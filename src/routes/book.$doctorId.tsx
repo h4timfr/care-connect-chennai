@@ -44,15 +44,15 @@ function BookAppointment() {
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!search.date || !search.time) {
       toast.error("Please select a date and time");
       return;
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      bookAppointment({
+    try {
+      await bookAppointment({
         doctorId: doctor.id,
         clinicId: doctor.clinicId,
         date: search.date!,
@@ -65,7 +65,10 @@ function BookAppointment() {
       setIsSubmitting(false);
       toast.success("Appointment booked successfully!");
       navigate({ to: "/appointments" });
-    }, 800);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to book appointment");
+      setIsSubmitting(false);
+    }
   };
 
   return (

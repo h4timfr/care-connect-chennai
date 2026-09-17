@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as AppointmentsIndexRouteImport } from './routes/appointments.index'
@@ -41,6 +42,11 @@ const AssistantRoute = AssistantRouteImport.update({
 const DiscoverRoute = DiscoverRouteImport.update({
   id: '/discover',
   path: '/discover',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MessagesRoute = MessagesRouteImport.update({
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
   '/discover': typeof DiscoverRoute
+  '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
   '/discover': typeof DiscoverRoute
+  '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/assistant': typeof AssistantRoute
   '/discover': typeof DiscoverRoute
+  '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assistant'
     | '/discover'
+    | '/login'
     | '/messages'
     | '/profile'
     | '/appointments/$appointmentId'
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assistant'
     | '/discover'
+    | '/login'
     | '/messages'
     | '/profile'
     | '/appointments/$appointmentId'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assistant'
     | '/discover'
+    | '/login'
     | '/messages'
     | '/profile'
     | '/appointments/$appointmentId'
@@ -248,6 +260,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssistantRoute: typeof AssistantRoute
   DiscoverRoute: typeof DiscoverRoute
+  LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRoute
   ProfileRoute: typeof ProfileRoute
   AppointmentsAppointmentIdRoute: typeof AppointmentsAppointmentIdRoute
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/discover'
       fullPath: '/discover'
       preLoaderRoute: typeof DiscoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/messages': {
@@ -400,6 +420,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssistantRoute: AssistantRoute,
   DiscoverRoute: DiscoverRoute,
+  LoginRoute: LoginRoute,
   MessagesRoute: MessagesRoute,
   ProfileRoute: ProfileRoute,
   AppointmentsAppointmentIdRoute: AppointmentsAppointmentIdRoute,

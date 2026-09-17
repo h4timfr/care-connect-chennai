@@ -51,7 +51,7 @@ interface AppState {
   updateSchedule: (doctorId: string, patch: Partial<DoctorSchedule>) => void;
 
   appointments: Appointment[];
-  bookAppointment: (input: BookingInput) => Appointment;
+  bookAppointment: (input: BookingInput) => Promise<Appointment>;
   cancelAppointment: (id: string) => void;
   rescheduleAppointment: (id: string, date: string, time: string) => void;
   setAppointmentStatus: (id: string, status: AppointmentStatus) => void;
@@ -74,19 +74,51 @@ const Ctx = createContext<AppState | null>(null);
 let counter = 100;
 const nextId = (prefix: string) => `${prefix}${++counter}`;
 
+import { useAuth } from "@/lib/supabase/auth";
+import { usePatientAppointments, useBookAppointment, useCancelAppointment } from "@/lib/supabase/appointments";
+
 export function AppProvider({ children }: { children: ReactNode }) {
+  const auth = useAuth();
+  
+  // Real Supabase queries
+  const patientAppointments = usePatientAppointments(auth.user?.id);
+  const bookMut = useBookAppointment();
+  const cancelMut = useCancelAppointment();
+  
+  const hasSupabase = !!import.meta.env.VITE_SUPABASE_URL;
+
   const [role, setRole] = useState<UserRole>("patient");
   const [signedIn, setSignedIn] = useState(true);
   const [patient, setPatient] = useState<Patient>(CURRENT_PATIENT);
   const [doctors, setDoctors] = useState<Doctor[]>(DOCTORS);
   const [clinics, setClinics] = useState<Clinic[]>(CLINICS);
   const [schedules, setSchedules] = useState<DoctorSchedule[]>(SCHEDULES);
-  const [appointments, setAppointments] = useState<Appointment[]>(APPOINTMENTS);
+  const [mockAppointments, setAppointments] = useState<Appointment[]>(APPOINTMENTS);
   const [conversations, setConversations] = useState<Conversation[]>(CONVERSATIONS);
+  
+  const appointments = hasSupabase && patientAppointments.data ? patientAppointments.data : mockAppointments;
 
   const activeClinic = clinics.find((c) => c.id === CURRENT_CLINIC_ID) ?? clinics[0]!;
 
-  const bookAppointment = useCallback((input: BookingInput) => {
+  const bookAppointment = useCallback(async (input: BookingInput) => {
+    if (hasSupabase && auth.user) {
+       await bookMut.mutateAsync({
+           doctorId: input.doctorId,
+           clinicId: input.clinicId,
+           patientId: auth.user.id,
+           patientName: input.patientName,
+           patientPhone: input.patientPhone,
+           date: input.date,
+           time: input.time,
+           reason: input.reason,
+           fee: input.fee
+       });
+       
+       return {
+         id: "temp", patientId: auth.user.id, status: "pending", createdAt: new Date().toISOString(), ...input
+       } as Appointment;
+    }
+
     const appointment: Appointment = {
       id: nextId("a"),
       patientId: CURRENT_PATIENT.id,
@@ -96,13 +128,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     setAppointments((prev) => [appointment, ...prev]);
     return appointment;
-  }, []);
+  }, [hasSupabase, auth.user, bookMut]);
 
   const cancelAppointment = useCallback((id: string) => {
+    if (hasSupabase && auth.user) {
+        cancelMut.mutate(id);
+        return;
+    }
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: "cancelled" as const } : a)),
     );
-  }, []);
+  }, [hasSupabase, auth.user, cancelMut]);
 
   const rescheduleAppointment = useCallback((id: string, date: string, time: string) => {
     setAppointments((prev) =>
