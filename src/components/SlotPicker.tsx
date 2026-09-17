@@ -82,9 +82,14 @@ export function SlotGrid({
                   onClick={() => onChange(slot.time)}
                   className={cn(
                     "rounded-lg border px-2 py-2 text-sm font-medium transition-colors",
-                    slot.booked && "cursor-not-allowed bg-muted text-muted-foreground/50 line-through",
-                    !slot.booked && value === slot.time && "border-primary bg-primary text-primary-foreground",
-                    !slot.booked && value !== slot.time && "bg-card hover:border-primary hover:text-primary",
+                    slot.booked &&
+                      "cursor-not-allowed bg-muted text-muted-foreground/50 line-through",
+                    !slot.booked &&
+                      value === slot.time &&
+                      "border-primary bg-primary text-primary-foreground",
+                    !slot.booked &&
+                      value !== slot.time &&
+                      "bg-card hover:border-primary hover:text-primary",
                   )}
                 >
                   {to12h(slot.time)}

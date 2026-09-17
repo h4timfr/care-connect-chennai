@@ -89,12 +89,7 @@ export interface Slot {
   booked: boolean;
 }
 
-export type AppointmentStatus =
-  | "pending"
-  | "confirmed"
-  | "arrived"
-  | "completed"
-  | "cancelled";
+export type AppointmentStatus = "pending" | "confirmed" | "arrived" | "completed" | "cancelled";
 
 export interface Appointment {
   id: string;

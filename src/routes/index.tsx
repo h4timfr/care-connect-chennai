@@ -52,7 +52,10 @@ function Home() {
     .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))[0];
   const upcomingDoctor = upcoming ? doctorById(upcoming.doctorId) : undefined;
 
-  const nearYou = doctors.slice().sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 6);
+  const nearYou = doctors
+    .slice()
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, 6);
 
   return (
     <PatientShell>
@@ -164,7 +167,10 @@ function Home() {
         </section>
 
         <section>
-          <SectionHeader title="Clinics in your city" subtitle="Independent clinics across Chennai" />
+          <SectionHeader
+            title="Clinics in your city"
+            subtitle="Independent clinics across Chennai"
+          />
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {CLINICS.slice(0, 3).map((c) => (
               <ClinicCard key={c.id} clinic={c} />

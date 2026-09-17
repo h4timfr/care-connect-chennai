@@ -122,8 +122,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ? {
                 ...c,
                 unreadForClinic: sender === "patient" ? c.unreadForClinic + 1 : c.unreadForClinic,
-                unreadForPatient:
-                  sender === "clinic" ? c.unreadForPatient + 1 : c.unreadForPatient,
+                unreadForPatient: sender === "clinic" ? c.unreadForPatient + 1 : c.unreadForPatient,
                 messages: [
                   ...c.messages,
                   {
@@ -207,9 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clinics,
       activeClinic,
       updateClinic: (patch) =>
-        setClinics((prev) =>
-          prev.map((c) => (c.id === activeClinic.id ? { ...c, ...patch } : c)),
-        ),
+        setClinics((prev) => prev.map((c) => (c.id === activeClinic.id ? { ...c, ...patch } : c))),
       upsertDoctor: (doctor) =>
         setDoctors((prev) =>
           prev.some((d) => d.id === doctor.id)
@@ -219,9 +216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       removeDoctor: (id) => setDoctors((prev) => prev.filter((d) => d.id !== id)),
       schedules,
       updateSchedule: (doctorId, patch) =>
-        setSchedules((prev) =>
-          prev.map((s) => (s.doctorId === doctorId ? { ...s, ...patch } : s)),
-        ),
+        setSchedules((prev) => prev.map((s) => (s.doctorId === doctorId ? { ...s, ...patch } : s))),
       appointments,
       bookAppointment,
       cancelAppointment,

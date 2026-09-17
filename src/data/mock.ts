@@ -73,8 +73,7 @@ export const CLINICS: Clinic[] = [
     address: "45, 2nd Avenue, Anna Nagar West, Chennai 600040",
     phone: "+91 44 4000 2204",
     email: "care@annanagarortho.demo",
-    about:
-      "Orthopaedic consultations, sports injury reviews and physiotherapy under one roof.",
+    about: "Orthopaedic consultations, sports injury reviews and physiotherapy under one roof.",
     specialtyIds: ["orthopedics", "general", "neurology"],
     services: ["Fracture care", "Physiotherapy", "Sports injury review", "Digital X-ray"],
     facilities: ["On-site X-ray", "Lift access", "Parking", "Insurance desk"],
@@ -93,8 +92,7 @@ export const CLINICS: Clinic[] = [
     address: "8, Vijayanagar Main Road, Velachery, Chennai 600042",
     phone: "+91 44 4000 3310",
     email: "front.desk@vfhp.demo",
-    about:
-      "Everyday family medicine, diabetes follow-ups and preventive health check packages.",
+    about: "Everyday family medicine, diabetes follow-ups and preventive health check packages.",
     specialtyIds: ["general", "cardiology", "ent"],
     services: ["Health check packages", "Diabetes follow-up", "ECG", "Blood collection"],
     facilities: ["Lab collection", "Parking", "Card payments"],
@@ -132,8 +130,7 @@ export const CLINICS: Clinic[] = [
     address: "5, Sterling Road, Nungambakkam, Chennai 600034",
     phone: "+91 44 4000 5519",
     email: "reception@nwcare.demo",
-    about:
-      "Gynaecology, antenatal follow-ups and women's preventive health consultations.",
+    about: "Gynaecology, antenatal follow-ups and women's preventive health consultations.",
     specialtyIds: ["gynecology", "general", "ophthalmology"],
     services: ["Antenatal care", "Ultrasound", "PCOS consultation", "Well-woman check"],
     facilities: ["Female staff on duty", "Lift access", "Pharmacy"],
@@ -232,8 +229,7 @@ export const DOCTORS: Doctor[] = [
     experienceYears: 22,
     languages: ["English", "Tamil"],
     consultationFee: 400,
-    about:
-      "General physician handling everyday illness, diabetes and blood pressure follow-ups.",
+    about: "General physician handling everyday illness, diabetes and blood pressure follow-ups.",
     services: ["Fever & infection", "Diabetes follow-up", "BP review", "Health check"],
     rating: 4.5,
     reviewCount: 98,
@@ -379,8 +375,7 @@ export const DOCTORS: Doctor[] = [
 ];
 
 export const doctorById = (id: string) => DOCTORS.find((d) => d.id === id);
-export const doctorsOfClinic = (clinicId: string) =>
-  DOCTORS.filter((d) => d.clinicId === clinicId);
+export const doctorsOfClinic = (clinicId: string) => DOCTORS.filter((d) => d.clinicId === clinicId);
 
 export const SCHEDULES: DoctorSchedule[] = DOCTORS.map((d, i) => ({
   doctorId: d.id,
@@ -539,15 +534,17 @@ export const APPOINTMENTS: Appointment[] = [
     createdAt: `${lastWeek}T07:10:00`,
   },
   // Clinic-side demo bookings for Little Steps Clinic (c1)
-  ...([
-    ["a6", "d1", "09:00", "Aarav Menon", "confirmed", "Vaccination"],
-    ["a7", "d1", "09:30", "Ishita Raghavan", "arrived", "Fever review"],
-    ["a8", "d1", "10:30", "Kabir Sundar", "pending", "Cough & cold"],
-    ["a9", "d11", "11:00", "Sneha Varma", "confirmed", "Routine check"],
-    ["a10", "d11", "11:30", "Rohan Pillai", "completed", "Travel consultation"],
-    ["a11", "d1", "17:30", "Maya Elangovan", "confirmed", "Growth review"],
-    ["a12", "d11", "18:00", "Deepak Anand", "cancelled", "Fever review"],
-  ] as const).map(([id, doctorId, time, patientName, status, reason]) => ({
+  ...(
+    [
+      ["a6", "d1", "09:00", "Aarav Menon", "confirmed", "Vaccination"],
+      ["a7", "d1", "09:30", "Ishita Raghavan", "arrived", "Fever review"],
+      ["a8", "d1", "10:30", "Kabir Sundar", "pending", "Cough & cold"],
+      ["a9", "d11", "11:00", "Sneha Varma", "confirmed", "Routine check"],
+      ["a10", "d11", "11:30", "Rohan Pillai", "completed", "Travel consultation"],
+      ["a11", "d1", "17:30", "Maya Elangovan", "confirmed", "Growth review"],
+      ["a12", "d11", "18:00", "Deepak Anand", "cancelled", "Fever review"],
+    ] as const
+  ).map(([id, doctorId, time, patientName, status, reason]) => ({
     id,
     doctorId,
     clinicId: "c1",

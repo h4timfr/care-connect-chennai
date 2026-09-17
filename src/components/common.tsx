@@ -168,10 +168,7 @@ export function MapPlaceholder({
 }) {
   return (
     <div
-      className={cn(
-        "relative overflow-hidden rounded-xl border bg-surface",
-        className ?? "h-44",
-      )}
+      className={cn("relative overflow-hidden rounded-xl border bg-surface", className ?? "h-44")}
       role="img"
       aria-label={`Map placeholder for ${area}`}
     >

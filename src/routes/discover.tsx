@@ -10,7 +10,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { CLINICS, LANGUAGES, SPECIALTIES, clinicById, nextAvailable, slotsForDoctor, specialtyName } from "@/data/mock";
+import {
+  CLINICS,
+  LANGUAGES,
+  SPECIALTIES,
+  clinicById,
+  nextAvailable,
+  slotsForDoctor,
+  specialtyName,
+} from "@/data/mock";
 import { addDays, dayPartOf, isoDate } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -76,7 +84,18 @@ function Discover() {
     setLoading(true);
     const timer = setTimeout(() => setLoading(false), 350);
     return () => clearTimeout(timer);
-  }, [text, specialtyId, availability, parts, maxFee, maxDistance, gender, language, minExperience, sort]);
+  }, [
+    text,
+    specialtyId,
+    availability,
+    parts,
+    maxFee,
+    maxDistance,
+    gender,
+    language,
+    minExperience,
+    sort,
+  ]);
 
   const today = isoDate(new Date());
   const tomorrow = isoDate(addDays(new Date(), 1));
@@ -305,7 +324,9 @@ function Discover() {
             </div>
 
             <div>
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Gender</Label>
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Gender
+              </Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(["any", "female", "male"] as const).map((g) => (
                   <button

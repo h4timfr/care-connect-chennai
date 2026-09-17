@@ -746,15 +746,15 @@ Create a calendar/schedule visualization.
 
 Example:
 
-09:00  Dr. Kumar      Booked
+09:00 Dr. Kumar Booked
 
-09:30  Dr. Kumar      Booked
+09:30 Dr. Kumar Booked
 
-10:00  Dr. Kumar      Available
+10:00 Dr. Kumar Available
 
-10:30  Dr. Priya      Booked
+10:30 Dr. Priya Booked
 
-11:00  Dr. Priya      Available
+11:00 Dr. Priya Available
 
 Use realistic demo data.
 

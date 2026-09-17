@@ -69,7 +69,7 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm">
-          <Link to="/doctors/$doctorId" params={{ doctorId: appointment.doctorId }}>
+          <Link to="/appointments/$appointmentId" params={{ appointmentId: appointment.id }}>
             View details
           </Link>
         </Button>
