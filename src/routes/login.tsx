@@ -34,9 +34,6 @@ function LoginPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { role: "patient" },
-      },
     });
     if (error) {
       toast.error(error.message);
