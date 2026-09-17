@@ -58,7 +58,7 @@ function ClinicAppointments() {
         </div>
 
         <div className="surface-card overflow-hidden overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-left text-sm whitespace-nowrap min-w-[700px]">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
                 <th className="font-medium p-4">Patient</th>

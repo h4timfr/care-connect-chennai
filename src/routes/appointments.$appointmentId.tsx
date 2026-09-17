@@ -17,8 +17,19 @@ function AppointmentDetails() {
   const { appointments, cancelAppointment, ensureConversation } = useApp();
   const router = useRouter();
 
-  const appointment = appointments.find((a) => a.id === appointmentId);
-  if (!appointment) return <div>Appointment not found</div>;
+  const appointment = appointments.find(a => a.id === appointmentId);
+  
+  if (!appointment) {
+    return (
+      <PatientShell>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+           <h1 className="text-2xl font-bold mb-2">Appointment not found</h1>
+           <p className="text-muted-foreground mb-4">The appointment you are looking for does not exist.</p>
+           <Button onClick={() => router.history.back()}>Go Back</Button>
+        </div>
+      </PatientShell>
+    );
+  }
 
   const doctor = doctorById(appointment.doctorId);
   const clinic = clinicById(appointment.clinicId);

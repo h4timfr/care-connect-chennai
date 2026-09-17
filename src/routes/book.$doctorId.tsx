@@ -16,16 +16,27 @@ export const Route = createFileRoute("/book/$doctorId")({
   }),
   loader: ({ params }) => {
     const doctor = doctorById(params.doctorId);
-    if (!doctor) throw new Error("Doctor not found");
-    return { doctor };
+    return { doctor, doctorId: params.doctorId };
   },
 });
 
 function BookAppointment() {
-  const { doctor } = Route.useLoaderData();
+  const { doctor, doctorId } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const { patient, bookAppointment } = useApp();
+
+  if (!doctor) {
+    return (
+      <PatientShell>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+           <h1 className="text-2xl font-bold mb-2">Doctor not found</h1>
+           <p className="text-muted-foreground mb-4">Cannot book an appointment because the doctor was not found.</p>
+           <Button onClick={() => window.history.back()}>Go Back</Button>
+        </div>
+      </PatientShell>
+    );
+  }
 
   const clinic = clinicById(doctor.clinicId);
   const [reason, setReason] = useState("");

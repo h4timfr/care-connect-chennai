@@ -20,19 +20,33 @@ export const Route = createFileRoute("/doctors/$doctorId")({
   component: DoctorProfile,
   loader: ({ params }) => {
     const doctor = doctorById(params.doctorId);
-    if (!doctor) throw new Error("Doctor not found");
-    return { doctor };
+    return { doctor, doctorId: params.doctorId };
   },
 });
 
 function DoctorProfile() {
-  const { doctor } = Route.useLoaderData();
+  const { doctor, doctorId } = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = useNavigate();
   const router = useRouter();
+
+  const [date, setDate] = useState(isoDate(new Date()));
+
+  if (!doctor) {
+    return (
+      <PatientShell>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+           <h1 className="text-2xl font-bold mb-2">Doctor not found</h1>
+           <p className="text-muted-foreground mb-4">The doctor you are looking for does not exist or has been removed.</p>
+           <Button onClick={() => window.history.back()}>Go Back</Button>
+        </div>
+      </PatientShell>
+    );
+  }
+
   const clinic = clinicById(doctor.clinicId);
   const schedule = scheduleOf(doctor.id);
   const reviews = REVIEWS.filter((r) => r.doctorId === doctor.id);
-
-  const [date, setDate] = useState(isoDate(new Date()));
 
   return (
     <PatientShell>
