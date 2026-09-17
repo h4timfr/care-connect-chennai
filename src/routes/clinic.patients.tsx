@@ -64,10 +64,12 @@ function ClinicPatients() {
             </thead>
             <tbody className="divide-y">
               {filteredPatients.map((patient: Patient) => {
-                const sortedApts = [...patient.appointments].sort((a, b) => b.date.localeCompare(a.date));
+                const sortedApts = [...patient.appointments].sort((a, b) =>
+                  b.date.localeCompare(a.date),
+                );
                 const lastVisit = sortedApts[0];
                 const completed = patient.appointments.filter(
-                  (a: any) => a.status === "completed",
+                  (a: Appointment) => a.status === "completed",
                 ).length;
 
                 return (

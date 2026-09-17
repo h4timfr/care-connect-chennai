@@ -4,13 +4,21 @@ import { PatientShell } from "@/components/layout/PatientShell";
 import { Initials } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/supabase/auth";
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
 function ProfilePage() {
-  const { patient, signOut, setRole } = useApp();
+  const { patient } = useApp();
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate({ to: "/login" });
+  };
 
   return (
     <PatientShell>
@@ -83,23 +91,15 @@ function ProfilePage() {
           <h3 className="font-medium flex items-center gap-2 text-destructive">
             <Shield className="h-4 w-4" /> Account Actions
           </h3>
-          <div className="space-y-3">
+          {/* Action Buttons */}
+          <div className="pt-4 flex flex-col gap-3">
             <Button
               variant="outline"
-              className="w-full justify-start text-foreground"
-              onClick={() => setRole("clinic")}
+              className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
+              onClick={handleSignOut}
             >
-              <LogOut className="h-4 w-4 mr-2" /> Switch to Clinic Portal (Demo)
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
-              onClick={() => {
-                signOut();
-                window.location.href = "/";
-              }}
-            >
-              <LogOut className="h-4 w-4 mr-2" /> Sign Out
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
           </div>
         </section>

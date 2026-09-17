@@ -31,12 +31,7 @@ interface BookingInput {
 }
 
 interface AppState {
-  role: UserRole;
-  setRole: (role: UserRole) => void;
-  signedIn: boolean;
-  signIn: (role: UserRole) => void;
-  signOut: () => void;
-
+  // Auth state now exclusively managed by Supabase AuthProvider
   patient: Patient;
   updatePatient: (patch: Partial<Patient>) => void;
 
@@ -91,8 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const hasSupabase = !!import.meta.env.VITE_SUPABASE_URL;
 
-  const [role, setRole] = useState<UserRole>("patient");
-  const [signedIn, setSignedIn] = useState(true);
+  // Global Mock Fallbacks (for non-migrated domains only)
   const [patient, setPatient] = useState<Patient>(CURRENT_PATIENT);
   const [doctors, setDoctors] = useState<Doctor[]>(DOCTORS);
   const [clinics, setClinics] = useState<Clinic[]>(CLINICS);
@@ -243,14 +237,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppState>(
     () => ({
-      role,
-      setRole,
-      signedIn,
-      signIn: (r: UserRole) => {
-        setRole(r);
-        setSignedIn(true);
-      },
-      signOut: () => setSignedIn(false),
       patient,
       updatePatient: (patch) => setPatient((p) => ({ ...p, ...patch })),
       doctors,
@@ -293,8 +279,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })),
     }),
     [
-      role,
-      signedIn,
       patient,
       doctors,
       clinics,

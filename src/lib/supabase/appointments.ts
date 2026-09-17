@@ -48,21 +48,16 @@ export function useBookAppointment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: Omit<Appointment, "id" | "createdAt" | "status">) => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .insert({
-          patient_id: input.patientId,
-          doctor_id: input.doctorId,
-          clinic_id: input.clinicId,
-          date: input.date,
-          time: input.time,
-          reason: input.reason,
-          fee: input.fee,
-          status: "pending",
-        })
-        .select()
-        .single();
+    mutationFn: async (appointment: Omit<Appointment, "id" | "createdAt">) => {
+      // 1. We no longer pass patientId or fee from the frontend; the backend RPC infers it.
+      // 2. We call the secure RPC function.
+      const { data, error } = await supabase.rpc("book_appointment", {
+        p_doctor_id: appointment.doctorId,
+        p_clinic_id: appointment.clinicId,
+        p_date: appointment.date,
+        p_time: appointment.time,
+        p_reason: appointment.reason || "",
+      });
 
       if (error) {
         // Handle unique constraint violation for double booking
@@ -71,7 +66,6 @@ export function useBookAppointment() {
         }
         throw new Error(error.message);
       }
-      return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["appointments", "patient", variables.patientId] });
