@@ -50,12 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", userId)
-        .single();
-      
+      const { data, error } = await supabase.from("users").select("role").eq("id", userId).single();
+
       if (!error && data) {
         setRole(data.role as UserRole);
       } else {

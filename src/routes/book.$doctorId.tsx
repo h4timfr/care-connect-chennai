@@ -26,6 +26,9 @@ function BookAppointment() {
   const navigate = useNavigate();
   const { patient, bookAppointment } = useApp();
 
+  const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!doctor) {
     return (
       <PatientShell>
@@ -41,8 +44,6 @@ function BookAppointment() {
   }
 
   const clinic = clinicById(doctor.clinicId);
-  const [reason, setReason] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBook = async () => {
     if (!search.date || !search.time) {
@@ -65,8 +66,9 @@ function BookAppointment() {
       setIsSubmitting(false);
       toast.success("Appointment booked successfully!");
       navigate({ to: "/appointments" });
-    } catch (err: any) {
-      toast.error(err.message || "Failed to book appointment");
+    } catch (err) {
+      const e = err as Error;
+      toast.error(e.message || "Failed to book appointment");
       setIsSubmitting(false);
     }
   };

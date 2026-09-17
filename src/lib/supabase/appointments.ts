@@ -12,18 +12,20 @@ export function usePatientAppointments(patientId?: string) {
       if (!patientId) return [];
       const { data, error } = await supabase
         .from("appointments")
-        .select(`
+        .select(
+          `
           *,
           doctors ( name ),
           clinics ( name )
-        `)
+        `,
+        )
         .eq("patient_id", patientId)
         .order("date", { ascending: false });
 
       if (error) throw error;
-      
+
       // Map to frontend type
-      return data.map((a: any) => ({
+      return data.map((a: Record<string, unknown>) => ({
         id: a.id,
         doctorId: a.doctor_id,
         clinicId: a.clinic_id,
@@ -57,14 +59,14 @@ export function useBookAppointment() {
           time: input.time,
           reason: input.reason,
           fee: input.fee,
-          status: "pending"
+          status: "pending",
         })
         .select()
         .single();
 
       if (error) {
         // Handle unique constraint violation for double booking
-        if (error.code === '23505' || error.message.includes('unique constraint')) {
+        if (error.code === "23505" || error.message.includes("unique constraint")) {
           throw new Error("That appointment slot is no longer available.");
         }
         throw new Error(error.message);
