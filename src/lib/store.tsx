@@ -58,7 +58,7 @@ interface AppState {
     clinicId: string;
     doctorId?: string;
     appointmentId?: string;
-  }) => string;
+  }) => Promise<string>;
 
   toggleSavedDoctor: (id: string) => void;
   toggleSavedClinic: (id: string) => void;
@@ -75,27 +75,42 @@ import {
   useBookAppointment,
   useCancelAppointment,
 } from "@/lib/supabase/appointments";
+import { useClinics, useDoctors, useSchedules } from "@/lib/supabase/queries";
+
+import { useConversations, useSendMessage, useMarkRead, useEnsureConversation } from "@/lib/supabase/messaging";
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
   // Real Supabase queries
   const patientAppointments = usePatientAppointments(auth.user?.id);
+  const clinicsQuery = useClinics();
+  const doctorsQuery = useDoctors();
+  const schedulesQuery = useSchedules();
+  const conversationsQuery = useConversations(auth.user?.id);
+  
   const bookMut = useBookAppointment();
   const cancelMut = useCancelAppointment();
+  const sendMsgMut = useSendMessage();
+  const markReadMut = useMarkRead();
+  const ensureConvMut = useEnsureConversation();
 
   const hasSupabase = !!import.meta.env.VITE_SUPABASE_URL;
 
   // Global Mock Fallbacks (for non-migrated domains only)
   const [patient, setPatient] = useState<Patient>(CURRENT_PATIENT);
-  const [doctors, setDoctors] = useState<Doctor[]>(DOCTORS);
-  const [clinics, setClinics] = useState<Clinic[]>(CLINICS);
-  const [schedules, setSchedules] = useState<DoctorSchedule[]>(SCHEDULES);
+  const [mockClinics, setClinics] = useState<Clinic[]>(CLINICS);
+  const [mockDoctors, setDoctors] = useState<Doctor[]>(DOCTORS);
+  const [mockSchedules, setSchedules] = useState<DoctorSchedule[]>(SCHEDULES);
   const [mockAppointments, setAppointments] = useState<Appointment[]>(APPOINTMENTS);
-  const [conversations, setConversations] = useState<Conversation[]>(CONVERSATIONS);
+  const [mockConversations, setConversations] = useState<Conversation[]>(CONVERSATIONS);
 
   const appointments =
     hasSupabase && patientAppointments.data ? patientAppointments.data : mockAppointments;
+  const clinics = hasSupabase && clinicsQuery.data ? clinicsQuery.data : mockClinics;
+  const doctors = hasSupabase && doctorsQuery.data ? doctorsQuery.data : mockDoctors;
+  const schedules = hasSupabase && schedulesQuery.data ? schedulesQuery.data : mockSchedules;
+  const conversations = hasSupabase && conversationsQuery.data ? conversationsQuery.data : mockConversations;
 
   const activeClinic = clinics.find((c) => c.id === CURRENT_CLINIC_ID) ?? clinics[0]!;
 
@@ -161,6 +176,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = useCallback(
     (conversationId: string, sender: "patient" | "clinic", body: string) => {
+      if (hasSupabase && auth.user) {
+        sendMsgMut.mutate({ conversationId, senderId: auth.user.id, body, isPatient: sender === "patient" });
+        return;
+      }
       setConversations((prev) =>
         prev.map((c) =>
           c.id === conversationId
@@ -183,25 +202,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ),
       );
     },
-    [],
+    [hasSupabase, auth.user, sendMsgMut],
   );
 
-  const markRead = useCallback((conversationId: string, side: "patient" | "clinic") => {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === conversationId
-          ? {
-              ...c,
-              unreadForPatient: side === "patient" ? 0 : c.unreadForPatient,
-              unreadForClinic: side === "clinic" ? 0 : c.unreadForClinic,
-            }
-          : c,
-      ),
-    );
-  }, []);
+  const markRead = useCallback(
+    (conversationId: string, side: "patient" | "clinic") => {
+      if (hasSupabase) {
+        markReadMut.mutate({ conversationId, side });
+        return;
+      }
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === conversationId
+            ? {
+                ...c,
+                unreadForPatient: side === "patient" ? 0 : c.unreadForPatient,
+                unreadForClinic: side === "clinic" ? 0 : c.unreadForClinic,
+              }
+            : c,
+        ),
+      );
+    },
+    [hasSupabase, markReadMut],
+  );
 
   const ensureConversation = useCallback(
-    ({
+    async ({
       clinicId,
       doctorId,
       appointmentId,
@@ -210,10 +236,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       doctorId?: string;
       appointmentId?: string;
     }) => {
+      const patientId = hasSupabase && auth.user ? auth.user.id : CURRENT_PATIENT.id;
       const existing = conversations.find(
-        (c) => c.clinicId === clinicId && c.patientId === CURRENT_PATIENT.id,
+        (c) => c.clinicId === clinicId && c.patientId === patientId,
       );
       if (existing) return existing.id;
+      
+      if (hasSupabase) {
+        return ensureConvMut.mutateAsync({ clinicId, doctorId, appointmentId, patientId });
+      }
+
       const id = nextId("cv");
       setConversations((prev) => [
         {
@@ -224,15 +256,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           patientId: CURRENT_PATIENT.id,
           patientName: CURRENT_PATIENT.name,
           kind: appointmentId ? "appointment" : "general",
-          unreadForClinic: 0,
           unreadForPatient: 0,
+          unreadForClinic: 0,
           messages: [],
         },
         ...prev,
       ]);
       return id;
     },
-    [conversations],
+    [conversations, hasSupabase, auth.user, ensureConvMut],
   );
 
   const value = useMemo<AppState>(

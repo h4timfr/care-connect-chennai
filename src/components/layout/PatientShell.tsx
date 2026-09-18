@@ -12,6 +12,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/lib/store";
 import { Initials } from "@/components/common";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
@@ -75,9 +77,13 @@ export function PatientShell({ children }: { children: ReactNode }) {
             <Button asChild variant="outline" size="sm" className="hidden lg:inline-flex">
               <Link to="/clinic">Clinic portal</Link>
             </Button>
-            <Link to="/profile" aria-label="Your profile">
-              <Initials name={patient.name} className="h-9 w-9" />
-            </Link>
+            <div className="flex shrink-0 items-center gap-3">
+              <LanguageToggle />
+              <ThemeToggle />
+              <Link to="/profile" aria-label="Your profile">
+                <Initials name={patient.name} className="h-9 w-9" />
+              </Link>
+            </div>
           </div>
         </div>
       </header>

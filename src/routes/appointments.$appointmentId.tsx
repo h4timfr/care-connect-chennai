@@ -37,8 +37,8 @@ function AppointmentDetails() {
   const clinic = clinicById(appointment.clinicId);
   const active = appointment.status === "confirmed" || appointment.status === "pending";
 
-  const openChat = () => {
-    const cvId = ensureConversation({
+  const openChat = async () => {
+    const cvId = await ensureConversation({
       clinicId: appointment.clinicId,
       doctorId: appointment.doctorId,
       appointmentId: appointment.id,

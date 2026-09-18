@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { useApp } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 
@@ -99,7 +101,11 @@ export function ClinicShell({
                   <p className="truncate text-sm text-muted-foreground">{description}</p>
                 ) : null}
               </div>
-              <div className="flex shrink-0 items-center gap-2">{actions}</div>
+              <div className="flex shrink-0 items-center gap-2">
+                <LanguageToggle />
+                <ThemeToggle />
+                {actions}
+              </div>
             </div>
             <nav
               className="mt-3 -mx-1 flex gap-1 overflow-x-auto pb-1 lg:hidden"

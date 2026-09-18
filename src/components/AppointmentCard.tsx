@@ -27,8 +27,8 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
   const clinic = clinicById(appointment.clinicId);
   const active = appointment.status === "confirmed" || appointment.status === "pending";
 
-  const openChat = () => {
-    const id = ensureConversation({
+  const openChat = async () => {
+    const id = await ensureConversation({
       clinicId: appointment.clinicId,
       doctorId: appointment.doctorId,
       appointmentId: appointment.id,

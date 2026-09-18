@@ -50,16 +50,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      const { data, error } = await supabase.from("users").select("role").eq("id", userId).single();
-
-      if (!error && data) {
-        setRole(data.role as UserRole);
-      } else {
-        // Fallback to patient if not found (e.g. just signed up and trigger hasn't fired)
-        setRole("patient");
+      const { data: dData } = await supabase.from("doctors").select("id").eq("user_id", userId).maybeSingle();
+      if (dData) {
+        setRole("doctor");
+        return;
       }
+
+      const { data: cData } = await supabase.from("clinic_memberships").select("id").eq("user_id", userId).maybeSingle();
+      if (cData) {
+        setRole("clinic");
+        return;
+      }
+
+      setRole("patient");
     } catch (e) {
       console.error(e);
+      setRole("patient");
     } finally {
       setLoading(false);
     }
