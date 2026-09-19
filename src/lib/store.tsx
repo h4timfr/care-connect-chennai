@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type {
   Appointment,
@@ -84,13 +85,15 @@ export const newDoctorId = () => "d" + (++counter);
 export function AppProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const queryClient = useQueryClient();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
 
   const patientQuery = usePatient(auth.user?.id);
   const patientAppointments = usePatientAppointments(patientQuery.data?.id);
-  const clinicsQuery = useClinics();
+  const clinicsQuery = useClinics({ enabled: !isAuthPage });
   const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id);
-  const doctorsQuery = useDoctors();
-  const schedulesQuery = useSchedules();
+  const doctorsQuery = useDoctors({ enabled: !isAuthPage });
+  const schedulesQuery = useSchedules({ enabled: !isAuthPage });
   const conversationsQuery = useConversations(auth.user?.id);
 
   const bookMut = useBookAppointment();

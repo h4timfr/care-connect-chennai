@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Clinic, Doctor, DoctorSchedule } from "@/lib/types";
 
-export function useClinics() {
+export function useClinics(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["clinics"],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const { data, error } = await supabase.from("clinics").select("*");
       if (error) throw error;
@@ -32,9 +33,10 @@ export function useClinics() {
   });
 }
 
-export function useDoctors() {
+export function useDoctors(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["doctors"],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const { data, error } = await supabase.from("doctors").select(`
           *,
@@ -63,9 +65,10 @@ export function useDoctors() {
   });
 }
 
-export function useSchedules() {
+export function useSchedules(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["schedules"],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const { data, error } = await supabase.from("doctor_schedules").select("*");
       if (error) throw error;
