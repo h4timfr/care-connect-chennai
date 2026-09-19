@@ -45,13 +45,13 @@ interface BookingInput {
 }
 
 interface AppState {
-  patient?: Patient;
+  patient: Patient | undefined;
   isLoadingPatient: boolean;
   
 
   doctors: Doctor[];
   clinics: Clinic[];
-  activeClinic?: Clinic;
+  activeClinic: Clinic | undefined;
   doctorById: (id: string) => Doctor | undefined;
   clinicById: (id: string) => Clinic | undefined;
   doctorsOfClinic: (clinicId: string) => Doctor[];
@@ -86,7 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   const patientQuery = usePatient(auth.user?.id);
-  const patientAppointments = usePatientAppointments(auth.user?.id);
+  const patientAppointments = usePatientAppointments(patientQuery.data?.id);
   const clinicsQuery = useClinics();
   const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id);
   const doctorsQuery = useDoctors();
@@ -109,6 +109,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const appointments = patientAppointments.data || [];
   const conversations = conversationsQuery.data || [];
 
+  // The UI currently only supports a single active clinic context.
+  // We deterministically use the first authorized clinic membership.
+  // The RLS guarantees this clinic is authorized for the user.
   const authorizedClinics = authorizedClinicsQuery.data || [];
   const activeClinic = authorizedClinics.length > 0 ? authorizedClinics[0] : undefined;
 
@@ -118,7 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const result = await bookMut.mutateAsync({
         doctorId: input.doctorId,
         clinicId: input.clinicId,
-        patientId: auth.user.id,
+        patientId: patient?.id ?? "",
         patientName: input.patientName,
         patientPhone: input.patientPhone,
         date: input.date,
@@ -168,7 +171,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const ensureConversation = useCallback(
     async ({ clinicId, doctorId, appointmentId }: any) => {
       if (!auth.user) throw new Error("Must be logged in");
-      const patientId = auth.user.id;
+      if (!patient) throw new Error("Must have a patient profile to chat");
+      const patientId = patient.id;
       const existing = conversations.find((c) => c.clinicId === clinicId && c.patientId === patientId);
       if (existing) return existing.id;
       return ensureConvMut.mutateAsync({
@@ -185,7 +189,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       if (!patient || !auth.user) return;
       const isSaved = patient.savedDoctorIds.includes(id);
-      toggleDoctorMut.mutate({ userId: auth.user.id, doctorId: id, isSaved });
+      toggleDoctorMut.mutate(id);
     },
     [patient, auth.user, toggleDoctorMut]
   );
@@ -194,14 +198,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       if (!patient || !auth.user) return;
       const isSaved = patient.savedClinicIds.includes(id);
-      toggleClinicMut.mutate({ userId: auth.user.id, clinicId: id, isSaved });
+      toggleClinicMut.mutate(id);
     },
     [patient, auth.user, toggleClinicMut]
   );
 
-  const updatePatient = useCallback((patch: Partial<Patient>) => {
-    // We will do a full mutation for patient update next!
-  }, []);
+  
 
   const value = useMemo<AppState>(
     () => ({
@@ -256,3 +258,7 @@ export function useApp() {
   if (!ctx) throw new Error("useApp must be used inside AppProvider");
   return ctx;
 }
+
+
+
+

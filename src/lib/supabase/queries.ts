@@ -184,35 +184,14 @@ export function useAuthorizedClinics(userId?: string) {
 export function useToggleSavedDoctor() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ userId, doctorId, isSaved }: { userId: string, doctorId: string, isSaved: boolean }) => {
-      // Fetch current array
-      const { data: pData, error: pError } = await supabase
-        .from("patients")
-        .select("saved_doctor_ids")
-        .eq("user_id", userId)
-        .single();
-      if (pError) throw pError;
-      
-      let current = pData.saved_doctor_ids || [];
-      if (isSaved) {
-        current = current.filter((id: string) => id !== doctorId);
-      } else {
-        if (!current.includes(doctorId)) current.push(doctorId);
-      }
-
-      const { error } = await supabase
-        .from("patients")
-        .update({ saved_doctor_ids: current })
-        .eq("user_id", userId);
-      
+    mutationFn: async (doctorId: string) => {
+      const { data, error } = await (supabase.rpc as any)("toggle_saved_doctor", { p_doctor_id: doctorId });
       if (error) throw error;
-      return current;
+      return data;
     },
-    onSuccess: (newArray, variables) => {
-      queryClient.setQueryData(["patient", variables.userId], (old: any) => {
-        if (!old) return old;
-        return { ...old, savedDoctorIds: newArray };
-      });
+    onSuccess: (newArray, doctorId, context: any) => {
+      // Invalidate the patient query to ensure cache is correct
+      queryClient.invalidateQueries({ queryKey: ["patient"] });
     },
   });
 }
@@ -220,34 +199,14 @@ export function useToggleSavedDoctor() {
 export function useToggleSavedClinic() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ userId, clinicId, isSaved }: { userId: string, clinicId: string, isSaved: boolean }) => {
-      const { data: pData, error: pError } = await supabase
-        .from("patients")
-        .select("saved_clinic_ids")
-        .eq("user_id", userId)
-        .single();
-      if (pError) throw pError;
-      
-      let current = pData.saved_clinic_ids || [];
-      if (isSaved) {
-        current = current.filter((id: string) => id !== clinicId);
-      } else {
-        if (!current.includes(clinicId)) current.push(clinicId);
-      }
-
-      const { error } = await supabase
-        .from("patients")
-        .update({ saved_clinic_ids: current })
-        .eq("user_id", userId);
-      
+    mutationFn: async (clinicId: string) => {
+      const { data, error } = await (supabase.rpc as any)("toggle_saved_clinic", { p_clinic_id: clinicId });
       if (error) throw error;
-      return current;
+      return data;
     },
-    onSuccess: (newArray, variables) => {
-      queryClient.setQueryData(["patient", variables.userId], (old: any) => {
-        if (!old) return old;
-        return { ...old, savedClinicIds: newArray };
-      });
+    onSuccess: (newArray, clinicId, context: any) => {
+      queryClient.invalidateQueries({ queryKey: ["patient"] });
     },
   });
 }
+
