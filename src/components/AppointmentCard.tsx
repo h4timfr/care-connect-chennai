@@ -14,13 +14,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Initials, StatusBadge } from "@/components/common";
-import { clinicById, doctorById, specialtyName } from "@/data/mock";
+import { specialtyName } from "@/data/constants";
 import { inr, longDate, to12h } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import type { Appointment } from "@/lib/types";
 
 export function AppointmentCard({ appointment }: { appointment: Appointment }) {
-  const { cancelAppointment, ensureConversation } = useApp();
+  const { cancelAppointment, ensureConversation, doctorById, clinicById } = useApp();
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const doctor = doctorById(appointment.doctorId);

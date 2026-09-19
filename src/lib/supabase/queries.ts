@@ -9,7 +9,7 @@ export function useClinics() {
     queryFn: async () => {
       const { data, error } = await supabase.from("clinics").select("*");
       if (error) throw error;
-      
+
       return data.map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -28,7 +28,7 @@ export function useClinics() {
         distanceKm: c.distanceKm || 0,
         photoTone: c.photo_tone || "bg-primary-soft",
       })) as Clinic[];
-    }
+    },
   });
 }
 
@@ -36,14 +36,12 @@ export function useDoctors() {
   return useQuery({
     queryKey: ["doctors"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("doctors")
-        .select(`
+      const { data, error } = await supabase.from("doctors").select(`
           *,
           clinic_doctors(clinic_id)
         `);
       if (error) throw error;
-      
+
       return data.map((d: any) => ({
         id: d.id,
         name: d.name,
@@ -59,9 +57,9 @@ export function useDoctors() {
         reviewCount: d.review_count || 0,
         distanceKm: d.distanceKm || 0,
         registrationNote: d.registration_note,
-        clinicId: d.clinic_doctors?.[0]?.clinic_id, 
+        clinicId: d.clinic_doctors?.[0]?.clinic_id,
       })) as Doctor[];
-    }
+    },
   });
 }
 
@@ -71,10 +69,18 @@ export function useSchedules() {
     queryFn: async () => {
       const { data, error } = await supabase.from("doctor_schedules").select("*");
       if (error) throw error;
-      
-      const dayMapReverse: Record<number, string> = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
+
+      const dayMapReverse: Record<number, string> = {
+        0: "Sun",
+        1: "Mon",
+        2: "Tue",
+        3: "Wed",
+        4: "Thu",
+        5: "Fri",
+        6: "Sat",
+      };
       const scheduleMap = new Map<string, DoctorSchedule>();
-      
+
       for (const s of data) {
         const key = `${s.doctor_id}-${s.clinic_id}`;
         if (!scheduleMap.has(key)) {
@@ -84,15 +90,16 @@ export function useSchedules() {
             workingDays: [],
             workingHours: { start: s.start_time.substring(0, 5), end: s.end_time.substring(0, 5) },
             breakPeriod: { start: "13:00", end: "14:00" },
-            unavailableDates: []
+            unavailableDates: [],
           });
         }
         const schedule = scheduleMap.get(key)!;
-        if (!schedule.workingDays.includes(dayMapReverse[s.day_of_week])) {
-          schedule.workingDays.push(dayMapReverse[s.day_of_week]);
+        const dayStr = dayMapReverse[s.day_of_week] as string;
+        if (dayStr && !schedule.workingDays.includes(dayStr)) {
+          schedule.workingDays.push(dayStr);
         }
       }
       return Array.from(scheduleMap.values());
-    }
+    },
   });
 }

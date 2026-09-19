@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../database.types";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey =
@@ -12,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // We initialize the client regardless, but it will fail network requests if empty.
 // This allows the app to start up and show clear fallback UI or errors.
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   supabaseUrl || "https://placeholder.supabase.co",
   supabaseAnonKey || "placeholder",
 );

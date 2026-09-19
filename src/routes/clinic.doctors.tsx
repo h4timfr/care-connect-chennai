@@ -4,7 +4,7 @@ import { useApp } from "@/lib/store";
 import { UserPlus, MoreHorizontal } from "lucide-react";
 import { Initials } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import { specialtyName } from "@/data/mock";
+import { specialtyName } from "@/data/constants";
 
 export const Route = createFileRoute("/clinic/doctors")({
   component: ClinicDoctors,

@@ -7,17 +7,20 @@ import { Initials } from "@/components/common";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { to12h } from "@/lib/format";
-import { doctorById } from "@/data/mock";
 
 export const Route = createFileRoute("/clinic/messages")({
   component: ClinicMessages,
-  validateSearch: (search: Record<string, unknown>) => ({
-    c: search.c as string | undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>) => {
+    const params: { c?: string } = {};
+    if (typeof search["c"] === "string" && search["c"]) {
+      params.c = search["c"];
+    }
+    return params;
+  },
 });
 
 function ClinicMessages() {
-  const { conversations, activeClinic, markRead, sendMessage } = useApp();
+  const { conversations, activeClinic, markRead, sendMessage, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate();
 
@@ -189,7 +192,7 @@ function ClinicMessages() {
                         {m.body}
                       </div>
                       <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-                        {to12h(m.sentAt.split("T")[1].substring(0, 5))}
+                        {to12h(m.sentAt.split("T")[1]?.substring(0, 5) ?? "00:00")}
                       </span>
                     </div>
                   );

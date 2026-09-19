@@ -2,16 +2,15 @@ import { Link } from "@tanstack/react-router";
 import { Clock, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Rating } from "@/components/common";
-import { doctorsOfClinic, nextAvailable, specialtyName } from "@/data/mock";
+import { useApp } from "@/lib/store";
+import { specialtyName } from "@/data/constants";
 import { inr, relativeDay, to12h } from "@/lib/format";
 import type { Clinic } from "@/lib/types";
 
 export function ClinicCard({ clinic }: { clinic: Clinic }) {
+  const { doctorsOfClinic } = useApp();
   const doctors = doctorsOfClinic(clinic.id);
-  const nextSlots = doctors
-    .map((d) => nextAvailable(d.id))
-    .filter((n): n is { date: string; times: string[] } => Boolean(n))
-    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  const nextSlots = null; // Removed mock availability
 
   return (
     <article className="surface-card overflow-hidden transition-shadow hover:shadow-pop">
@@ -57,9 +56,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
         <p className="truncate text-sm text-muted-foreground">{clinic.address}</p>
 
         <p className="rounded-lg bg-primary-soft/60 px-3 py-2 text-xs font-medium text-primary">
-          {nextSlots
-            ? `Next appointment ${relativeDay(nextSlots.date).toLowerCase()} at ${to12h(nextSlots.times[0] ?? "")}`
-            : "No open appointments in the next 14 days"}
+          <p className="font-medium text-sm">Not available today</p>
         </p>
 
         <Button asChild className="w-full" size="sm">

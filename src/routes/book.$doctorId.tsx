@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Calendar, Clock, MapPin, Stethoscope } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Button } from "@/components/ui/button";
-import { doctorById, clinicById } from "@/data/mock";
 import { inr, longDate, to12h } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { useState } from "react";
@@ -10,21 +9,29 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/book/$doctorId")({
   component: BookAppointment,
-  validateSearch: (search: Record<string, unknown>) => ({
-    date: search.date as string | undefined,
-    time: search.time as string | undefined,
-  }),
-  loader: ({ params }) => {
-    const doctor = doctorById(params.doctorId);
-    return { doctor, doctorId: params.doctorId };
+  validateSearch: (search: Record<string, unknown>) => {
+    const params: { date?: string; time?: string; reschedule?: string } = {};
+    if (typeof search["date"] === "string" && search["date"]) {
+      params.date = search["date"];
+    }
+    if (typeof search["time"] === "string" && search["time"]) {
+      params.time = search["time"];
+    }
+    if (typeof search["reschedule"] === "string" && search["reschedule"]) {
+      params.reschedule = search["reschedule"];
+    }
+    return params;
   },
 });
 
 function BookAppointment() {
-  const { doctor, doctorId } = Route.useLoaderData();
+  const { doctorId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { patient, bookAppointment } = useApp();
+  const { doctorById, clinicById, patient, bookAppointment } = useApp();
+
+  const doctor = doctorById(doctorId);
+  const clinic = doctor ? clinicById(doctor.clinicId) : undefined;
 
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +50,7 @@ function BookAppointment() {
     );
   }
 
-  const clinic = clinicById(doctor.clinicId);
+
 
   const handleBook = async () => {
     if (!search.date || !search.time) {

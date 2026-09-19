@@ -2,16 +2,16 @@ import { Link } from "@tanstack/react-router";
 import { Bookmark, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Initials, Rating } from "@/components/common";
-import { clinicById, nextAvailable, specialtyName } from "@/data/mock";
+import { specialtyName } from "@/data/constants";
 import { inr, relativeDay, to12h } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { Doctor } from "@/lib/types";
 
 export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: boolean }) {
-  const { patient, toggleSavedDoctor } = useApp();
+  const { patient, toggleSavedDoctor, clinicById } = useApp();
   const clinic = clinicById(doctor.clinicId);
-  const next = nextAvailable(doctor.id);
+  const next = null; // Removed mock availability
   const saved = patient.savedDoctorIds.includes(doctor.id);
 
   return (
@@ -51,29 +51,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
       ) : null}
 
       <div className="rounded-lg bg-primary-soft/60 px-3 py-2.5">
-        {next ? (
-          <>
-            <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
-              <Clock className="h-3.5 w-3.5" aria-hidden />
-              Available {relativeDay(next.date).toLowerCase()}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {next.times.map((time) => (
-                <Link
-                  key={time}
-                  to="/book/$doctorId"
-                  params={{ doctorId: doctor.id }}
-                  search={{ date: next.date, time }}
-                  className="rounded-md bg-card px-2.5 py-1 text-xs font-medium shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground"
-                >
-                  {to12h(time)}
-                </Link>
-              ))}
-            </div>
-          </>
-        ) : (
           <p className="text-xs text-muted-foreground">No open slots in the next 14 days</p>
-        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">

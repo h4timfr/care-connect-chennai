@@ -25,7 +25,7 @@ export function usePatientAppointments(patientId?: string) {
       if (error) throw error;
 
       // Map to frontend type
-      return data.map((a: Record<string, unknown>) => ({
+      return data.map((a) => ({
         id: a.id,
         doctorId: a.doctor_id,
         clinicId: a.clinic_id,

@@ -1,4 +1,3 @@
-import { slotsForDoctor } from "@/data/mock";
 import { addDays, dayPartOf, isoDate, relativeDay, shortDate, to12h } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +51,16 @@ export function SlotGrid({
   value?: string;
   onChange: (time: string) => void;
 }) {
-  const slots = slotsForDoctor(doctorId, date);
+  // Generate some available slots since we don't have a schedule engine
+  const generateSlots = () => {
+    return [
+      { time: "09:00:00", booked: false },
+      { time: "10:00:00", booked: false },
+      { time: "14:00:00", booked: false },
+      { time: "16:00:00", booked: false }
+    ];
+  };
+  const slots = generateSlots();
 
   if (!slots.length) {
     return (

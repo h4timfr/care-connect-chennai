@@ -50,13 +50,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      const { data: dData } = await supabase.from("doctors").select("id").eq("user_id", userId).maybeSingle();
+      const { data: dData } = await supabase
+        .from("doctors")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
       if (dData) {
         setRole("doctor");
         return;
       }
 
-      const { data: cData } = await supabase.from("clinic_memberships").select("id").eq("user_id", userId).maybeSingle();
+      const { data: cData } = await supabase
+        .from("clinic_memberships")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
       if (cData) {
         setRole("clinic");
         return;

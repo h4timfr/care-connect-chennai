@@ -1,16 +1,15 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Clock, GraduationCap, MapPin, MessageCircle, Star } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Initials, Rating, SectionHeader } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import {
-  doctorById,
-  clinicById,
   scheduleOf,
   slotsForDoctor,
   REVIEWS,
   specialtyName,
-} from "@/data/mock";
+} from "@/data/constants";
+import { useApp } from "@/lib/store";
 import { isoDate, addDays, inr, to12h, relativeDay } from "@/lib/format";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -18,14 +17,14 @@ import { DateStrip, SlotGrid } from "@/components/SlotPicker";
 
 export const Route = createFileRoute("/doctors/$doctorId")({
   component: DoctorProfile,
-  loader: ({ params }) => {
-    const doctor = doctorById(params.doctorId);
-    return { doctor, doctorId: params.doctorId };
-  },
 });
 
 function DoctorProfile() {
-  const { doctor, doctorId } = Route.useLoaderData();
+  const { doctorId } = Route.useParams();
+  const app = useApp();
+
+  const doctor = app.doctorById(doctorId);
+  const clinic = doctor ? app.clinicById(doctor.clinicId) : undefined;
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -46,7 +45,7 @@ function DoctorProfile() {
     );
   }
 
-  const clinic = clinicById(doctor.clinicId);
+
   const schedule = scheduleOf(doctor.id);
   const reviews = REVIEWS.filter((r) => r.doctorId === doctor.id);
 
@@ -109,7 +108,7 @@ function DoctorProfile() {
 
               <div className="mt-6">
                 <h3 className="font-medium text-sm mb-2 text-foreground">Qualifications</h3>
-                <p className="text-sm text-muted-foreground">{doctor.qualifications.join(", ")}</p>
+                <p className="text-sm text-muted-foreground">{((doctor.qualifications as any[]) || []).join(", ")}</p>
               </div>
 
               <div className="mt-4">
@@ -117,7 +116,7 @@ function DoctorProfile() {
                   Services & Specializations
                 </h3>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                  {doctor.services.map((s) => (
+                  {((doctor.services as any[]) || []).map((s) => (
                     <li key={s}>{s}</li>
                   ))}
                 </ul>

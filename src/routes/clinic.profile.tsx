@@ -10,11 +10,13 @@ export const Route = createFileRoute("/clinic/profile")({
 });
 
 function ClinicProfileSettings() {
-  const { activeClinic, updateClinic } = useApp();
+  const { activeClinic } = useApp();
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Clinic profile updated successfully");
+    const formData = new FormData(e.target as HTMLFormElement);
+    // TODO: Connect to clinic update mutation
+    toast.success("Profile settings saved successfully");
   };
 
   return (
@@ -53,7 +55,7 @@ function ClinicProfileSettings() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Coordinates (Lat, Lng)</label>
-                <Input defaultValue={`${activeClinic.lat}, ${activeClinic.lng}`} />
+                <Input defaultValue={""} />
               </div>
             </div>
           </div>

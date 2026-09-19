@@ -5,7 +5,6 @@ import { CalendarDays, Users, Stethoscope, Banknote } from "lucide-react";
 import { StatusBadge } from "@/components/common";
 import { isoDate, shortDate, to12h } from "@/lib/format";
 import { useMemo } from "react";
-import { doctorById } from "@/data/mock";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/clinic/")({
@@ -13,7 +12,7 @@ export const Route = createFileRoute("/clinic/")({
 });
 
 function ClinicDashboard() {
-  const { appointments, activeClinic, doctors } = useApp();
+  const { appointments, activeClinic, doctors, doctorById } = useApp();
   const today = isoDate(new Date());
 
   const clinicAppointments = appointments.filter((a) => a.clinicId === activeClinic.id);

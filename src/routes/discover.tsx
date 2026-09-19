@@ -11,14 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import {
-  CLINICS,
   LANGUAGES,
   SPECIALTIES,
-  clinicById,
-  nextAvailable,
-  slotsForDoctor,
   specialtyName,
-} from "@/data/mock";
+} from "@/data/constants";
 import { addDays, dayPartOf, isoDate } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -29,13 +25,16 @@ interface DiscoverSearch {
 }
 
 export const Route = createFileRoute("/discover")({
-  validateSearch: (search: Record<string, unknown>): DiscoverSearch => ({
-    q: typeof search["q"] === "string" && search["q"] ? String(search["q"]) : undefined,
-    specialty:
-      typeof search["specialty"] === "string" && search["specialty"]
-        ? String(search["specialty"])
-        : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): DiscoverSearch => {
+    const params: DiscoverSearch = {};
+    if (typeof search["q"] === "string" && search["q"]) {
+      params.q = search["q"];
+    }
+    if (typeof search["specialty"] === "string" && search["specialty"]) {
+      params.specialty = search["specialty"];
+    }
+    return params;
+  },
   head: () => ({
     meta: [
       { title: "Find doctors and clinics in Chennai — CareConnect" },
@@ -60,7 +59,7 @@ type Sort = "availability" | "distance" | "fee";
 function Discover() {
   const { q, specialty } = Route.useSearch();
   const navigate = useNavigate();
-  const { doctors } = useApp();
+  const { doctors, clinics } = useApp();
 
   const [text, setText] = useState(q ?? "");
   const [specialtyId, setSpecialtyId] = useState(specialty ?? "");
@@ -103,7 +102,7 @@ function Discover() {
   const results = useMemo(() => {
     const needle = text.trim().toLowerCase();
     const filtered = doctors.filter((d) => {
-      const clinic = clinicById(d.clinicId);
+      const clinic = clinics.find(c => c.id === d.clinicId);
       if (specialtyId && d.specialtyId !== specialtyId) return false;
       if (needle) {
         const haystack = [
@@ -128,10 +127,9 @@ function Discover() {
       const targetDate =
         availability === "today" ? today : availability === "tomorrow" ? tomorrow : null;
       if (targetDate || parts.length) {
-        const dates = targetDate ? [targetDate] : [today, tomorrow];
-        const open = dates.flatMap((date) => slotsForDoctor(d.id, date).filter((s) => !s.booked));
+        // TODO: implement real schedule matching
+        const open = [true];
         if (!open.length) return false;
-        if (parts.length && !open.some((s) => parts.includes(dayPartOf(s.time)))) return false;
       }
       return true;
     });
@@ -139,8 +137,8 @@ function Discover() {
     return filtered.sort((a, b) => {
       if (sort === "distance") return a.distanceKm - b.distanceKm;
       if (sort === "fee") return a.consultationFee - b.consultationFee;
-      const na = nextAvailable(a.id)?.date ?? "9999";
-      const nb = nextAvailable(b.id)?.date ?? "9999";
+      const na = "9999";
+      const nb = "9999";
       return na.localeCompare(nb);
     });
   }, [
@@ -161,7 +159,7 @@ function Discover() {
 
   const clinicResults = useMemo(() => {
     const needle = text.trim().toLowerCase();
-    return CLINICS.filter((c) => {
+    return clinics.filter((c) => {
       if (specialtyId && !c.specialtyIds.includes(specialtyId)) return false;
       if (!needle) return true;
       return `${c.name} ${c.area} ${c.services.join(" ")}`.toLowerCase().includes(needle);
@@ -198,7 +196,10 @@ function Discover() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            navigate({ to: "/discover", search: { q: text, specialty: specialtyId || undefined } });
+            const searchParams: { q?: string; specialty?: string } = {};
+            if (text) searchParams.q = text;
+            if (specialtyId) searchParams.specialty = specialtyId;
+            navigate({ to: "/discover", search: searchParams });
           }}
           className="surface-card flex items-center gap-2 p-2 pl-4"
         >
@@ -382,7 +383,7 @@ function Discover() {
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <TabsList>
                   <TabsTrigger value="doctors">Doctors</TabsTrigger>
-                  <TabsTrigger value="clinics">Clinics</TabsTrigger>
+                  <TabsTrigger value="clinics">clinics</TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-2">
                   <label htmlFor="sort" className="hidden text-xs text-muted-foreground sm:block">

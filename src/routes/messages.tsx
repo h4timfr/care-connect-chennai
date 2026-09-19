@@ -3,7 +3,6 @@ import { MessageSquare, ArrowLeft, Send, User } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { EmptyState, Initials } from "@/components/common";
 import { useApp } from "@/lib/store";
-import { clinicById, doctorById } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { to12h } from "@/lib/format";
@@ -11,13 +10,17 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/messages")({
   component: MessagesView,
-  validateSearch: (search: Record<string, unknown>) => ({
-    c: search.c as string | undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>) => {
+    const params: { c?: string } = {};
+    if (typeof search["c"] === "string" && search["c"]) {
+      params.c = search["c"];
+    }
+    return params;
+  },
 });
 
 function MessagesView() {
-  const { conversations, patient, markRead, sendMessage } = useApp();
+  const { conversations, patient, markRead, sendMessage, clinicById, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate();
 
@@ -206,7 +209,7 @@ function MessagesView() {
                         {m.body}
                       </div>
                       <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-                        {to12h(m.sentAt.split("T")[1].substring(0, 5))}
+                        {to12h(m.sentAt.split("T")[1]?.substring(0, 5) ?? "00:00")}
                       </span>
                     </div>
                   );

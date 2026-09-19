@@ -4,7 +4,7 @@ import { PatientShell } from "@/components/layout/PatientShell";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, Initials } from "@/components/common";
 import { useApp } from "@/lib/store";
-import { doctorById, clinicById, specialtyName } from "@/data/mock";
+import { doctorById, clinicById, specialtyName } from "@/data/constants";
 import { longDate, to12h, inr } from "@/lib/format";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({

@@ -4,7 +4,6 @@ import { useApp } from "@/lib/store";
 import { useState } from "react";
 import { StatusBadge } from "@/components/common";
 import { shortDate, to12h } from "@/lib/format";
-import { doctorById } from "@/data/mock";
 import { Button } from "@/components/ui/button";
 import type { AppointmentStatus } from "@/lib/types";
 
@@ -13,7 +12,7 @@ export const Route = createFileRoute("/clinic/appointments")({
 });
 
 function ClinicAppointments() {
-  const { appointments, activeClinic, setAppointmentStatus } = useApp();
+  const { appointments, activeClinic, setAppointmentStatus, doctorById } = useApp();
   const [filter, setFilter] = useState<"all" | "upcoming" | "pending">("all");
 
   const clinicAppointments = appointments

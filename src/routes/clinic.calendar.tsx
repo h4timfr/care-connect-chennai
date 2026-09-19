@@ -102,8 +102,8 @@ function ClinicCalendar() {
           <div className="divide-y relative min-h-[500px]">
             {hours.map((h) => {
               const hourAppointments = filteredAppointments.filter((a) => {
-                const [aHour] = a.time.split(":");
-                return parseInt(aHour) === h;
+                const [aHour] = (a.time || "").split(":");
+                return parseInt(aHour || "0") === h;
               });
 
               return (

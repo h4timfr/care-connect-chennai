@@ -3,23 +3,23 @@ import { ArrowLeft, Clock, MapPin, Phone, Mail } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Rating, SectionHeader } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import { clinicById, doctorsOfClinic } from "@/data/mock";
+import { useApp } from "@/lib/store";
 import { inr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DoctorCard } from "@/components/DoctorCard";
 
 export const Route = createFileRoute("/clinics/$clinicId")({
   component: ClinicProfile,
-  loader: ({ params }) => {
-    const clinic = clinicById(params.clinicId);
-    return { clinic };
-  },
 });
 
 function ClinicProfile() {
-  const { clinic } = Route.useLoaderData();
-  const router = useRouter();
+  const { clinicId } = Route.useParams();
+  const app = useApp();
 
+  const clinic = app.clinicById(clinicId);
+  const clinicDoctors = app.doctorsOfClinic(clinicId);
+
+  const router = useRouter();
   if (!clinic) {
     return (
       <PatientShell>
@@ -33,8 +33,6 @@ function ClinicProfile() {
       </PatientShell>
     );
   }
-
-  const doctors = doctorsOfClinic(clinic.id);
 
   return (
     <PatientShell>
@@ -82,7 +80,7 @@ function ClinicProfile() {
             <section>
               <SectionHeader title="Doctors" />
               <div className="grid gap-4 sm:grid-cols-2">
-                {doctors.map((d) => (
+                {clinicDoctors.map((d) => (
                   <DoctorCard key={d.id} doctor={d} compact />
                 ))}
               </div>
@@ -91,7 +89,7 @@ function ClinicProfile() {
             <section>
               <SectionHeader title="Services" />
               <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                {clinic.services.map((s) => (
+                {(clinic.services || []).map((s) => (
                   <li key={s}>{s}</li>
                 ))}
               </ul>
@@ -100,7 +98,7 @@ function ClinicProfile() {
             <section>
               <SectionHeader title="Facilities" />
               <div className="flex flex-wrap gap-2">
-                {clinic.facilities.map((f) => (
+                {(clinic.facilities || []).map((f) => (
                   <span key={f} className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium">
                     {f}
                   </span>
@@ -131,7 +129,7 @@ function ClinicProfile() {
             <section className="surface-card p-5 space-y-4">
               <h2 className="font-display font-semibold text-lg">Hours</h2>
               <div className="space-y-2 text-sm">
-                {clinic.openingHours.map((h) => (
+                {(clinic.openingHours || []).map((h) => (
                   <div
                     key={h.day}
                     className="flex justify-between border-b last:border-0 pb-2 last:pb-0"

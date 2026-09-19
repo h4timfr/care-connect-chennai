@@ -6,10 +6,9 @@ import { DoctorCard } from "@/components/DoctorCard";
 import { ClinicCard } from "@/components/ClinicCard";
 import { DemoBanner, SectionHeader, SpecialtyIcon } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import { CLINICS, SPECIALTIES } from "@/data/mock";
+import { SPECIALTIES } from "@/data/constants";
 import { useApp } from "@/lib/store";
 import { longDate, to12h } from "@/lib/format";
-import { doctorById } from "@/data/mock";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,7 +37,7 @@ function greeting() {
 }
 
 function Home() {
-  const { patient, appointments, doctors } = useApp();
+  const { patient, appointments, doctors, clinics } = useApp();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
 
@@ -50,7 +49,7 @@ function Home() {
         a.date >= new Date().toISOString().slice(0, 10),
     )
     .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))[0];
-  const upcomingDoctor = upcoming ? doctorById(upcoming.doctorId) : undefined;
+  const upcomingDoctor = upcoming ? doctors.find(d => d.id === upcoming.doctorId) : undefined;
 
   const nearYou = doctors
     .slice()
@@ -172,7 +171,7 @@ function Home() {
             subtitle="Independent clinics across Chennai"
           />
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {CLINICS.slice(0, 3).map((c) => (
+            {clinics.slice(0, 3).map((c) => (
               <ClinicCard key={c.id} clinic={c} />
             ))}
           </div>

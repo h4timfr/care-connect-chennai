@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { User, Mail, Phone, MapPin, Globe, Shield, LogOut } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Initials } from "@/components/common";
