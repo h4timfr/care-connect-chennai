@@ -16,9 +16,7 @@ function ClinicProfileSettings() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    // TODO: Connect to clinic update mutation
-    toast.success("Profile settings saved successfully");
+    toast.error("Updating clinic profiles is not supported yet.");
   };
 
   return (

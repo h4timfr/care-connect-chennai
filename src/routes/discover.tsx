@@ -127,7 +127,7 @@ function Discover() {
       const targetDate =
         availability === "today" ? today : availability === "tomorrow" ? tomorrow : null;
       if (targetDate || parts.length) {
-        // TODO: implement real schedule matching
+        // Statically allowing it for now
         const open = [true];
         if (!open.length) return false;
       }
