@@ -3,15 +3,14 @@
 -- Derives identity securely from auth.uid().
 
 CREATE OR REPLACE FUNCTION public.toggle_saved_doctor(p_doctor_id UUID)
-RETURNS text[]
+RETURNS UUID[]
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
     v_user_id UUID;
-    v_current_ids UUID[];
-    v_new_ids TEXT[];
+    v_new_ids UUID[];
 BEGIN
     v_user_id := (SELECT auth.uid());
     IF v_user_id IS NULL THEN
@@ -23,8 +22,8 @@ BEGIN
     UPDATE public.patients
     SET saved_doctor_ids = 
         CASE 
-            WHEN p_doctor_id::TEXT = ANY(saved_doctor_ids) THEN array_remove(saved_doctor_ids, p_doctor_id::TEXT)
-            ELSE array_append(COALESCE(saved_doctor_ids, ARRAY[]::TEXT[]), p_doctor_id::TEXT)
+            WHEN p_doctor_id = ANY(saved_doctor_ids) THEN array_remove(saved_doctor_ids, p_doctor_id)
+            ELSE array_append(COALESCE(saved_doctor_ids, ARRAY[]::UUID[]), p_doctor_id)
         END
     WHERE user_id = v_user_id
     RETURNING saved_doctor_ids INTO v_new_ids;
@@ -34,15 +33,14 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.toggle_saved_clinic(p_clinic_id UUID)
-RETURNS text[]
+RETURNS UUID[]
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
     v_user_id UUID;
-    v_current_ids UUID[];
-    v_new_ids TEXT[];
+    v_new_ids UUID[];
 BEGIN
     v_user_id := (SELECT auth.uid());
     IF v_user_id IS NULL THEN
@@ -52,8 +50,8 @@ BEGIN
     UPDATE public.patients
     SET saved_clinic_ids = 
         CASE 
-            WHEN p_clinic_id::TEXT = ANY(saved_clinic_ids) THEN array_remove(saved_clinic_ids, p_clinic_id::TEXT)
-            ELSE array_append(COALESCE(saved_clinic_ids, ARRAY[]::TEXT[]), p_clinic_id::TEXT)
+            WHEN p_clinic_id = ANY(saved_clinic_ids) THEN array_remove(saved_clinic_ids, p_clinic_id)
+            ELSE array_append(COALESCE(saved_clinic_ids, ARRAY[]::UUID[]), p_clinic_id)
         END
     WHERE user_id = v_user_id
     RETURNING saved_clinic_ids INTO v_new_ids;

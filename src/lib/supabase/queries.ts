@@ -185,7 +185,7 @@ export function useToggleSavedDoctor() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (doctorId: string) => {
-      const { data, error } = await (supabase.rpc as any)("toggle_saved_doctor", { p_doctor_id: doctorId });
+      const { data, error } = await supabase.rpc("toggle_saved_doctor", { p_doctor_id: doctorId });
       if (error) throw error;
       return data;
     },
@@ -200,7 +200,7 @@ export function useToggleSavedClinic() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (clinicId: string) => {
-      const { data, error } = await (supabase.rpc as any)("toggle_saved_clinic", { p_clinic_id: clinicId });
+      const { data, error } = await supabase.rpc("toggle_saved_clinic", { p_clinic_id: clinicId });
       if (error) throw error;
       return data;
     },
