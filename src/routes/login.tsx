@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,35 +11,37 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Signed in successfully!");
-      navigate({ to: "/" });
-    }
-    setLoading(false);
-  };
 
-  const handleSignUp = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) {
-      toast.error(error.message);
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Account created! You can now log in.");
+        setIsSignUp(false); // Switch back to login mode so they can log in
+      }
     } else {
-      toast.success("Account created! You can now log in.");
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Signed in successfully!");
+        navigate({ to: "/" });
+      }
     }
+    
     setLoading(false);
   };
 
@@ -51,10 +53,12 @@ function LoginPage() {
             <Shield className="h-6 w-6 text-primary" />
           </div>
           <h1 className="text-2xl font-bold font-display">CareConnect</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isSignUp ? "Create a new account" : "Sign in to your account"}
+          </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-1 block">Email</label>
             <Input
@@ -72,15 +76,21 @@ function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="••••••••"
+              minLength={6}
+              placeholder="********"
             />
           </div>
           <div className="pt-2 flex flex-col gap-2">
             <Button type="submit" disabled={loading}>
-              Sign In
+              {isSignUp ? "Create Account" : "Sign In"}
             </Button>
-            <Button type="button" variant="outline" onClick={handleSignUp} disabled={loading}>
-              Create Account
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsSignUp(!isSignUp)}
+              disabled={loading}
+            >
+              {isSignUp ? "Back to Sign In" : "Create Account"}
             </Button>
           </div>
         </form>
