@@ -21,6 +21,37 @@ export function addDays(base: Date, days: number) {
   return d;
 }
 
+export const LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Malayalam"];
+
+export const SPECIALTIES = [
+  { id: "pediatrics", name: "Pediatrics", icon: "baby" },
+  { id: "orthopedics", name: "Orthopedics", icon: "bone" },
+  { id: "cardiology", name: "Cardiology", icon: "heart" },
+  { id: "dermatology", name: "Dermatology", icon: "scan-face" },
+  { id: "neurology", name: "Neurology", icon: "brain" },
+  { id: "ophthalmology", name: "Ophthalmology", icon: "eye" },
+  { id: "dentistry", name: "Dentistry", icon: "smile" },
+  { id: "gynaecology", name: "Gynaecology", icon: "user-round" },
+  { id: "general_medicine", name: "General", icon: "stethoscope" },
+];
+
+export const specialties: Record<string, string> = {
+  pediatrics: "Pediatrics",
+  orthopedics: "Orthopedics",
+  cardiology: "Cardiology",
+  dermatology: "Dermatology",
+  neurology: "Neurology",
+  ophthalmology: "Ophthalmology",
+  dentistry: "Dentistry",
+  gynaecology: "Gynaecology",
+  general_medicine: "General Medicine",
+};
+
+export function specialtyName(id: string) {
+  if (!id) return "";
+  return specialties[id] || id.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
 export function longDate(iso: string) {
   const d = new Date(`${iso}T00:00:00`);
   return d.toLocaleDateString("en-IN", {

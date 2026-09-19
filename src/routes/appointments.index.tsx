@@ -16,8 +16,8 @@ function AppointmentsList() {
   const { appointments, patient } = useApp();
 
   const myAppointments = useMemo(
-    () => appointments.filter((a) => a.patientId === patient.id),
-    [appointments, patient.id],
+    () => appointments.filter((a) => a.patientId === patient?.id),
+    [appointments, patient?.id],
   );
 
   const upcoming = useMemo(() => {

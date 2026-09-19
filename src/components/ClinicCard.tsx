@@ -3,7 +3,7 @@ import { Clock, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Rating } from "@/components/common";
 import { useApp } from "@/lib/store";
-import { specialtyName } from "@/data/constants";
+import { specialtyName } from "@/lib/format";
 import { inr, relativeDay, to12h } from "@/lib/format";
 import type { Clinic } from "@/lib/types";
 

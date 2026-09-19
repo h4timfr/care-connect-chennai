@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Bookmark, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Initials, Rating } from "@/components/common";
-import { specialtyName } from "@/data/constants";
+import { specialtyName } from "@/lib/format";
 import { inr, relativeDay, to12h } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
   const { patient, toggleSavedDoctor, clinicById } = useApp();
   const clinic = clinicById(doctor.clinicId);
   const next = null; // Removed mock availability
-  const saved = patient.savedDoctorIds.includes(doctor.id);
+  const saved = patient?.savedDoctorIds?.includes(doctor.id) ?? false;
 
   return (
     <article className="surface-card flex flex-col gap-4 p-4 transition-shadow hover:shadow-pop sm:p-5">

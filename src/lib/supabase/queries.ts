@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Clinic, Doctor, DoctorSchedule } from "@/lib/types";
 
@@ -100,6 +100,154 @@ export function useSchedules() {
         }
       }
       return Array.from(scheduleMap.values());
+    },
+  });
+}
+
+export function usePatient(userId?: string) {
+  return useQuery({
+    queryKey: ["patient", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data: pData, error: pError } = await supabase
+        .from("patients")
+        .select("*, user:users(*)")
+        .eq("user_id", userId)
+        .single();
+        
+      if (pError || !pData) {
+        if (pError?.code === 'PGRST116') return null; // Not found
+        throw pError;
+      }
+      
+      const user = Array.isArray(pData.user) ? pData.user[0] : pData.user;
+      if (!user) return null;
+
+      return {
+        id: pData.id,
+        userId: pData.user_id,
+        name: pData.full_name,
+        email: user.email,
+        phone: user.phone ?? "",
+        dateOfBirth: pData.date_of_birth ?? "",
+        gender: pData.gender ?? "other",
+        preferredLanguage: pData.preferred_language ?? "",
+        area: pData.area ?? "",
+        savedDoctorIds: pData.saved_doctor_ids ?? [],
+        savedClinicIds: pData.saved_clinic_ids ?? [],
+      } as import("@/lib/types").Patient;
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useAuthorizedClinics(userId?: string) {
+  return useQuery({
+    queryKey: ["authorized_clinics", userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data, error } = await supabase
+        .from("clinic_memberships")
+        .select("clinic_id, clinics!inner(*)")
+        .eq("user_id", userId)
+        .eq("active", true);
+
+      if (error) throw error;
+      if (!data) return [];
+
+      return data.map((row: any) => {
+        const c = Array.isArray(row.clinics) ? row.clinics[0] : row.clinics;
+        return {
+          id: c.id,
+          name: c.name,
+          address: c.address,
+          area: c.area,
+          phone: c.phone,
+          email: c.email,
+          about: c.about,
+          specialtyIds: c.specialty_ids || [],
+          services: c.services || [],
+          facilities: c.facilities || [],
+          languages: c.languages || [],
+          feeRange: c.fee_range || [0, 0],
+          rating: Number(c.rating) || 0,
+          reviewCount: c.review_count || 0,
+          distanceKm: c.distanceKm || 0,
+          photoTone: c.photo_tone || "bg-primary-soft",
+        } as Clinic;
+      });
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useToggleSavedDoctor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, doctorId, isSaved }: { userId: string, doctorId: string, isSaved: boolean }) => {
+      // Fetch current array
+      const { data: pData, error: pError } = await supabase
+        .from("patients")
+        .select("saved_doctor_ids")
+        .eq("user_id", userId)
+        .single();
+      if (pError) throw pError;
+      
+      let current = pData.saved_doctor_ids || [];
+      if (isSaved) {
+        current = current.filter((id: string) => id !== doctorId);
+      } else {
+        if (!current.includes(doctorId)) current.push(doctorId);
+      }
+
+      const { error } = await supabase
+        .from("patients")
+        .update({ saved_doctor_ids: current })
+        .eq("user_id", userId);
+      
+      if (error) throw error;
+      return current;
+    },
+    onSuccess: (newArray, variables) => {
+      queryClient.setQueryData(["patient", variables.userId], (old: any) => {
+        if (!old) return old;
+        return { ...old, savedDoctorIds: newArray };
+      });
+    },
+  });
+}
+
+export function useToggleSavedClinic() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, clinicId, isSaved }: { userId: string, clinicId: string, isSaved: boolean }) => {
+      const { data: pData, error: pError } = await supabase
+        .from("patients")
+        .select("saved_clinic_ids")
+        .eq("user_id", userId)
+        .single();
+      if (pError) throw pError;
+      
+      let current = pData.saved_clinic_ids || [];
+      if (isSaved) {
+        current = current.filter((id: string) => id !== clinicId);
+      } else {
+        if (!current.includes(clinicId)) current.push(clinicId);
+      }
+
+      const { error } = await supabase
+        .from("patients")
+        .update({ saved_clinic_ids: current })
+        .eq("user_id", userId);
+      
+      if (error) throw error;
+      return current;
+    },
+    onSuccess: (newArray, variables) => {
+      queryClient.setQueryData(["patient", variables.userId], (old: any) => {
+        if (!old) return old;
+        return { ...old, savedClinicIds: newArray };
+      });
     },
   });
 }

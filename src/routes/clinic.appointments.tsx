@@ -13,6 +13,8 @@ export const Route = createFileRoute("/clinic/appointments")({
 
 function ClinicAppointments() {
   const { appointments, activeClinic, setAppointmentStatus, doctorById } = useApp();
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const [filter, setFilter] = useState<"all" | "upcoming" | "pending">("all");
 
   const clinicAppointments = appointments

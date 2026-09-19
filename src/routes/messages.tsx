@@ -21,6 +21,18 @@ export const Route = createFileRoute("/messages")({
 
 function MessagesView() {
   const { conversations, patient, markRead, sendMessage, clinicById, doctorById } = useApp();
+
+  if (!patient) {
+    return (
+      <PatientShell>
+        <div className="flex h-[80vh] flex-col items-center justify-center space-y-4">
+          <MessageSquare className="h-12 w-12 text-muted-foreground" />
+          <h2 className="text-xl font-bold">Sign In Required</h2>
+          <p className="text-muted-foreground">Please sign in to view your messages.</p>
+        </div>
+      </PatientShell>
+    );
+  }
   const search = Route.useSearch();
   const navigate = useNavigate();
 

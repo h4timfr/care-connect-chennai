@@ -3,12 +3,7 @@ import { ArrowLeft, Clock, GraduationCap, MapPin, MessageCircle, Star } from "lu
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Initials, Rating, SectionHeader } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import {
-  scheduleOf,
-  slotsForDoctor,
-  REVIEWS,
-  specialtyName,
-} from "@/data/constants";
+import { specialtyName } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { isoDate, addDays, inr, to12h, relativeDay } from "@/lib/format";
 import { useState } from "react";
@@ -46,8 +41,8 @@ function DoctorProfile() {
   }
 
 
-  const schedule = scheduleOf(doctor.id);
-  const reviews = REVIEWS.filter((r) => r.doctorId === doctor.id);
+  const schedule = app.scheduleOf(doctor.id);
+  const reviews: any[] = [];
 
   return (
     <PatientShell>

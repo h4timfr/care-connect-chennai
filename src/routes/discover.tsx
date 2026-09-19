@@ -14,7 +14,7 @@ import {
   LANGUAGES,
   SPECIALTIES,
   specialtyName,
-} from "@/data/constants";
+} from "@/lib/format";
 import { addDays, dayPartOf, isoDate } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";

@@ -12,6 +12,8 @@ export const Route = createFileRoute("/clinic/profile")({
 function ClinicProfileSettings() {
   const { activeClinic } = useApp();
 
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);

@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Initials, StatusBadge } from "@/components/common";
-import { specialtyName } from "@/data/constants";
+import { specialtyName } from "@/lib/format";
 import { inr, longDate, to12h } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import type { Appointment } from "@/lib/types";

@@ -40,6 +40,21 @@ export function ClinicShell({
   children: ReactNode;
 }) {
   const { activeClinic, conversations } = useApp();
+
+  if (!activeClinic) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-6 text-center">
+        <Stethoscope className="mb-4 h-12 w-12 text-muted-foreground" />
+        <h1 className="mb-2 font-display text-2xl font-bold">No Authorized Clinic</h1>
+        <p className="mb-6 max-w-md text-muted-foreground">
+          You don't have access to any clinic. If you believe this is an error, please contact your administrator.
+        </p>
+        <Button asChild>
+          <Link to="/">Return to App</Link>
+        </Button>
+      </div>
+    );
+  }
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = conversations
     .filter((c) => c.clinicId === activeClinic.id)

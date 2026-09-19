@@ -15,6 +15,8 @@ export const Route = createFileRoute("/clinic/calendar")({
 
 function ClinicCalendar() {
   const { appointments, activeClinic, doctors } = useApp();
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all");
 

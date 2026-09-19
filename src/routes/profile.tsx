@@ -12,6 +12,23 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { patient } = useApp();
+
+  if (!patient) {
+    return (
+      <PatientShell>
+        <div className="mx-auto max-w-2xl space-y-6 flex flex-col items-center justify-center min-h-[50vh] text-center">
+          <User className="h-12 w-12 text-muted-foreground mb-4" />
+          <h1 className="text-2xl font-bold">Profile Setup Required</h1>
+          <p className="text-muted-foreground mb-6">You need to set up your profile first.</p>
+          <Button onClick={async () => {
+             const { supabase } = await import('@/lib/supabase/client');
+             await supabase.auth.signOut();
+             window.location.href = '/login';
+          }}>Sign Out</Button>
+        </div>
+      </PatientShell>
+    );
+  }
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
 
@@ -36,9 +53,6 @@ function ProfilePage() {
             <h2 className="font-display text-2xl font-bold">{patient.name}</h2>
             <p className="text-muted-foreground">{patient.email}</p>
             <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
-              <Button variant="outline" size="sm">
-                Edit Profile
-              </Button>
             </div>
           </div>
         </div>

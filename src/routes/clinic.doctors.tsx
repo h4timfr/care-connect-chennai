@@ -4,7 +4,7 @@ import { useApp } from "@/lib/store";
 import { UserPlus, MoreHorizontal } from "lucide-react";
 import { Initials } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import { specialtyName } from "@/data/constants";
+import { specialtyName } from "@/lib/format";
 
 export const Route = createFileRoute("/clinic/doctors")({
   component: ClinicDoctors,
@@ -12,6 +12,8 @@ export const Route = createFileRoute("/clinic/doctors")({
 
 function ClinicDoctors() {
   const { doctors, activeClinic } = useApp();
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
 
   const clinicDoctors = doctors.filter((d) => d.clinicId === activeClinic.id);
 

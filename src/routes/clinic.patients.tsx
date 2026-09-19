@@ -14,6 +14,8 @@ export const Route = createFileRoute("/clinic/patients")({
 
 function ClinicPatients() {
   const { appointments, activeClinic } = useApp();
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const [search, setSearch] = useState("");
 
   const clinicAppointments = appointments.filter((a) => a.clinicId === activeClinic.id);

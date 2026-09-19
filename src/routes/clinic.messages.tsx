@@ -21,6 +21,8 @@ export const Route = createFileRoute("/clinic/messages")({
 
 function ClinicMessages() {
   const { conversations, activeClinic, markRead, sendMessage, doctorById } = useApp();
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const search = Route.useSearch();
   const navigate = useNavigate();
 

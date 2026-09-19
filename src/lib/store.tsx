@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { CURRENT_PATIENT, CURRENT_CLINIC_ID } from "@/data/constants";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type {
   Appointment,
   AppointmentStatus,
@@ -10,6 +10,28 @@ import type {
   Patient,
   UserRole,
 } from "@/lib/types";
+import { useAuth } from "@/lib/supabase/auth";
+import {
+  usePatientAppointments,
+  useBookAppointment,
+  useCancelAppointment,
+  useUpdateAppointmentStatus,
+} from "@/lib/supabase/appointments";
+import { 
+  useClinics, 
+  useAuthorizedClinics, 
+  useDoctors, 
+  useSchedules, 
+  usePatient,
+  useToggleSavedDoctor,
+  useToggleSavedClinic
+} from "@/lib/supabase/queries";
+import {
+  useConversations,
+  useSendMessage,
+  useMarkRead,
+  useEnsureConversation,
+} from "@/lib/supabase/messaging";
 
 interface BookingInput {
   doctorId: string;
@@ -23,13 +45,13 @@ interface BookingInput {
 }
 
 interface AppState {
-  // Auth state now exclusively managed by Supabase AuthProvider
-  patient: Patient;
-  updatePatient: (patch: Partial<Patient>) => void;
+  patient?: Patient;
+  isLoadingPatient: boolean;
+  
 
   doctors: Doctor[];
   clinics: Clinic[];
-  activeClinic: Clinic;
+  activeClinic?: Clinic;
   doctorById: (id: string) => Doctor | undefined;
   clinicById: (id: string) => Clinic | undefined;
   doctorsOfClinic: (clinicId: string) => Doctor[];
@@ -39,7 +61,6 @@ interface AppState {
   appointments: Appointment[];
   bookAppointment: (input: BookingInput) => Promise<Appointment>;
   cancelAppointment: (id: string) => void;
-  rescheduleAppointment: (id: string, date: string, time: string) => void;
   setAppointmentStatus: (id: string, status: AppointmentStatus) => void;
 
   conversations: Conversation[];
@@ -58,54 +79,43 @@ interface AppState {
 const Ctx = createContext<AppState | null>(null);
 
 let counter = 100;
-const nextId = (prefix: string) => `${prefix}${++counter}`;
-
-import { useAuth } from "@/lib/supabase/auth";
-import {
-  usePatientAppointments,
-  useBookAppointment,
-  useCancelAppointment,
-} from "@/lib/supabase/appointments";
-import { useClinics, useDoctors, useSchedules } from "@/lib/supabase/queries";
-
-import {
-  useConversations,
-  useSendMessage,
-  useMarkRead,
-  useEnsureConversation,
-} from "@/lib/supabase/messaging";
+export const newDoctorId = () => "d" + (++counter);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
+  const queryClient = useQueryClient();
 
-  // Real Supabase queries
+  const patientQuery = usePatient(auth.user?.id);
   const patientAppointments = usePatientAppointments(auth.user?.id);
   const clinicsQuery = useClinics();
+  const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id);
   const doctorsQuery = useDoctors();
   const schedulesQuery = useSchedules();
   const conversationsQuery = useConversations(auth.user?.id);
 
   const bookMut = useBookAppointment();
   const cancelMut = useCancelAppointment();
+  const updateStatusMut = useUpdateAppointmentStatus();
   const sendMsgMut = useSendMessage();
   const markReadMut = useMarkRead();
   const ensureConvMut = useEnsureConversation();
+  const toggleDoctorMut = useToggleSavedDoctor();
+  const toggleClinicMut = useToggleSavedClinic();
 
-  const hasSupabase = !!import.meta.env.VITE_SUPABASE_URL;
-
-  const [patient, setPatient] = useState<Patient>(CURRENT_PATIENT);
+  const patient = patientQuery.data || undefined;
   const clinics = clinicsQuery.data || [];
   const doctors = doctorsQuery.data || [];
   const schedules = schedulesQuery.data || [];
   const appointments = patientAppointments.data || [];
   const conversations = conversationsQuery.data || [];
 
-  const activeClinic = clinics.find((c) => c.id === CURRENT_CLINIC_ID) ?? clinics[0]!;
+  const authorizedClinics = authorizedClinicsQuery.data || [];
+  const activeClinic = authorizedClinics.length > 0 ? authorizedClinics[0] : undefined;
 
   const bookAppointment = useCallback(
     async (input: BookingInput) => {
       if (!auth.user) throw new Error("Must be logged in to book");
-      await bookMut.mutateAsync({
+      const result = await bookMut.mutateAsync({
         doctorId: input.doctorId,
         clinicId: input.clinicId,
         patientId: auth.user.id,
@@ -117,25 +127,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fee: input.fee,
         status: "pending",
       });
-      return { id: "optimistic", status: "pending" } as Appointment;
+      return result;
     },
-    [auth.user, bookMut],
+    [auth.user, bookMut]
   );
 
   const cancelAppointment = useCallback(
-    (id: string) => {
-      cancelMut.mutate(id);
-    },
-    [cancelMut],
+    (id: string) => { cancelMut.mutate(id); },
+    [cancelMut]
   );
 
-  const rescheduleAppointment = useCallback((id: string, date: string, time: string) => {
-    // TODO: implement reschedule mutation
-  }, []);
-
-  const setAppointmentStatus = useCallback((id: string, status: AppointmentStatus) => {
-    // TODO: implement status mutation
-  }, []);
+  const setAppointmentStatus = useCallback(
+    (id: string, status: AppointmentStatus) => {
+      if (!activeClinic) return;
+      updateStatusMut.mutate({ id, status, clinicId: activeClinic.id });
+    },
+    [activeClinic, updateStatusMut]
+  );
 
   const sendMessage = useCallback(
     (conversationId: string, sender: "patient" | "clinic", body: string) => {
@@ -147,33 +155,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isPatient: sender === "patient",
       });
     },
-    [auth.user, sendMsgMut],
+    [auth.user, sendMsgMut]
   );
 
   const markRead = useCallback(
     (conversationId: string, side: "patient" | "clinic") => {
       markReadMut.mutate({ conversationId, side });
     },
-    [markReadMut],
+    [markReadMut]
   );
 
   const ensureConversation = useCallback(
-    async ({
-      clinicId,
-      doctorId,
-      appointmentId,
-    }: {
-      clinicId: string;
-      doctorId?: string;
-      appointmentId?: string;
-    }) => {
-      if (!auth.user) throw new Error("Must be logged in to chat");
+    async ({ clinicId, doctorId, appointmentId }: any) => {
+      if (!auth.user) throw new Error("Must be logged in");
       const patientId = auth.user.id;
-      const existing = conversations.find(
-        (c) => c.clinicId === clinicId && c.patientId === patientId,
-      );
+      const existing = conversations.find((c) => c.clinicId === clinicId && c.patientId === patientId);
       if (existing) return existing.id;
-
       return ensureConvMut.mutateAsync({
         clinicId,
         patientId,
@@ -181,60 +178,74 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...(appointmentId ? { appointmentId } : {}),
       });
     },
-    [conversations, auth.user, ensureConvMut],
+    [conversations, auth.user, ensureConvMut]
   );
+
+  const toggleSavedDoctor = useCallback(
+    (id: string) => {
+      if (!patient || !auth.user) return;
+      const isSaved = patient.savedDoctorIds.includes(id);
+      toggleDoctorMut.mutate({ userId: auth.user.id, doctorId: id, isSaved });
+    },
+    [patient, auth.user, toggleDoctorMut]
+  );
+
+  const toggleSavedClinic = useCallback(
+    (id: string) => {
+      if (!patient || !auth.user) return;
+      const isSaved = patient.savedClinicIds.includes(id);
+      toggleClinicMut.mutate({ userId: auth.user.id, clinicId: id, isSaved });
+    },
+    [patient, auth.user, toggleClinicMut]
+  );
+
+  const updatePatient = useCallback((patch: Partial<Patient>) => {
+    // We will do a full mutation for patient update next!
+  }, []);
 
   const value = useMemo<AppState>(
     () => ({
       patient,
-      updatePatient: (patch) => setPatient((p) => ({ ...p, ...patch })),
+      isLoadingPatient: patientQuery.isLoading,
+      
       doctors,
       clinics,
       activeClinic,
-      doctorById: (id: string) => doctors.find((d) => d.id === id),
-      clinicById: (id: string) => clinics.find((c) => c.id === id),
-      doctorsOfClinic: (clinicId: string) => doctors.filter((d) => d.clinicId === clinicId),
-      scheduleOf: (doctorId: string) => schedules.find((s) => s.doctorId === doctorId),
+      doctorById: (id) => doctors.find((d) => d.id === id),
+      clinicById: (id) => clinics.find((c) => c.id === id),
+      doctorsOfClinic: (cid) => doctors.filter((d) => d.clinicId === cid),
+      scheduleOf: (did) => schedules.find((s) => s.doctorId === did),
       schedules,
       appointments,
       bookAppointment,
       cancelAppointment,
-      rescheduleAppointment,
       setAppointmentStatus,
       conversations,
       sendMessage,
       markRead,
       ensureConversation,
-      toggleSavedDoctor: (id) =>
-        setPatient((p) => ({
-          ...p,
-          savedDoctorIds: p.savedDoctorIds.includes(id)
-            ? p.savedDoctorIds.filter((x) => x !== id)
-            : [...p.savedDoctorIds, id],
-        })),
-      toggleSavedClinic: (id) =>
-        setPatient((p) => ({
-          ...p,
-          savedClinicIds: p.savedClinicIds.includes(id)
-            ? p.savedClinicIds.filter((x) => x !== id)
-            : [...p.savedClinicIds, id],
-        })),
+      toggleSavedDoctor,
+      toggleSavedClinic,
     }),
     [
       patient,
+      patientQuery.isLoading,
+      
       doctors,
       clinics,
+      activeClinic,
       schedules,
       appointments,
       conversations,
       bookAppointment,
       cancelAppointment,
-      rescheduleAppointment,
       setAppointmentStatus,
       sendMessage,
       markRead,
       ensureConversation,
-    ],
+      toggleSavedDoctor,
+      toggleSavedClinic,
+    ]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -245,6 +256,3 @@ export function useApp() {
   if (!ctx) throw new Error("useApp must be used inside AppProvider");
   return ctx;
 }
-
-/** Newly created doctors need a matching schedule id; helper for clinic portal. */
-export const newDoctorId = () => nextId("d");

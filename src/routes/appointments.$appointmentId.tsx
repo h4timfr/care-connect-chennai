@@ -4,7 +4,7 @@ import { PatientShell } from "@/components/layout/PatientShell";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, Initials } from "@/components/common";
 import { useApp } from "@/lib/store";
-import { doctorById, clinicById, specialtyName } from "@/data/constants";
+import { specialtyName } from "@/lib/format";
 import { longDate, to12h, inr } from "@/lib/format";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({
@@ -14,7 +14,8 @@ export const Route = createFileRoute("/appointments/$appointmentId")({
 
 function AppointmentDetails() {
   const { appointmentId } = Route.useLoaderData();
-  const { appointments, cancelAppointment, ensureConversation } = useApp();
+  const app = useApp();
+  const { appointments, cancelAppointment, ensureConversation } = app;
   const router = useRouter();
 
   const appointment = appointments.find((a) => a.id === appointmentId);
@@ -33,8 +34,8 @@ function AppointmentDetails() {
     );
   }
 
-  const doctor = doctorById(appointment.doctorId);
-  const clinic = clinicById(appointment.clinicId);
+  const doctor = app.doctorById(appointment.doctorId);
+  const clinic = app.clinicById(appointment.clinicId);
   const active = appointment.status === "confirmed" || appointment.status === "pending";
 
   const openChat = async () => {

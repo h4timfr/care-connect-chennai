@@ -66,6 +66,22 @@ export function useBookAppointment() {
         }
         throw new Error(error.message);
       }
+      
+      // Return the actual mapped DB row
+      return {
+        id: data.id,
+        doctorId: data.doctor_id,
+        clinicId: data.clinic_id,
+        patientId: data.patient_id,
+        date: data.date,
+        time: data.time,
+        status: data.status,
+        reason: data.reason,
+        fee: Number(data.fee),
+        patientName: "You",
+        patientPhone: "",
+        createdAt: data.created_at,
+      } as Appointment;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["appointments", "patient", variables.patientId] });
@@ -90,6 +106,28 @@ export function useCancelAppointment() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["appointments", "patient", data.patient_id] });
+    },
+  });
+}
+
+export function useUpdateAppointmentStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, status, clinicId }: { id: string; status: AppointmentStatus; clinicId: string }) => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .update({ status })
+        .eq("id", id)
+        .eq("clinic_id", clinicId) // enforce clinic ownership implicitly
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
     },
   });
 }

@@ -28,7 +28,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
   const { patient, conversations } = useApp();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = conversations
-    .filter((c) => c.patientId === patient.id)
+    .filter((c) => c.patientId === patient?.id)
     .reduce((n, c) => n + c.unreadForPatient, 0);
 
   const isActive = (to: string, exact?: boolean) =>
@@ -81,7 +81,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
               <LanguageToggle />
               <ThemeToggle />
               <Link to="/profile" aria-label="Your profile">
-                <Initials name={patient.name} className="h-9 w-9" />
+                <Initials name={patient?.name ?? ""} className="h-9 w-9" />
               </Link>
             </div>
           </div>

@@ -6,7 +6,7 @@ import { DoctorCard } from "@/components/DoctorCard";
 import { ClinicCard } from "@/components/ClinicCard";
 import { DemoBanner, SectionHeader, SpecialtyIcon } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import { SPECIALTIES } from "@/data/constants";
+import { SPECIALTIES } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { longDate, to12h } from "@/lib/format";
 
@@ -38,13 +38,14 @@ function greeting() {
 
 function Home() {
   const { patient, appointments, doctors, clinics } = useApp();
+  
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
 
   const upcoming = appointments
     .filter(
       (a) =>
-        a.patientId === patient.id &&
+        a.patientId === patient?.id &&
         (a.status === "confirmed" || a.status === "pending") &&
         a.date >= new Date().toISOString().slice(0, 10),
     )
@@ -61,7 +62,7 @@ function Home() {
       <div className="space-y-10">
         <section>
           <p className="text-sm text-muted-foreground">{greeting()},</p>
-          <h1 className="font-display text-2xl font-bold sm:text-3xl">{patient.name}</h1>
+          <h1 className="font-display text-2xl font-bold sm:text-3xl">{patient?.name ?? "Welcome!"}</h1>
 
           <form
             className="mt-5"
@@ -114,7 +115,7 @@ function Home() {
         <section>
           <SectionHeader title="Browse by specialty" />
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
-            {SPECIALTIES.map((s) => (
+            {SPECIALTIES.map((s: {id: string, name: string, icon: string}) => (
               <Link
                 key={s.id}
                 to="/discover"
@@ -133,7 +134,7 @@ function Home() {
         <section>
           <SectionHeader
             title="Near you"
-            subtitle={`Doctors consulting close to ${patient.area}`}
+            subtitle={`Doctors consulting close to ${patient?.area ?? "you"}`}
             action={
               <Button asChild variant="ghost" size="sm">
                 <Link to="/discover" search={{}}>

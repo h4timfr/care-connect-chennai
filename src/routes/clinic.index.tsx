@@ -13,6 +13,8 @@ export const Route = createFileRoute("/clinic/")({
 
 function ClinicDashboard() {
   const { appointments, activeClinic, doctors, doctorById } = useApp();
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const today = isoDate(new Date());
 
   const clinicAppointments = appointments.filter((a) => a.clinicId === activeClinic.id);

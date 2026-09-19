@@ -30,6 +30,19 @@ function BookAppointment() {
   const navigate = useNavigate();
   const { doctorById, clinicById, patient, bookAppointment } = useApp();
 
+  if (!patient) {
+    return (
+      <PatientShell>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-4">
+          <Stethoscope className="h-12 w-12 text-muted-foreground" />
+          <h1 className="text-2xl font-bold">Authentication Required</h1>
+          <p className="text-muted-foreground">You must complete your profile to book an appointment.</p>
+          <Button asChild><Link to="/profile">Go to Profile</Link></Button>
+        </div>
+      </PatientShell>
+    );
+  }
+
   const doctor = doctorById(doctorId);
   const clinic = doctor ? clinicById(doctor.clinicId) : undefined;
 
