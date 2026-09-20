@@ -158,7 +158,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         conversationId,
         senderId: auth.user.id,
         body,
-        isPatient: sender === "patient",
       });
     },
     [auth.user, sendMsgMut]

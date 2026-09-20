@@ -1,10 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Conversation } from "@/lib/types";
+import { useAuthorizedClinics } from "./queries";
 
 export function useConversations(userId?: string) {
   const queryClient = useQueryClient();
+  const authorizedClinicsQuery = useAuthorizedClinics(userId);
+  
+  const clinicIds = useMemo(() => {
+    const clinics = authorizedClinicsQuery.data;
+    if (!clinics) return [];
+    return clinics.map((c: any) => c.id);
+  }, [authorizedClinicsQuery.data]);
 
   useEffect(() => {
     if (!userId) return;
@@ -21,7 +29,7 @@ export function useConversations(userId?: string) {
         },
         () => {
           // Invalidate conversations to fetch new messages
-          queryClient.invalidateQueries({ queryKey: ["conversations", userId] });
+          queryClient.invalidateQueries({ queryKey: ["conversations", userId, clinicIds] });
         },
       )
       .subscribe();
@@ -29,27 +37,33 @@ export function useConversations(userId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, queryClient]);
+  }, [userId, clinicIds, queryClient]);
 
   return useQuery({
-    queryKey: ["conversations", userId],
+    queryKey: ["conversations", userId, clinicIds],
     queryFn: async () => {
       if (!userId) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("conversations")
         .select(
           `
           *,
           messages(*),
           clinics(name),
-          patients(full_name)
+          patients(full_name, user_id)
         `,
-        )
-        .or(
-          `patient_id.eq.${userId},clinic_id.in.(select clinic_id from clinic_memberships where user_id = '${userId}')`,
-        )
-        .order("created_at", { ascending: false });
+        );
+        
+      if (clinicIds.length > 0) {
+        query = query.or(
+          `patient_id.eq.${userId},clinic_id.in.(${clinicIds.join(",")})`,
+        );
+      } else {
+        query = query.eq("patient_id", userId);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
 
@@ -67,14 +81,14 @@ export function useConversations(userId?: string) {
           .map((m: any) => ({
             id: m.id,
             conversationId: m.conversation_id,
-            sender: m.sender_id === c.patient_id ? "patient" : "clinic",
+            sender: m.sender_id === c.patients?.user_id ? "patient" : "clinic",
             body: m.body,
             sentAt: m.created_at,
           }))
           .sort((a: any, b: any) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()),
       })) as Conversation[];
     },
-    enabled: !!userId,
+    enabled: !!userId && !authorizedClinicsQuery.isLoading,
   });
 }
 
@@ -90,7 +104,6 @@ export function useSendMessage() {
       conversationId: string;
       senderId: string;
       body: string;
-      isPatient: boolean;
     }) => {
       const { data, error } = await supabase
         .from("messages")
