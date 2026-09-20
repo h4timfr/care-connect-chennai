@@ -61,15 +61,6 @@ function MessagesView() {
     if (!text.trim() || !activeConversation) return;
     sendMessage(activeConversation.id, "patient", text.trim());
     setText("");
-
-    // Simulate clinic response after a delay
-    setTimeout(() => {
-      sendMessage(
-        activeConversation.id,
-        "clinic",
-        "Thank you for your message. Our receptionist will get back to you shortly.",
-      );
-    }, 2000);
   };
 
   const clinic = activeConversation ? clinicById(activeConversation.clinicId) : undefined;

@@ -55,9 +55,9 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
 
         <p className="truncate text-sm text-muted-foreground">{clinic.address}</p>
 
-        <p className="rounded-lg bg-primary-soft/60 px-3 py-2 text-xs font-medium text-primary">
+        <div className="rounded-lg bg-primary-soft/60 px-3 py-2 text-primary">
           <p className="font-medium text-sm">Not available today</p>
-        </p>
+        </div>
 
         <Button asChild className="w-full" size="sm">
           <Link to="/clinics/$clinicId" params={{ clinicId: clinic.id }}>

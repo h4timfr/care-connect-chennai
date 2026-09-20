@@ -174,6 +174,7 @@ export function useEnsureConversation() {
         .select("id")
         .eq("clinic_id", clinicId)
         .eq("patient_id", patientId)
+        .limit(1)
         .maybeSingle();
 
       if (fetchError) throw fetchError;

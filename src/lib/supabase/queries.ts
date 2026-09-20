@@ -117,12 +117,10 @@ export function usePatient(userId?: string) {
         .from("patients")
         .select("*, user:users(*)")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
         
-      if (pError || !pData) {
-        if (pError?.code === 'PGRST116') return null; // Not found
-        throw pError;
-      }
+      if (pError) throw pError;
+      if (!pData) return null;
       
       const user = Array.isArray(pData.user) ? pData.user[0] : pData.user;
       if (!user) return null;
