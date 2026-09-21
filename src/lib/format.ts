@@ -1,4 +1,4 @@
-export const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
+﻿export const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
 export function to12h(time: string) {
   const parts = time.split(":");

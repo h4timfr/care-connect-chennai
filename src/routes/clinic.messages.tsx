@@ -21,13 +21,11 @@ export const Route = createFileRoute("/clinic/messages")({
 
 function ClinicMessages() {
   const { conversations, activeClinic, markRead, sendMessage, doctorById } = useApp();
-
-  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const search = Route.useSearch();
   const navigate = useNavigate();
 
   const clinicConversations = conversations
-    .filter((c) => c.clinicId === activeClinic.id)
+    .filter((c) => c.clinicId === activeClinic?.id)
     .sort((a, b) => {
       const lastA = a.messages[a.messages.length - 1]?.sentAt ?? "";
       const lastB = b.messages[b.messages.length - 1]?.sentAt ?? "";
@@ -47,6 +45,8 @@ function ClinicMessages() {
     }
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation, markRead]);
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();

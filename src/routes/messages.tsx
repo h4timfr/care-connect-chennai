@@ -21,6 +21,27 @@ export const Route = createFileRoute("/messages")({
 
 function MessagesView() {
   const { conversations, patient, markRead, sendMessage, clinicById, doctorById } = useApp();
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const [text, setText] = useState("");
+  const endRef = useRef<HTMLDivElement>(null);
+
+  const myConversations = conversations
+    .filter((c) => c.patientId === patient?.id)
+    .sort((a, b) => {
+      const lastA = a.messages[a.messages.length - 1]?.sentAt ?? "";
+      const lastB = b.messages[b.messages.length - 1]?.sentAt ?? "";
+      return lastB.localeCompare(lastA);
+    });
+
+  const activeConversation = search.c ? myConversations.find((c) => c.id === search.c) : undefined;
+
+  useEffect(() => {
+    if (activeConversation && activeConversation.unreadForPatient > 0) {
+      markRead(activeConversation.id, "patient");
+    }
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeConversation, markRead]);
 
   if (!patient) {
     return (
@@ -33,28 +54,6 @@ function MessagesView() {
       </PatientShell>
     );
   }
-  const search = Route.useSearch();
-  const navigate = useNavigate();
-
-  const myConversations = conversations
-    .filter((c) => c.patientId === patient.id)
-    .sort((a, b) => {
-      const lastA = a.messages[a.messages.length - 1]?.sentAt ?? "";
-      const lastB = b.messages[b.messages.length - 1]?.sentAt ?? "";
-      return lastB.localeCompare(lastA);
-    });
-
-  const activeConversation = search.c ? myConversations.find((c) => c.id === search.c) : undefined;
-
-  const [text, setText] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (activeConversation && activeConversation.unreadForPatient > 0) {
-      markRead(activeConversation.id, "patient");
-    }
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeConversation, markRead]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();

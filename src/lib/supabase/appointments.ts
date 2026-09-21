@@ -25,7 +25,7 @@ export function usePatientAppointments(patientId?: string) {
       if (error) throw error;
 
       // Map to frontend type
-      return data.map((a) => ({
+      return data.map((a: any) => ({
         id: a.id,
         doctorId: a.doctor_id,
         clinicId: a.clinic_id,
@@ -41,6 +41,45 @@ export function usePatientAppointments(patientId?: string) {
       })) as Appointment[];
     },
     enabled: !!patientId,
+  });
+}
+
+export function useClinicAppointments(clinicIds: string[]) {
+  return useQuery({
+    queryKey: ["appointments", "clinic", clinicIds],
+    queryFn: async () => {
+      if (!clinicIds || clinicIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("appointments")
+        .select(
+          `
+          *,
+          doctors ( name ),
+          patients ( full_name )
+        `,
+        )
+        .in("clinic_id", clinicIds)
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+
+      // Map to frontend type
+      return data.map((a: any) => ({
+        id: a.id,
+        doctorId: a.doctor_id,
+        clinicId: a.clinic_id,
+        patientId: a.patient_id,
+        patientName: a.patients?.full_name || "Unknown Patient",
+        patientPhone: "",
+        date: a.date,
+        time: a.time,
+        reason: a.reason,
+        status: a.status as AppointmentStatus,
+        fee: Number(a.fee),
+        createdAt: a.created_at,
+      })) as Appointment[];
+    },
+    enabled: clinicIds.length > 0,
   });
 }
 

@@ -14,6 +14,7 @@ import type {
 import { useAuth } from "@/lib/supabase/auth";
 import {
   usePatientAppointments,
+  useClinicAppointments,
   useBookAppointment,
   useCancelAppointment,
   useUpdateAppointmentStatus,
@@ -92,6 +93,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const patientAppointments = usePatientAppointments(patientQuery.data?.id);
   const clinicsQuery = useClinics({ enabled: !isAuthPage });
   const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id);
+  
+  const authorizedClinicIds = authorizedClinicsQuery.data?.map(c => c.id) || [];
+  const clinicAppointments = useClinicAppointments(authorizedClinicIds);
+
   const doctorsQuery = useDoctors({ enabled: !isAuthPage });
   const schedulesQuery = useSchedules({ enabled: !isAuthPage });
   const conversationsQuery = useConversations(auth.user?.id);
@@ -109,7 +114,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clinics = clinicsQuery.data || [];
   const doctors = doctorsQuery.data || [];
   const schedules = schedulesQuery.data || [];
-  const appointments = patientAppointments.data || [];
+  
+  // Merge patient appointments and clinic appointments, removing duplicates by ID
+  const allAppts = [...(patientAppointments.data || []), ...(clinicAppointments.data || [])];
+  const appointments = Array.from(new Map(allAppts.map(a => [a.id, a])).values());
+  
   const conversations = conversationsQuery.data || [];
 
   // The UI currently only supports a single active clinic context.

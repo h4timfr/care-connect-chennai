@@ -12,13 +12,15 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const { patient } = useApp();
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
 
   if (!patient) {
     return (
       <PatientShell>
-        <div className="mx-auto max-w-2xl space-y-6 flex flex-col items-center justify-center min-h-[50vh] text-center">
+        <div className="flex flex-col items-center justify-center h-[50vh] text-center">
           <User className="h-12 w-12 text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold">Profile Setup Required</h1>
+          <h2 className="text-xl font-bold mb-2">Profile Not Found</h2>
           <p className="text-muted-foreground mb-6">You need to set up your profile first.</p>
           <Button onClick={async () => {
              const { supabase } = await import('@/lib/supabase/client');
@@ -29,8 +31,6 @@ function ProfilePage() {
       </PatientShell>
     );
   }
-  const { signOut, user } = useAuth();
-  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
