@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Calendar, Clock, MapPin, Stethoscope } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ function BookAppointment() {
   }
 
   const doctor = doctorById(doctorId);
-  const clinic = doctor ? clinicById(doctor.clinicId) : undefined;
+  const clinic = doctor ? clinicById(doctor.clinicIds?.[0] || "") : undefined;
 
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,7 +75,7 @@ function BookAppointment() {
     try {
       await bookAppointment({
         doctorId: doctor.id,
-        clinicId: doctor.clinicId,
+        clinicId: doctor.clinicIds?.[0] || "",
         date: search.date!,
         time: search.time!,
         reason: reason || "Routine consultation",
@@ -205,3 +205,4 @@ function BookAppointment() {
     </PatientShell>
   );
 }
+

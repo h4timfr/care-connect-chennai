@@ -1,4 +1,4 @@
-// Conceptual data model for CareConnect.
+﻿// Conceptual data model for CareConnect.
 // Shapes mirror a future PostgreSQL schema so a real backend can be swapped in
 // without changing the UI layer.
 
@@ -49,7 +49,6 @@ export interface Clinic {
   feeRange: [number, number];
   rating: number;
   reviewCount: number;
-  distanceKm: number;
   photoTone: string;
 }
 
@@ -58,7 +57,7 @@ export interface Doctor {
   name: string;
   gender: "male" | "female";
   specialtyId: string;
-  clinicId: string;
+  clinicIds: string[];
   qualifications: string[];
   experienceYears: number;
   languages: string[];
@@ -67,7 +66,6 @@ export interface Doctor {
   services: string[];
   rating: number;
   reviewCount: number;
-  distanceKm: number;
   registrationNote: string;
 }
 
@@ -145,3 +143,5 @@ export interface Notification {
   date: string;
   read: boolean;
 }
+
+

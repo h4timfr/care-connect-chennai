@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   Appointment,
   Clinic,
   Conversation,
@@ -63,7 +63,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [400, 700],
     rating: 4.8,
     reviewCount: 126,
-    distanceKm: 1.2,
+    
     photoTone: "from-teal-200 to-emerald-100",
   },
   {
@@ -82,7 +82,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [600, 900],
     rating: 4.6,
     reviewCount: 214,
-    distanceKm: 6.4,
+    
     photoTone: "from-sky-200 to-cyan-100",
   },
   {
@@ -101,7 +101,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [350, 800],
     rating: 4.5,
     reviewCount: 98,
-    distanceKm: 4.1,
+    
     photoTone: "from-emerald-200 to-lime-100",
   },
   {
@@ -120,7 +120,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [500, 1000],
     rating: 4.7,
     reviewCount: 173,
-    distanceKm: 7.8,
+    
     photoTone: "from-rose-200 to-orange-100",
   },
   {
@@ -139,7 +139,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [600, 1100],
     rating: 4.9,
     reviewCount: 241,
-    distanceKm: 8.6,
+    
     photoTone: "from-violet-200 to-fuchsia-100",
   },
   {
@@ -158,7 +158,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [700, 1200],
     rating: 4.4,
     reviewCount: 87,
-    distanceKm: 11.3,
+    
     photoTone: "from-indigo-200 to-sky-100",
   },
 ];
@@ -171,7 +171,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Ananya Rao",
     gender: "female",
     specialtyId: "pediatrics",
-    clinicId: "c1",
+    clinicIds: ["c1"],
     qualifications: ["MBBS", "MD (Paediatrics)"],
     experienceYears: 12,
     languages: ["English", "Tamil", "Hindi"],
@@ -181,7 +181,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Newborn care", "Vaccination", "Growth review", "Allergy consultation"],
     rating: 4.8,
     reviewCount: 126,
-    distanceKm: 1.2,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -189,7 +189,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Karthik Subramanian",
     gender: "male",
     specialtyId: "orthopedics",
-    clinicId: "c2",
+    clinicIds: ["c2"],
     qualifications: ["MBBS", "MS (Orthopaedics)"],
     experienceYears: 18,
     languages: ["English", "Tamil", "Telugu"],
@@ -199,7 +199,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Joint pain review", "Sports injury", "Fracture follow-up", "Physio referral"],
     rating: 4.6,
     reviewCount: 214,
-    distanceKm: 6.4,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -207,7 +207,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Meera Krishnan",
     gender: "female",
     specialtyId: "dermatology",
-    clinicId: "c4",
+    clinicIds: ["c4"],
     qualifications: ["MBBS", "MD (Dermatology)"],
     experienceYears: 9,
     languages: ["English", "Tamil", "Malayalam"],
@@ -216,7 +216,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Acne care", "Hair fall review", "Pigmentation", "Patch testing"],
     rating: 4.7,
     reviewCount: 173,
-    distanceKm: 7.8,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -224,7 +224,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Rajesh Kumar",
     gender: "male",
     specialtyId: "general",
-    clinicId: "c3",
+    clinicIds: ["c3"],
     qualifications: ["MBBS", "MD (General Medicine)"],
     experienceYears: 22,
     languages: ["English", "Tamil"],
@@ -233,7 +233,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Fever & infection", "Diabetes follow-up", "BP review", "Health check"],
     rating: 4.5,
     reviewCount: 98,
-    distanceKm: 4.1,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -241,7 +241,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Priya Venkatesh",
     gender: "female",
     specialtyId: "gynecology",
-    clinicId: "c5",
+    clinicIds: ["c5"],
     qualifications: ["MBBS", "DGO", "DNB (OBG)"],
     experienceYears: 15,
     languages: ["English", "Tamil", "Hindi"],
@@ -250,7 +250,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Antenatal visit", "PCOS consultation", "Menstrual health", "Well-woman check"],
     rating: 4.9,
     reviewCount: 241,
-    distanceKm: 8.6,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -258,7 +258,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Faizal Ahmed",
     gender: "male",
     specialtyId: "ent",
-    clinicId: "c3",
+    clinicIds: ["c3"],
     qualifications: ["MBBS", "MS (ENT)"],
     experienceYears: 11,
     languages: ["English", "Tamil", "Urdu"],
@@ -267,7 +267,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Sinus review", "Hearing check", "Vertigo consultation", "Tonsil review"],
     rating: 4.4,
     reviewCount: 76,
-    distanceKm: 4.3,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -275,7 +275,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Lakshmi Narayanan",
     gender: "female",
     specialtyId: "cardiology",
-    clinicId: "c3",
+    clinicIds: ["c3"],
     qualifications: ["MBBS", "MD", "DM (Cardiology)"],
     experienceYears: 20,
     languages: ["English", "Tamil", "Telugu"],
@@ -284,7 +284,7 @@ export const DOCTORS: Doctor[] = [
     services: ["ECG review", "BP management", "Cholesterol review", "Post-procedure follow-up"],
     rating: 4.7,
     reviewCount: 159,
-    distanceKm: 4.1,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -292,7 +292,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Sanjay Iyer",
     gender: "male",
     specialtyId: "dentistry",
-    clinicId: "c4",
+    clinicIds: ["c4"],
     qualifications: ["BDS", "MDS (Conservative Dentistry)"],
     experienceYears: 8,
     languages: ["English", "Tamil"],
@@ -301,7 +301,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Dental cleaning", "Filling", "Root canal", "Dental check"],
     rating: 4.6,
     reviewCount: 112,
-    distanceKm: 7.8,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -309,7 +309,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Divya Shankar",
     gender: "female",
     specialtyId: "ophthalmology",
-    clinicId: "c6",
+    clinicIds: ["c6"],
     qualifications: ["MBBS", "MS (Ophthalmology)"],
     experienceYears: 10,
     languages: ["English", "Tamil", "Hindi"],
@@ -318,7 +318,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Vision check", "Dry eye review", "Spectacle prescription", "Diabetic eye check"],
     rating: 4.5,
     reviewCount: 64,
-    distanceKm: 11.3,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -326,7 +326,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Arun Prakash",
     gender: "male",
     specialtyId: "neurology",
-    clinicId: "c6",
+    clinicIds: ["c6"],
     qualifications: ["MBBS", "MD", "DM (Neurology)"],
     experienceYears: 14,
     languages: ["English", "Tamil", "Hindi"],
@@ -335,7 +335,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Headache clinic", "Migraine review", "Sleep consultation", "Follow-up care"],
     rating: 4.6,
     reviewCount: 88,
-    distanceKm: 11.3,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -343,7 +343,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Nithya Balaji",
     gender: "female",
     specialtyId: "general",
-    clinicId: "c1",
+    clinicIds: ["c1"],
     qualifications: ["MBBS", "DNB (Family Medicine)"],
     experienceYears: 7,
     languages: ["English", "Tamil"],
@@ -352,7 +352,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Fever & infection", "Travel consultation", "Routine review"],
     rating: 4.3,
     reviewCount: 54,
-    distanceKm: 1.2,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -360,7 +360,7 @@ export const DOCTORS: Doctor[] = [
     name: "Dr. Vignesh Mohan",
     gender: "male",
     specialtyId: "orthopedics",
-    clinicId: "c2",
+    clinicIds: ["c2"],
     qualifications: ["MBBS", "DNB (Orthopaedics)"],
     experienceYears: 6,
     languages: ["English", "Tamil", "Hindi"],
@@ -369,13 +369,13 @@ export const DOCTORS: Doctor[] = [
     services: ["Back pain review", "Knee pain", "Post-injury follow-up"],
     rating: 4.2,
     reviewCount: 41,
-    distanceKm: 6.4,
+    
     registrationNote: "Demo profile — registration details are illustrative.",
   },
 ];
 
 export const doctorById = (id: string) => DOCTORS.find((d) => d.id === id);
-export const doctorsOfClinic = (clinicId: string) => DOCTORS.filter((d) => d.clinicId === clinicId);
+export const doctorsOfClinic = (clinicId: string) => DOCTORS.filter((d) => d.clinicIds.includes(clinicId));
 
 export const SCHEDULES: DoctorSchedule[] = DOCTORS.map((d, i) => ({
   doctorId: d.id,
@@ -817,3 +817,7 @@ export const CHENNAI_AREAS = [
 ];
 
 export const LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Malayalam", "Urdu"];
+
+
+
+

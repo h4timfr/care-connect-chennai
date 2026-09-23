@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { useApp } from "@/lib/store";
 import { UserPlus, MoreHorizontal } from "lucide-react";
@@ -15,7 +15,7 @@ function ClinicDoctors() {
 
   if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
 
-  const clinicDoctors = doctors.filter((d) => d.clinicId === activeClinic.id);
+  const clinicDoctors = doctors.filter((d) => d.clinicIds?.includes(activeClinic.id));
 
   return (
     <ClinicShell
@@ -67,3 +67,4 @@ function ClinicDoctors() {
     </ClinicShell>
   );
 }
+

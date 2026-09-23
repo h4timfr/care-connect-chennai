@@ -228,7 +228,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activeClinic,
       doctorById: (id) => doctors.find((d) => d.id === id),
       clinicById: (id) => clinics.find((c) => c.id === id),
-      doctorsOfClinic: (cid) => doctors.filter((d) => d.clinicId === cid),
+      doctorsOfClinic: (cid) => doctors.filter((d) => d.clinicIds?.includes(cid)),
       scheduleOf: (did) => schedules.find((s) => s.doctorId === did),
       schedules,
       patientAppointments: patientAppts,
@@ -273,6 +273,7 @@ export function useApp() {
   if (!ctx) throw new Error("useApp must be used inside AppProvider");
   return ctx;
 }
+
 
 
 

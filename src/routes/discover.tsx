@@ -99,7 +99,7 @@ function Discover() {
   const results = useMemo(() => {
     const needle = text.trim().toLowerCase();
     const filtered = doctors.filter((d) => {
-      const clinic = clinics.find(c => c.id === d.clinicId);
+      const clinic = clinics.find(c => d.clinicIds?.includes(c.id));
       if (specialtyId && d.specialtyId !== specialtyId) return false;
       if (needle) {
         const haystack = [
@@ -457,6 +457,7 @@ function Discover() {
     </PatientShell>
   );
 }
+
 
 
 

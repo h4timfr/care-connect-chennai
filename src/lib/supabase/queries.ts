@@ -27,7 +27,6 @@ export function useClinics(options?: { enabled?: boolean }) {
         feeRange: c.fee_range || [0, 0],
         rating: Number(c.rating) || 0,
         reviewCount: c.review_count || 0,
-        distanceKm: c.distanceKm || 0,
         photoTone: c.photo_tone || "bg-primary-soft",
       })) as Clinic[];
     },
@@ -58,9 +57,8 @@ export function useDoctors(options?: { enabled?: boolean }) {
         services: d.services || [],
         rating: Number(d.rating) || 0,
         reviewCount: d.review_count || 0,
-        distanceKm: d.distanceKm || 0,
         registrationNote: d.registration_note,
-        clinicId: d.clinic_doctors?.[0]?.clinic_id,
+        clinicIds: d.clinic_doctors?.map((cd: any) => cd.clinic_id) || [],
       })) as Doctor[];
     },
   });
@@ -176,7 +174,6 @@ export function useAuthorizedClinics(userId?: string, options?: { enabled?: bool
           feeRange: c.fee_range || [0, 0],
           rating: Number(c.rating) || 0,
           reviewCount: c.review_count || 0,
-          distanceKm: c.distanceKm || 0,
           photoTone: c.photo_tone || "bg-primary-soft",
         } as Clinic;
       });
@@ -212,5 +209,8 @@ export function useToggleSavedClinic() {
     },
   });
 }
+
+
+
 
 

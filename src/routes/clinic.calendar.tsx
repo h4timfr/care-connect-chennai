@@ -34,7 +34,7 @@ function ClinicCalendar() {
     setCurrentDate(d);
   };
 
-  const clinicDoctors = doctors.filter((d) => d.clinicId === activeClinic.id);
+  const clinicDoctors = doctors.filter((d) => d.clinicIds?.includes(activeClinic.id));
   const clinicAppointments = appointments.filter(
     (a) => a.clinicId === activeClinic.id && a.date === todayIso && a.status !== "cancelled",
   );
@@ -141,4 +141,5 @@ function ClinicCalendar() {
     </ClinicShell>
   );
 }
+
 

@@ -54,7 +54,6 @@ function Home() {
 
   const nearYou = doctors
     .slice()
-    .sort((a, b) => a.distanceKm - b.distanceKm)
     .slice(0, 6);
 
   return (
@@ -183,4 +182,5 @@ function Home() {
     </PatientShell>
   );
 }
+
 

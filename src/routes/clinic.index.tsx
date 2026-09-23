@@ -27,7 +27,7 @@ function ClinicDashboard() {
     .filter((a) => a.status === "completed" || a.status === "arrived" || a.status === "confirmed")
     .reduce((sum, a) => sum + a.fee, 0);
 
-  const activeDoctors = doctors.filter((d) => d.clinicId === activeClinic.id).length;
+  const activeDoctors = doctors.filter((d) => d.clinicIds?.includes(activeClinic.id)).length;
 
   return (
     <ClinicShell
@@ -137,4 +137,5 @@ function ClinicDashboard() {
     </ClinicShell>
   );
 }
+
 

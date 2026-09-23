@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+﻿import { Link } from "@tanstack/react-router";
 import { Bookmark, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Initials, Rating } from "@/components/common";
@@ -10,7 +10,7 @@ import type { Doctor } from "@/lib/types";
 
 export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: boolean }) {
   const { patient, toggleSavedDoctor, clinicById } = useApp();
-  const clinic = clinicById(doctor.clinicId);
+  const clinic = clinicById(doctor.clinicIds?.[0] || "");
   const next = null; // Removed mock availability
   const saved = patient?.savedDoctorIds?.includes(doctor.id) ?? false;
 
@@ -69,3 +69,4 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
     </article>
   );
 }
+

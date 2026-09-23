@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Clock, GraduationCap, MapPin, MessageCircle, Star } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Initials, Rating, SectionHeader } from "@/components/common";
@@ -19,7 +19,7 @@ function DoctorProfile() {
   const app = useApp();
 
   const doctor = app.doctorById(doctorId);
-  const clinic = doctor ? app.clinicById(doctor.clinicId) : undefined;
+  const clinic = doctor ? app.clinicById(doctor.clinicIds?.[0] || "") : undefined;
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -183,3 +183,4 @@ function DoctorProfile() {
     </PatientShell>
   );
 }
+
