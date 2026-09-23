@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Search, SearchX, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PatientShell } from "@/components/layout/PatientShell";
@@ -46,7 +46,6 @@ export const Route = createFileRoute("/discover")({
       { property: "og:title", content: "Find doctors in Chennai — CareConnect" },
       {
         property: "og:description",
-        content: "Filter by availability, fee, distance, language and experience.",
       },
     ],
   }),
@@ -54,7 +53,7 @@ export const Route = createFileRoute("/discover")({
 });
 
 type Availability = "any" | "today" | "tomorrow";
-type Sort = "availability" | "distance" | "fee";
+type Sort = "availability" | "fee";
 
 function Discover() {
   const { q, specialty } = Route.useSearch();
@@ -66,7 +65,6 @@ function Discover() {
   const [availability, setAvailability] = useState<Availability>("any");
   const [parts, setParts] = useState<string[]>([]);
   const [maxFee, setMaxFee] = useState(1200);
-  const [maxDistance, setMaxDistance] = useState(15);
   const [gender, setGender] = useState<"any" | "male" | "female">("any");
   const [language, setLanguage] = useState("");
   const [minExperience, setMinExperience] = useState(0);
@@ -89,7 +87,6 @@ function Discover() {
     availability,
     parts,
     maxFee,
-    maxDistance,
     gender,
     language,
     minExperience,
@@ -119,7 +116,6 @@ function Discover() {
         if (words.length && !matched) return false;
       }
       if (d.consultationFee > maxFee) return false;
-      if (d.distanceKm > maxDistance) return false;
       if (gender !== "any" && d.gender !== gender) return false;
       if (language && !d.languages.includes(language)) return false;
       if (d.experienceYears < minExperience) return false;
@@ -135,7 +131,6 @@ function Discover() {
     });
 
     return filtered.sort((a, b) => {
-      if (sort === "distance") return a.distanceKm - b.distanceKm;
       if (sort === "fee") return a.consultationFee - b.consultationFee;
       const na = "9999";
       const nb = "9999";
@@ -148,7 +143,6 @@ function Discover() {
     availability,
     parts,
     maxFee,
-    maxDistance,
     gender,
     language,
     minExperience,
@@ -176,7 +170,6 @@ function Discover() {
     setAvailability("any");
     setParts([]);
     setMaxFee(1200);
-    setMaxDistance(15);
     setGender("any");
     setLanguage("");
     setMinExperience(0);
@@ -312,15 +305,12 @@ function Discover() {
 
             <div>
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Distance up to {maxDistance} km
               </Label>
               <Slider
                 className="mt-3"
                 min={1}
                 max={15}
                 step={1}
-                value={[maxDistance]}
-                onValueChange={([v]) => setMaxDistance(v ?? 15)}
               />
             </div>
 
@@ -396,7 +386,6 @@ function Discover() {
                     className="rounded-lg border bg-card px-2.5 py-1.5 text-xs"
                   >
                     <option value="availability">Earliest availability</option>
-                    <option value="distance">Distance</option>
                     <option value="fee">Consultation fee</option>
                   </select>
                 </div>
@@ -432,9 +421,9 @@ function Discover() {
                   </>
                 ) : (
                   <EmptyState
-                    icon={SearchX}
-                    title="No doctors match these filters"
-                    description="Try widening the fee or distance range, or clearing the availability filter."
+                      icon={SearchX}
+                      title="No doctors match these filters"
+                      description="Try widening the fee range, or clearing the availability filter."
                     action={
                       <Button variant="outline" size="sm" onClick={resetFilters}>
                         Clear filters
@@ -468,3 +457,6 @@ function Discover() {
     </PatientShell>
   );
 }
+
+
+

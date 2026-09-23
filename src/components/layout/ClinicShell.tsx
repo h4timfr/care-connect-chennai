@@ -28,6 +28,8 @@ const NAV = [
   { to: "/clinic/settings", label: "Settings", icon: Settings },
 ] as const;
 
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+
 export function ClinicShell({
   title,
   description,
@@ -39,7 +41,19 @@ export function ClinicShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
+  const { loading, user } = useProtectedRoute();
   const { activeClinic, conversations } = useApp();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-6 text-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   if (!activeClinic) {
     return (
@@ -55,7 +69,6 @@ export function ClinicShell({
       </div>
     );
   }
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = conversations
     .filter((c) => c.clinicId === activeClinic.id)
     .reduce((n, c) => n + c.unreadForClinic, 0);

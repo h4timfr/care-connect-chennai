@@ -24,8 +24,11 @@ const NAV = [
   { to: "/profile", label: "Profile", mobileLabel: "Profile", icon: User },
 ] as const;
 
+import { useAuth } from "@/lib/supabase/auth";
+
 export function PatientShell({ children }: { children: ReactNode }) {
   const { patient, conversations } = useApp();
+  const { user, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = conversations
     .filter((c) => c.patientId === patient?.id)
@@ -80,9 +83,22 @@ export function PatientShell({ children }: { children: ReactNode }) {
             <div className="flex shrink-0 items-center gap-3">
               <LanguageToggle />
               <ThemeToggle />
-              <Link to="/profile" aria-label="Your profile">
-                <Initials name={patient?.name ?? ""} className="h-9 w-9" />
-              </Link>
+              {loading ? (
+                <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />
+              ) : user ? (
+                <Link to="/profile" aria-label="Your profile">
+                  <Initials name={patient?.name ?? ""} className="h-9 w-9" />
+                </Link>
+              ) : (
+                <div className="flex gap-2">
+                  <Button asChild variant="ghost" size="sm">
+                    <Link to="/login">Sign In</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link to="/login" search={{ signup: true } as any}>Sign Up</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

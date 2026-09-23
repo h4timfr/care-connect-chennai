@@ -41,7 +41,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
         <span>{doctor.experienceYears} yrs experience</span>
         <span className="inline-flex items-center gap-1">
           <MapPin className="h-3.5 w-3.5" aria-hidden />
-          {doctor.distanceKm} km
+          Independent
         </span>
         <Rating value={doctor.rating} count={doctor.reviewCount} />
       </div>

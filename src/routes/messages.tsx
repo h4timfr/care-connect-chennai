@@ -8,6 +8,8 @@ import { useState, useRef, useEffect } from "react";
 import { to12h } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+
 export const Route = createFileRoute("/messages")({
   component: MessagesView,
   validateSearch: (search: Record<string, unknown>) => {
@@ -23,6 +25,7 @@ function MessagesView() {
   const { conversations, patient, markRead, sendMessage, clinicById, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const { loading, user } = useProtectedRoute("/messages");
   const [text, setText] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -43,16 +46,18 @@ function MessagesView() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation, markRead]);
 
-  if (!patient) {
+  if (loading) {
     return (
       <PatientShell>
         <div className="flex h-[80vh] flex-col items-center justify-center space-y-4">
-          <MessageSquare className="h-12 w-12 text-muted-foreground" />
-          <h2 className="text-xl font-bold">Sign In Required</h2>
-          <p className="text-muted-foreground">Please sign in to view your messages.</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </PatientShell>
     );
+  }
+
+  if (!user || !patient) {
+    return null; // redirecting
   }
 
   const handleSend = (e: React.FormEvent) => {

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Clinic, Doctor, DoctorSchedule } from "@/lib/types";
@@ -108,9 +108,10 @@ export function useSchedules(options?: { enabled?: boolean }) {
   });
 }
 
-export function usePatient(userId?: string) {
+export function usePatient(userId?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["patient", userId],
+    enabled: options?.enabled ?? !!userId,
     queryFn: async () => {
       if (!userId) return null;
       const { data: pData, error: pError } = await supabase
@@ -139,13 +140,13 @@ export function usePatient(userId?: string) {
         savedClinicIds: pData.saved_clinic_ids ?? [],
       } as import("@/lib/types").Patient;
     },
-    enabled: !!userId,
   });
 }
 
-export function useAuthorizedClinics(userId?: string) {
+export function useAuthorizedClinics(userId?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["authorized_clinics", userId],
+    enabled: options?.enabled ?? !!userId,
     queryFn: async () => {
       if (!userId) return [];
       const { data, error } = await supabase
@@ -180,7 +181,6 @@ export function useAuthorizedClinics(userId?: string) {
         } as Clinic;
       });
     },
-    enabled: !!userId,
   });
 }
 
@@ -212,4 +212,5 @@ export function useToggleSavedClinic() {
     },
   });
 }
+
 

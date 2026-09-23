@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+﻿import { Link } from "@tanstack/react-router";
 import { Clock, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Rating } from "@/components/common";
@@ -21,7 +21,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
             <h3 className="truncate font-display text-base font-semibold">{clinic.name}</h3>
             <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {clinic.area} · {clinic.distanceKm} km
+              {clinic.area}
             </p>
           </div>
           <Rating value={clinic.rating} count={clinic.reviewCount} />
@@ -68,3 +68,4 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
     </article>
   );
 }
+

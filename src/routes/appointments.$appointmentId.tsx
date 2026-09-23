@@ -7,6 +7,8 @@ import { useApp } from "@/lib/store";
 import { specialtyName } from "@/lib/format";
 import { longDate, to12h, inr } from "@/lib/format";
 
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+
 export const Route = createFileRoute("/appointments/$appointmentId")({
   component: AppointmentDetails,
   loader: ({ params }) => ({ appointmentId: params.appointmentId }),
@@ -17,8 +19,12 @@ function AppointmentDetails() {
   const app = useApp();
   const { appointments, cancelAppointment, ensureConversation } = app;
   const router = useRouter();
+  const { loading, user } = useProtectedRoute(`/appointments/${appointmentId}`);
 
   const appointment = appointments.find((a) => a.id === appointmentId);
+
+  if (loading) return <PatientShell><div className="p-8">Loading...</div></PatientShell>;
+  if (!user) return null;
 
   if (!appointment) {
     return (

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+﻿import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "./client";
 import type { Session, User } from "@supabase/supabase-js";
 import { UserRole } from "@/lib/types";
@@ -6,17 +6,18 @@ import { UserRole } from "@/lib/types";
 interface AuthState {
   session: Session | null;
   user: User | null;
-  role: UserRole | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
 
+import { useQueryClient } from "@tanstack/react-query";
+
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id);
+        setLoading(false);
       } else {
         setLoading(false);
       }
@@ -38,53 +39,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id);
+        setLoading(false);
       } else {
-        setRole(null);
+        queryClient.clear();
         setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [queryClient]);
 
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data: dData } = await supabase
-        .from("doctors")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (dData) {
-        setRole("doctor");
-        return;
-      }
-
-      const { data: cData } = await supabase
-        .from("clinic_memberships")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (cData) {
-        setRole("clinic");
-        return;
-      }
-
-      setRole("patient");
-    } catch (e) {
-      console.error(e);
-      setRole("patient");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, role, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -97,3 +68,4 @@ export function useAuth() {
   }
   return context;
 }
+

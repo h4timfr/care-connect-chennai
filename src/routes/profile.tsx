@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { User, Mail, Phone, MapPin, Globe, Shield, LogOut } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Initials } from "@/components/common";
@@ -6,14 +7,23 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";
 
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
 function ProfilePage() {
-  const { patient } = useApp();
+  const { patient, isLoadingPatient } = useApp();
   const { signOut, user } = useAuth();
+  const { loading } = useProtectedRoute("/profile");
   const navigate = useNavigate();
+
+  if (loading || isLoadingPatient) {
+    return <PatientShell><div className="p-8">Loading...</div></PatientShell>;
+  }
+
+  if (!user) return null;
 
   if (!patient) {
     return (

@@ -8,6 +8,8 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { to12h } from "@/lib/format";
 
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+
 export const Route = createFileRoute("/clinic/messages")({
   component: ClinicMessages,
   validateSearch: (search: Record<string, unknown>) => {
@@ -23,6 +25,7 @@ function ClinicMessages() {
   const { conversations, activeClinic, markRead, sendMessage, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const { loading, user } = useProtectedRoute("/clinic/messages");
 
   const clinicConversations = conversations
     .filter((c) => c.clinicId === activeClinic?.id)
@@ -46,7 +49,9 @@ function ClinicMessages() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation, markRead]);
 
-  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
+  if (loading) return <ClinicShell title="Loading..." children={<div className="p-8">Loading...</div>} />;
+  
+  if (!user || !activeClinic) return null;
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();

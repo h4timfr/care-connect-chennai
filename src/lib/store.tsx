@@ -88,18 +88,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAuthPage = pathname === "/login" || pathname === "/signup";
+  const isLoggedIn = !!auth.user && !auth.loading;
 
-  const patientQuery = usePatient(auth.user?.id);
-  const patientAppointments = usePatientAppointments(patientQuery.data?.id);
+  const patientQuery = usePatient(auth.user?.id, { enabled: isLoggedIn });
+  const patientAppointments = usePatientAppointments(patientQuery.data?.id, { enabled: isLoggedIn });
   const clinicsQuery = useClinics({ enabled: !isAuthPage });
-  const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id);
+  const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id, { enabled: isLoggedIn });
   
   const authorizedClinicIds = authorizedClinicsQuery.data?.map(c => c.id) || [];
-  const clinicAppointments = useClinicAppointments(authorizedClinicIds);
+  const clinicAppointments = useClinicAppointments(authorizedClinicIds, { enabled: isLoggedIn });
 
   const doctorsQuery = useDoctors({ enabled: !isAuthPage });
   const schedulesQuery = useSchedules({ enabled: !isAuthPage });
-  const conversationsQuery = useConversations(auth.user?.id);
+  const conversationsQuery = useConversations(auth.user?.id, { enabled: isLoggedIn });
 
   const bookMut = useBookAppointment();
   const cancelMut = useCancelAppointment();

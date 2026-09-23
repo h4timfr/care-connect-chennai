@@ -8,12 +8,15 @@ import { useApp } from "@/lib/store";
 import { useMemo } from "react";
 import { isoDate } from "@/lib/format";
 
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+
 export const Route = createFileRoute("/appointments/")({
   component: AppointmentsList,
 });
 
 function AppointmentsList() {
-  const { appointments, patient } = useApp();
+  const { appointments, patient, isLoadingPatient } = useApp();
+  const { loading, user } = useProtectedRoute("/appointments");
 
   const myAppointments = useMemo(
     () => appointments.filter((a) => a.patientId === patient?.id),
@@ -39,6 +42,12 @@ function AppointmentsList() {
       .filter((a) => a.status === "cancelled")
       .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
   }, [myAppointments]);
+
+  if (loading || isLoadingPatient) {
+    return <PatientShell><div className="p-8">Loading...</div></PatientShell>;
+  }
+
+  if (!user || !patient) return null;
 
   return (
     <PatientShell>

@@ -1,10 +1,10 @@
-import { useEffect, useMemo } from "react";
+﻿import { useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Conversation } from "@/lib/types";
 import { useAuthorizedClinics } from "./queries";
 
-export function useConversations(userId?: string) {
+export function useConversations(userId?: string, options?: { enabled?: boolean }) {
   const queryClient = useQueryClient();
   const authorizedClinicsQuery = useAuthorizedClinics(userId);
   
@@ -15,7 +15,7 @@ export function useConversations(userId?: string) {
   }, [authorizedClinicsQuery.data]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || (options && options.enabled === false)) return;
 
     // Subscribe to new messages
     const channel = supabase
@@ -37,7 +37,7 @@ export function useConversations(userId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, clinicIds, queryClient]);
+  }, [userId, clinicIds, queryClient, options?.enabled]);
 
   return useQuery({
     queryKey: ["conversations", userId, clinicIds],
@@ -88,7 +88,7 @@ export function useConversations(userId?: string) {
           .sort((a: any, b: any) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()),
       })) as Conversation[];
     },
-    enabled: !!userId && !authorizedClinicsQuery.isLoading,
+    enabled: (options?.enabled ?? !!userId) && !authorizedClinicsQuery.isLoading,
   });
 }
 
@@ -201,3 +201,4 @@ export function useEnsureConversation() {
     },
   });
 }
+

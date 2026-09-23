@@ -1,12 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 
 // Note: This service represents the real Supabase implementation of Appointments.
 // It maps the Postgres rows back to the frontend types.
 
-export function usePatientAppointments(patientId?: string) {
+export function usePatientAppointments(patientId?: string, options?: { enabled?: boolean }) {
   return useQuery({
+    enabled: options?.enabled ?? !!patientId,
     queryKey: ["appointments", "patient", patientId],
     queryFn: async () => {
       if (!patientId) return [];
@@ -40,11 +41,10 @@ export function usePatientAppointments(patientId?: string) {
         createdAt: a.created_at,
       })) as Appointment[];
     },
-    enabled: !!patientId,
   });
 }
 
-export function useClinicAppointments(clinicIds: string[]) {
+export function useClinicAppointments(clinicIds: string[], options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["appointments", "clinic", clinicIds],
     queryFn: async () => {
@@ -79,7 +79,7 @@ export function useClinicAppointments(clinicIds: string[]) {
         createdAt: a.created_at,
       })) as Appointment[];
     },
-    enabled: clinicIds.length > 0,
+    enabled: options?.enabled ?? clinicIds.length > 0,
   });
 }
 
@@ -170,3 +170,6 @@ export function useUpdateAppointmentStatus() {
     },
   });
 }
+
+
+
