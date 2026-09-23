@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarX, SearchX } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { AppointmentCard } from "@/components/AppointmentCard";
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/appointments/")({
 });
 
 function AppointmentsList() {
-  const { appointments, patient, isLoadingPatient } = useApp();
+  const { patientAppointments: appointments, patient, isLoadingPatient } = useApp();
   const { loading, user } = useProtectedRoute("/appointments");
 
   const myAppointments = useMemo(
@@ -119,3 +119,5 @@ function AppointmentsList() {
     </PatientShell>
   );
 }
+
+

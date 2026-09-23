@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, CalendarDays, Search, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { PatientShell } from "@/components/layout/PatientShell";
@@ -37,7 +37,7 @@ function greeting() {
 }
 
 function Home() {
-  const { patient, appointments, doctors, clinics } = useApp();
+  const { patient, patientAppointments: appointments, doctors, clinics } = useApp();
   
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -183,3 +183,4 @@ function Home() {
     </PatientShell>
   );
 }
+

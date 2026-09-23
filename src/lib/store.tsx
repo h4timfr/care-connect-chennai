@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+﻿import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type {
@@ -60,7 +60,8 @@ interface AppState {
   scheduleOf: (doctorId: string) => DoctorSchedule | undefined;
   schedules: DoctorSchedule[];
 
-  appointments: Appointment[];
+  patientAppointments: Appointment[];
+  clinicAppointments: Appointment[];
   bookAppointment: (input: BookingInput) => Promise<Appointment>;
   cancelAppointment: (id: string) => void;
   setAppointmentStatus: (id: string, status: AppointmentStatus) => void;
@@ -117,8 +118,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const schedules = schedulesQuery.data || [];
   
   // Merge patient appointments and clinic appointments, removing duplicates by ID
-  const allAppts = [...(patientAppointments.data || []), ...(clinicAppointments.data || [])];
-  const appointments = Array.from(new Map(allAppts.map(a => [a.id, a])).values());
+  const patientAppts = patientAppointments.data || [];
+  const clinicAppts = clinicAppointments.data || [];
   
   const conversations = conversationsQuery.data || [];
 
@@ -230,7 +231,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       doctorsOfClinic: (cid) => doctors.filter((d) => d.clinicId === cid),
       scheduleOf: (did) => schedules.find((s) => s.doctorId === did),
       schedules,
-      appointments,
+      patientAppointments: patientAppts,
+      clinicAppointments: clinicAppts,
       bookAppointment,
       cancelAppointment,
       setAppointmentStatus,
@@ -249,7 +251,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clinics,
       activeClinic,
       schedules,
-      appointments,
+      patientAppts,
+      clinicAppts,
       conversations,
       bookAppointment,
       cancelAppointment,
@@ -270,6 +273,8 @@ export function useApp() {
   if (!ctx) throw new Error("useApp must be used inside AppProvider");
   return ctx;
 }
+
+
 
 
 

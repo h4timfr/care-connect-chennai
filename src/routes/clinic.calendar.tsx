@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { CalendarRange, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/clinic/calendar")({
 });
 
 function ClinicCalendar() {
-  const { appointments, activeClinic, doctors } = useApp();
+  const { clinicAppointments: appointments, activeClinic, doctors } = useApp();
 
   if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -141,3 +141,4 @@ function ClinicCalendar() {
     </ClinicShell>
   );
 }
+

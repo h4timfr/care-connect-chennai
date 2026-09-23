@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, CalendarDays, Clock, MapPin, MessageCircle } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Button } from "@/components/ui/button";
@@ -17,11 +17,11 @@ export const Route = createFileRoute("/appointments/$appointmentId")({
 function AppointmentDetails() {
   const { appointmentId } = Route.useLoaderData();
   const app = useApp();
-  const { appointments, cancelAppointment, ensureConversation } = app;
+  const { patientAppointments, cancelAppointment, ensureConversation } = app;
   const router = useRouter();
   const { loading, user } = useProtectedRoute(`/appointments/${appointmentId}`);
 
-  const appointment = appointments.find((a) => a.id === appointmentId);
+  const appointment = patientAppointments.find((a) => a.id === appointmentId);
 
   if (loading) return <PatientShell><div className="p-8">Loading...</div></PatientShell>;
   if (!user) return null;
@@ -145,3 +145,6 @@ function AppointmentDetails() {
     </PatientShell>
   );
 }
+
+
+

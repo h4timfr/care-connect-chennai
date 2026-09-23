@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { useState, useMemo } from "react";
 import { useApp } from "@/lib/store";
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/clinic/patients")({
 });
 
 function ClinicPatients() {
-  const { appointments, activeClinic } = useApp();
+  const { clinicAppointments: appointments, activeClinic } = useApp();
 
   if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const [search, setSearch] = useState("");
@@ -117,3 +117,4 @@ function ClinicPatients() {
     </ClinicShell>
   );
 }
+
