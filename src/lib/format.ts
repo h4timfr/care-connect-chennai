@@ -10,9 +10,14 @@ export function to12h(time: string) {
 }
 
 export function isoDate(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(d);
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
 }
 
 export function addDays(base: Date, days: number) {
@@ -58,12 +63,13 @@ export function longDate(iso: string) {
     weekday: "long",
     day: "numeric",
     month: "long",
+    timeZone: "Asia/Kolkata",
   });
 }
 
 export function shortDate(iso: string) {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
 }
 
 export function relativeDay(iso: string) {
@@ -96,5 +102,8 @@ export function clockTime(isoDateTime: string) {
   return new Date(isoDateTime).toLocaleTimeString("en-IN", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "Asia/Kolkata",
   });
 }
+
+
