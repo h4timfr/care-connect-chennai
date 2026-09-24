@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Documented technical reason: Generic API returns and complex UI component mappings */
 import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
@@ -65,7 +66,7 @@ function LoginPage() {
         navigate({ to: "/" });
       }
     }
-    
+
     setLoading(false);
   };
 

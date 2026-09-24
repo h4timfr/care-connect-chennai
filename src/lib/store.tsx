@@ -1,5 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable @typescript-eslint/no-explicit-any -- Documented technical reason: Generic API returns and complex UI component mappings */
 const EMPTY_ARRAY: any[] = [];
-﻿import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type {
@@ -20,14 +22,14 @@ import {
   useCancelAppointment,
   useUpdateAppointmentStatus,
 } from "@/lib/supabase/appointments";
-import { 
-  useClinics, 
-  useAuthorizedClinics, 
-  useDoctors, 
-  useSchedules, 
+import {
+  useClinics,
+  useAuthorizedClinics,
+  useDoctors,
+  useSchedules,
   usePatient,
   useToggleSavedDoctor,
-  useToggleSavedClinic
+  useToggleSavedClinic,
 } from "@/lib/supabase/queries";
 import {
   useConversations,
@@ -50,7 +52,6 @@ interface BookingInput {
 interface AppState {
   patient: Patient | undefined;
   isLoadingPatient: boolean;
-  
 
   doctors: Doctor[];
   clinics: Clinic[];
@@ -83,7 +84,7 @@ interface AppState {
 const Ctx = createContext<AppState | null>(null);
 
 let counter = 100;
-export const newDoctorId = () => "d" + (++counter);
+export const newDoctorId = () => "d" + ++counter;
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
@@ -93,11 +94,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const isLoggedIn = !!auth.user && !auth.loading;
 
   const patientQuery = usePatient(auth.user?.id, { enabled: isLoggedIn });
-  const patientAppointments = usePatientAppointments(patientQuery.data?.id, { enabled: isLoggedIn });
+  const patientAppointments = usePatientAppointments(patientQuery.data?.id, {
+    enabled: isLoggedIn,
+  });
   const clinicsQuery = useClinics({ enabled: !isAuthPage });
   const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id, { enabled: isLoggedIn });
-  
-  const authorizedClinicIds = authorizedClinicsQuery.data?.map(c => c.id) || [];
+
+  const authorizedClinicIds = authorizedClinicsQuery.data?.map((c) => c.id) || [];
   const clinicAppointments = useClinicAppointments(authorizedClinicIds, { enabled: isLoggedIn });
 
   const doctorsQuery = useDoctors({ enabled: !isAuthPage });
@@ -117,11 +120,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clinics = clinicsQuery.data || EMPTY_ARRAY;
   const doctors = doctorsQuery.data || EMPTY_ARRAY;
   const schedules = schedulesQuery.data || EMPTY_ARRAY;
-  
+
   // Merge patient appointments and clinic appointments, removing duplicates by ID
   const patientAppts = patientAppointments.data || EMPTY_ARRAY;
   const clinicAppts = clinicAppointments.data || EMPTY_ARRAY;
-  
+
   const conversations = conversationsQuery.data || EMPTY_ARRAY;
 
   // The UI currently only supports a single active clinic context.
@@ -147,12 +150,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       return result;
     },
-    [auth.user, bookMut]
+    [auth.user, bookMut, patient?.id],
   );
 
   const cancelAppointment = useCallback(
-    (id: string) => { cancelMut.mutate(id); },
-    [cancelMut]
+    (id: string) => {
+      cancelMut.mutate(id);
+    },
+    [cancelMut],
   );
 
   const setAppointmentStatus = useCallback(
@@ -160,7 +165,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!activeClinic) return;
       updateStatusMut.mutate({ id, status, clinicId: activeClinic.id });
     },
-    [activeClinic, updateStatusMut]
+    [activeClinic, updateStatusMut],
   );
 
   const sendMessage = useCallback(
@@ -172,14 +177,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         body,
       });
     },
-    [auth.user, sendMsgMut]
+    [auth.user, sendMsgMut],
   );
 
   const markRead = useCallback(
     (conversationId: string, side: "patient" | "clinic") => {
       markReadMut.mutate({ conversationId, side });
     },
-    [markReadMut]
+    [markReadMut],
   );
 
   const ensureConversation = useCallback(
@@ -187,7 +192,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!auth.user) throw new Error("Must be logged in");
       if (!patient) throw new Error("Must have a patient profile to chat");
       const patientId = patient.id;
-      const existing = conversations.find((c) => c.clinicId === clinicId && c.patientId === patientId);
+      const existing = conversations.find(
+        (c) => c.clinicId === clinicId && c.patientId === patientId,
+      );
       if (existing) return existing.id;
       return ensureConvMut.mutateAsync({
         clinicId,
@@ -196,7 +203,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...(appointmentId ? { appointmentId } : {}),
       });
     },
-    [conversations, auth.user, ensureConvMut]
+    [conversations, auth.user, ensureConvMut, patient],
   );
 
   const toggleSavedDoctor = useCallback(
@@ -205,7 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const isSaved = patient.savedDoctorIds.includes(id);
       toggleDoctorMut.mutate(id);
     },
-    [patient, auth.user, toggleDoctorMut]
+    [patient, auth.user, toggleDoctorMut],
   );
 
   const toggleSavedClinic = useCallback(
@@ -214,16 +221,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const isSaved = patient.savedClinicIds.includes(id);
       toggleClinicMut.mutate(id);
     },
-    [patient, auth.user, toggleClinicMut]
+    [patient, auth.user, toggleClinicMut],
   );
-
-  
 
   const value = useMemo<AppState>(
     () => ({
       patient,
       isLoadingPatient: patientQuery.isLoading,
-      
+
       doctors,
       clinics,
       activeClinic,
@@ -247,7 +252,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [
       patient,
       patientQuery.isLoading,
-      
+
       doctors,
       clinics,
       activeClinic,
@@ -263,7 +268,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ensureConversation,
       toggleSavedDoctor,
       toggleSavedClinic,
-    ]
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -274,10 +279,3 @@ export function useApp() {
   if (!ctx) throw new Error("useApp must be used inside AppProvider");
   return ctx;
 }
-
-
-
-
-
-
-

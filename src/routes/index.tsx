@@ -38,7 +38,7 @@ function greeting() {
 
 function Home() {
   const { patient, patientAppointments: appointments, doctors, clinics } = useApp();
-  
+
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
 
@@ -50,18 +50,18 @@ function Home() {
         a.date >= new Date().toISOString().slice(0, 10),
     )
     .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))[0];
-  const upcomingDoctor = upcoming ? doctors.find(d => d.id === upcoming.doctorId) : undefined;
+  const upcomingDoctor = upcoming ? doctors.find((d) => d.id === upcoming.doctorId) : undefined;
 
-  const nearYou = doctors
-    .slice()
-    .slice(0, 6);
+  const nearYou = doctors.slice().slice(0, 6);
 
   return (
     <PatientShell>
       <div className="space-y-10">
         <section>
           <p className="text-sm text-muted-foreground">{greeting()},</p>
-          <h1 className="font-display text-2xl font-bold sm:text-3xl">{patient?.name ?? "Welcome!"}</h1>
+          <h1 className="font-display text-2xl font-bold sm:text-3xl">
+            {patient?.name ?? "Welcome!"}
+          </h1>
 
           <form
             className="mt-5"
@@ -114,7 +114,7 @@ function Home() {
         <section>
           <SectionHeader title="Browse by specialty" />
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
-            {SPECIALTIES.map((s: {id: string, name: string, icon: string}) => (
+            {SPECIALTIES.map((s: { id: string; name: string; icon: string }) => (
               <Link
                 key={s.id}
                 to="/discover"
@@ -182,5 +182,3 @@ function Home() {
     </PatientShell>
   );
 }
-
-

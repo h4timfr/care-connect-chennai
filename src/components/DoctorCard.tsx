@@ -51,7 +51,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
       ) : null}
 
       <div className="rounded-lg bg-primary-soft/60 px-3 py-2.5">
-          <p className="text-xs text-muted-foreground">No open slots in the next 14 days</p>
+        <p className="text-xs text-muted-foreground">No open slots in the next 14 days</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -69,5 +69,3 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
     </article>
   );
 }
-
-

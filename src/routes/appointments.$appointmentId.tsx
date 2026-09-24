@@ -23,7 +23,12 @@ function AppointmentDetails() {
 
   const appointment = patientAppointments.find((a) => a.id === appointmentId);
 
-  if (loading) return <PatientShell><div className="p-8">Loading...</div></PatientShell>;
+  if (loading)
+    return (
+      <PatientShell>
+        <div className="p-8">Loading...</div>
+      </PatientShell>
+    );
   if (!user) return null;
 
   if (!appointment) {
@@ -145,6 +150,3 @@ function AppointmentDetails() {
     </PatientShell>
   );
 }
-
-
-

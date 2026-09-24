@@ -95,7 +95,9 @@ export function PatientShell({ children }: { children: ReactNode }) {
                     <Link to="/login">Sign In</Link>
                   </Button>
                   <Button asChild size="sm">
-                    <Link to="/login" search={{ signup: true } as any}>Sign Up</Link>
+                    <Link to="/login" search={{ signup: true }}>
+                      Sign Up
+                    </Link>
                   </Button>
                 </div>
               )}

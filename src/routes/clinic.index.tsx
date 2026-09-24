@@ -139,6 +139,3 @@ function ClinicDashboard() {
     </ClinicShell>
   );
 }
-
-
-

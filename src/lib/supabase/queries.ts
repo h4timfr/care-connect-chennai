@@ -117,10 +117,10 @@ export function usePatient(userId?: string, options?: { enabled?: boolean }) {
         .select("*, user:users(*)")
         .eq("user_id", userId)
         .maybeSingle();
-        
+
       if (pError) throw pError;
       if (!pData) return null;
-      
+
       const user = Array.isArray(pData.user) ? pData.user[0] : pData.user;
       if (!user) return null;
 
@@ -210,12 +210,11 @@ export function useToggleSavedClinic() {
   });
 }
 
-
-
-
-
-
-export function useDoctorAvailability(doctorId: string, date: string, options?: { enabled?: boolean }) {
+export function useDoctorAvailability(
+  doctorId: string,
+  date: string,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ["availability", doctorId, date],
     enabled: options?.enabled ?? (!!doctorId && !!date),

@@ -1,4 +1,5 @@
-﻿import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "./client";
 import type { Session, User } from "@supabase/supabase-js";
 import { UserRole } from "@/lib/types";
@@ -49,7 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -68,4 +68,3 @@ export function useAuth() {
   }
   return context;
 }
-

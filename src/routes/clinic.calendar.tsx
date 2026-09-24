@@ -18,9 +18,10 @@ function ClinicCalendar() {
   const { loading, user } = useProtectedRoute();
   const { clinicAppointments: appointments, activeClinic, doctors } = useApp();
 
-  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all");
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
 
   const todayIso = isoDate(currentDate);
 
@@ -143,6 +144,3 @@ function ClinicCalendar() {
     </ClinicShell>
   );
 }
-
-
-

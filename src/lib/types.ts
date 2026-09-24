@@ -143,5 +143,3 @@ export interface Notification {
   date: string;
   read: boolean;
 }
-
-

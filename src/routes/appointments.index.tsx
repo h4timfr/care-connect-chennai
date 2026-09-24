@@ -44,7 +44,11 @@ function AppointmentsList() {
   }, [myAppointments]);
 
   if (loading || isLoadingPatient) {
-    return <PatientShell><div className="p-8">Loading...</div></PatientShell>;
+    return (
+      <PatientShell>
+        <div className="p-8">Loading...</div>
+      </PatientShell>
+    );
   }
 
   if (!user || !patient) return null;
@@ -119,5 +123,3 @@ function AppointmentsList() {
     </PatientShell>
   );
 }
-
-

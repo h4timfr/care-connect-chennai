@@ -49,8 +49,9 @@ function ClinicMessages() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConversation, markRead]);
 
-  if (loading) return <ClinicShell title="Loading..." children={<div className="p-8">Loading...</div>} />;
-  
+  if (loading)
+    return <ClinicShell title="Loading..." children={<div className="p-8">Loading...</div>} />;
+
   if (!user || !activeClinic) return null;
 
   const handleSend = (e: React.FormEvent) => {

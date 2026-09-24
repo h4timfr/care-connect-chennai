@@ -42,7 +42,6 @@ export function DateStrip({
   );
 }
 
-
 export function SlotGrid({
   doctorId,
   date,
@@ -61,12 +60,12 @@ export function SlotGrid({
   const generateSlots = () => {
     const schedule = app.scheduleOf(doctorId);
     if (!schedule) return [];
-    
+
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const selectedDate = new Date(`${date}T00:00:00`);
     const dayName = dayNames[selectedDate.getDay()];
     if (dayName === undefined || !schedule.workingDays.includes(dayName)) return [];
-    
+
     if (schedule.unavailableDates.includes(date)) return [];
 
     const toMin = (t: string) => {
@@ -75,20 +74,20 @@ export function SlotGrid({
     };
     const fmt = (mins: number) =>
       `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
-    
+
     const out = [];
     const start = toMin(schedule.workingHours.start);
     const end = toMin(schedule.workingHours.end);
     const bStart = toMin(schedule.breakPeriod.start);
     const bEnd = toMin(schedule.breakPeriod.end);
-    
+
     for (let t = start; t < end; t += schedule.slotMinutes) {
       if (t >= bStart && t < bEnd) continue;
       const timeStr = fmt(t) + ":00";
       // It is booked if it's NOT in the availableSlots list (from the RPC)
       // and availabilityQuery has finished loading
       const isBooked = !availabilityQuery.isPending && !availableSlots.includes(timeStr);
-      
+
       out.push({ time: timeStr, booked: isBooked });
     }
     return out;
@@ -96,7 +95,9 @@ export function SlotGrid({
   const slots = generateSlots();
 
   if (availabilityQuery.isPending) {
-    return <p className="text-sm text-muted-foreground text-center py-4">Checking availability...</p>;
+    return (
+      <p className="text-sm text-muted-foreground text-center py-4">Checking availability...</p>
+    );
   }
 
   if (!slots.length) {
@@ -147,4 +148,3 @@ export function SlotGrid({
     </div>
   );
 }
-

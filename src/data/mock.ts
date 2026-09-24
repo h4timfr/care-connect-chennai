@@ -63,7 +63,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [400, 700],
     rating: 4.8,
     reviewCount: 126,
-    
+
     photoTone: "from-teal-200 to-emerald-100",
   },
   {
@@ -82,7 +82,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [600, 900],
     rating: 4.6,
     reviewCount: 214,
-    
+
     photoTone: "from-sky-200 to-cyan-100",
   },
   {
@@ -101,7 +101,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [350, 800],
     rating: 4.5,
     reviewCount: 98,
-    
+
     photoTone: "from-emerald-200 to-lime-100",
   },
   {
@@ -120,7 +120,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [500, 1000],
     rating: 4.7,
     reviewCount: 173,
-    
+
     photoTone: "from-rose-200 to-orange-100",
   },
   {
@@ -139,7 +139,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [600, 1100],
     rating: 4.9,
     reviewCount: 241,
-    
+
     photoTone: "from-violet-200 to-fuchsia-100",
   },
   {
@@ -158,7 +158,7 @@ export const CLINICS: Clinic[] = [
     feeRange: [700, 1200],
     rating: 4.4,
     reviewCount: 87,
-    
+
     photoTone: "from-indigo-200 to-sky-100",
   },
 ];
@@ -181,7 +181,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Newborn care", "Vaccination", "Growth review", "Allergy consultation"],
     rating: 4.8,
     reviewCount: 126,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -199,7 +199,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Joint pain review", "Sports injury", "Fracture follow-up", "Physio referral"],
     rating: 4.6,
     reviewCount: 214,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -216,7 +216,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Acne care", "Hair fall review", "Pigmentation", "Patch testing"],
     rating: 4.7,
     reviewCount: 173,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -233,7 +233,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Fever & infection", "Diabetes follow-up", "BP review", "Health check"],
     rating: 4.5,
     reviewCount: 98,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -250,7 +250,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Antenatal visit", "PCOS consultation", "Menstrual health", "Well-woman check"],
     rating: 4.9,
     reviewCount: 241,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -267,7 +267,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Sinus review", "Hearing check", "Vertigo consultation", "Tonsil review"],
     rating: 4.4,
     reviewCount: 76,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -284,7 +284,7 @@ export const DOCTORS: Doctor[] = [
     services: ["ECG review", "BP management", "Cholesterol review", "Post-procedure follow-up"],
     rating: 4.7,
     reviewCount: 159,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -301,7 +301,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Dental cleaning", "Filling", "Root canal", "Dental check"],
     rating: 4.6,
     reviewCount: 112,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -318,7 +318,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Vision check", "Dry eye review", "Spectacle prescription", "Diabetic eye check"],
     rating: 4.5,
     reviewCount: 64,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -335,7 +335,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Headache clinic", "Migraine review", "Sleep consultation", "Follow-up care"],
     rating: 4.6,
     reviewCount: 88,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -352,7 +352,7 @@ export const DOCTORS: Doctor[] = [
     services: ["Fever & infection", "Travel consultation", "Routine review"],
     rating: 4.3,
     reviewCount: 54,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
   {
@@ -369,13 +369,14 @@ export const DOCTORS: Doctor[] = [
     services: ["Back pain review", "Knee pain", "Post-injury follow-up"],
     rating: 4.2,
     reviewCount: 41,
-    
+
     registrationNote: "Demo profile — registration details are illustrative.",
   },
 ];
 
 export const doctorById = (id: string) => DOCTORS.find((d) => d.id === id);
-export const doctorsOfClinic = (clinicId: string) => DOCTORS.filter((d) => d.clinicIds.includes(clinicId));
+export const doctorsOfClinic = (clinicId: string) =>
+  DOCTORS.filter((d) => d.clinicIds.includes(clinicId));
 
 export const SCHEDULES: DoctorSchedule[] = DOCTORS.map((d, i) => ({
   doctorId: d.id,
@@ -817,7 +818,3 @@ export const CHENNAI_AREAS = [
 ];
 
 export const LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Malayalam", "Urdu"];
-
-
-
-

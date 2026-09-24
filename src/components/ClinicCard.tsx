@@ -55,7 +55,6 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
 
         <p className="truncate text-sm text-muted-foreground">{clinic.address}</p>
 
-
         <Button asChild className="w-full" size="sm">
           <Link to="/clinics/$clinicId" params={{ clinicId: clinic.id }}>
             View clinic
@@ -65,5 +64,3 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
     </article>
   );
 }
-
-

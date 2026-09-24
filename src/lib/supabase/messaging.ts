@@ -1,17 +1,19 @@
-﻿import { useEffect, useMemo } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any -- Documented technical reason: Generic API returns and complex UI component mappings */
+import { useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Conversation } from "@/lib/types";
 import { useAuthorizedClinics } from "./queries";
 
 export function useConversations(userId?: string, options?: { enabled?: boolean }) {
+  const enabled = options?.enabled;
   const queryClient = useQueryClient();
   const authorizedClinicsQuery = useAuthorizedClinics(userId);
-  
+
   const clinicIds = useMemo(() => {
     const clinics = authorizedClinicsQuery.data;
     if (!clinics) return [];
-    return clinics.map((c: any) => c.id);
+    return clinics.map((c: { id: string }) => c.id);
   }, [authorizedClinicsQuery.data]);
 
   useEffect(() => {
@@ -37,28 +39,24 @@ export function useConversations(userId?: string, options?: { enabled?: boolean 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, clinicIds, queryClient, options?.enabled]);
+  }, [userId, clinicIds, queryClient, enabled, options]);
 
   return useQuery({
     queryKey: ["conversations", userId, clinicIds],
     queryFn: async () => {
       if (!userId) return [];
 
-      let query = supabase
-        .from("conversations")
-        .select(
-          `
+      let query = supabase.from("conversations").select(
+        `
           *,
           messages(*),
           clinics(name),
           patients(full_name, user_id)
         `,
-        );
-        
+      );
+
       if (clinicIds.length > 0) {
-        query = query.or(
-          `patient_id.eq.${userId},clinic_id.in.(${clinicIds.join(",")})`,
-        );
+        query = query.or(`patient_id.eq.${userId},clinic_id.in.(${clinicIds.join(",")})`);
       } else {
         query = query.eq("patient_id", userId);
       }
@@ -85,10 +83,13 @@ export function useConversations(userId?: string, options?: { enabled?: boolean 
             body: m.body,
             sentAt: m.created_at,
           }))
-          .sort((a: any, b: any) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()),
+          .sort(
+            (a: { sentAt: string }, b: { sentAt: string }) =>
+              new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
+          ),
       })) as Conversation[];
     },
-    enabled: (options?.enabled ?? !!userId) && !authorizedClinicsQuery.isLoading,
+    enabled: (enabled ?? !!userId) && !authorizedClinicsQuery.isLoading,
   });
 }
 
@@ -201,4 +202,3 @@ export function useEnsureConversation() {
     },
   });
 }
-

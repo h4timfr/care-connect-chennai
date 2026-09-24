@@ -44,10 +44,8 @@ function AssistantView() {
     setIsTyping(true);
 
     setTimeout(() => {
-      let aiResponse =
+      const aiResponse =
         "I'm a demo assistant. In a real application, I would connect to a large language model to help you book appointments or answer logistical questions based on clinic data.";
-
-
 
       setMessages((prev) => [
         ...prev,
@@ -150,4 +148,3 @@ function AssistantView() {
     </PatientShell>
   );
 }
-

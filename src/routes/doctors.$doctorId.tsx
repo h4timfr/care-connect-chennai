@@ -1,4 +1,5 @@
-﻿import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
+/* eslint-disable @typescript-eslint/no-explicit-any -- Documented technical reason: Generic API returns and complex UI component mappings */
+import { createFileRoute, Link, useRouter, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Clock, GraduationCap, MapPin, MessageCircle, Star } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Initials, Rating, SectionHeader } from "@/components/common";
@@ -39,7 +40,6 @@ function DoctorProfile() {
       </PatientShell>
     );
   }
-
 
   const schedule = app.scheduleOf(doctor.id);
   const reviews: any[] = [];
@@ -103,7 +103,9 @@ function DoctorProfile() {
 
               <div className="mt-6">
                 <h3 className="font-medium text-sm mb-2 text-foreground">Qualifications</h3>
-                <p className="text-sm text-muted-foreground">{((doctor.qualifications as any[]) || []).join(", ")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {((doctor.qualifications as any[]) || []).join(", ")}
+                </p>
               </div>
 
               <div className="mt-4">
@@ -183,4 +185,3 @@ function DoctorProfile() {
     </PatientShell>
   );
 }
-

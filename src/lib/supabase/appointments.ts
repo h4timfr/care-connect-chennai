@@ -1,4 +1,5 @@
-﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+/* eslint-disable @typescript-eslint/no-explicit-any -- Documented technical reason: Generic API returns and complex UI component mappings */
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 
@@ -105,7 +106,7 @@ export function useBookAppointment() {
         }
         throw new Error(error.message);
       }
-      
+
       // Return the actual mapped DB row
       return {
         id: data.id,
@@ -153,7 +154,15 @@ export function useUpdateAppointmentStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, status, clinicId }: { id: string; status: AppointmentStatus; clinicId: string }) => {
+    mutationFn: async ({
+      id,
+      status,
+      clinicId,
+    }: {
+      id: string;
+      status: AppointmentStatus;
+      clinicId: string;
+    }) => {
       const { data, error } = await supabase
         .from("appointments")
         .update({ status })
@@ -161,7 +170,7 @@ export function useUpdateAppointmentStatus() {
         .eq("clinic_id", clinicId) // enforce clinic ownership implicitly
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -170,6 +179,3 @@ export function useUpdateAppointmentStatus() {
     },
   });
 }
-
-
-

@@ -32,14 +32,21 @@ function BookAppointment() {
   const { loading, user } = useProtectedRoute(`/book/${doctorId}`);
   const { doctorById, clinicById, patient, bookAppointment } = useApp();
 
+  const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!patient) {
     return (
       <PatientShell>
         <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-4">
           <Stethoscope className="h-12 w-12 text-muted-foreground" />
           <h1 className="text-2xl font-bold">Authentication Required</h1>
-          <p className="text-muted-foreground">You must complete your profile to book an appointment.</p>
-          <Button asChild><Link to="/profile">Go to Profile</Link></Button>
+          <p className="text-muted-foreground">
+            You must complete your profile to book an appointment.
+          </p>
+          <Button asChild>
+            <Link to="/profile">Go to Profile</Link>
+          </Button>
         </div>
       </PatientShell>
     );
@@ -47,9 +54,6 @@ function BookAppointment() {
 
   const doctor = doctorById(doctorId);
   const clinic = doctor ? clinicById(doctor.clinicIds?.[0] || "") : undefined;
-
-  const [reason, setReason] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!doctor) {
     return (
@@ -64,8 +68,6 @@ function BookAppointment() {
       </PatientShell>
     );
   }
-
-
 
   const handleBook = async () => {
     if (!search.date || !search.time) {
@@ -207,7 +209,3 @@ function BookAppointment() {
     </PatientShell>
   );
 }
-
-
-
-

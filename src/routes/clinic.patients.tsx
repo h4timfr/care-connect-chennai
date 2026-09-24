@@ -4,7 +4,17 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useState, useMemo } from "react";
 import { useApp } from "@/lib/store";
 import type { Patient, Appointment } from "@/lib/types";
-import { Users, Search, Phone, Mail, UserPlus, Calendar, Clock, MapPin, Search as SearchIcon } from "lucide-react";
+import {
+  Users,
+  Search,
+  Phone,
+  Mail,
+  UserPlus,
+  Calendar,
+  Clock,
+  MapPin,
+  Search as SearchIcon,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Initials, StatusBadge } from "@/components/common";
 import { shortDate } from "@/lib/format";
@@ -17,8 +27,9 @@ function ClinicPatients() {
   const { loading, user } = useProtectedRoute();
   const { clinicAppointments: appointments, activeClinic } = useApp();
 
-  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const [search, setSearch] = useState("");
+
+  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
 
   const clinicAppointments = appointments.filter((a) => a.clinicId === activeClinic.id);
 
@@ -71,7 +82,7 @@ function ClinicPatients() {
               {filteredPatients.map((p: Patient) => {
                 const sortedApts: Appointment[] = [];
                 // Temporarily typed as any to prevent TS narrowing to 'never' on unassigned const
-                const lastVisit: any = undefined;
+                const lastVisit: Appointment | undefined = undefined;
                 const completed = 0;
 
                 return (
@@ -119,5 +130,3 @@ function ClinicPatients() {
     </ClinicShell>
   );
 }
-
-

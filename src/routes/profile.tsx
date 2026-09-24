@@ -20,7 +20,11 @@ function ProfilePage() {
   const navigate = useNavigate();
 
   if (loading || isLoadingPatient) {
-    return <PatientShell><div className="p-8">Loading...</div></PatientShell>;
+    return (
+      <PatientShell>
+        <div className="p-8">Loading...</div>
+      </PatientShell>
+    );
   }
 
   if (!user) return null;
@@ -32,11 +36,15 @@ function ProfilePage() {
           <User className="h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-bold mb-2">Profile Not Found</h2>
           <p className="text-muted-foreground mb-6">You need to set up your profile first.</p>
-          <Button onClick={async () => {
-             const { supabase } = await import('@/lib/supabase/client');
-             await supabase.auth.signOut();
-             window.location.href = '/login';
-          }}>Sign Out</Button>
+          <Button
+            onClick={async () => {
+              const { supabase } = await import("@/lib/supabase/client");
+              await supabase.auth.signOut();
+              window.location.href = "/login";
+            }}
+          >
+            Sign Out
+          </Button>
         </div>
       </PatientShell>
     );
@@ -62,8 +70,7 @@ function ProfilePage() {
           <div className="flex-1 space-y-1">
             <h2 className="font-display text-2xl font-bold">{patient.name}</h2>
             <p className="text-muted-foreground">{patient.email}</p>
-            <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
-            </div>
+            <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2"></div>
           </div>
         </div>
 

@@ -10,13 +10,15 @@ export function to12h(time: string) {
 }
 
 export function isoDate(d: Date) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric', month: '2-digit', day: '2-digit'
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).formatToParts(d);
-  const year = parts.find(p => p.type === 'year')?.value;
-  const month = parts.find(p => p.type === 'month')?.value;
-  const day = parts.find(p => p.type === 'day')?.value;
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
   return `${year}-${month}-${day}`;
 }
 
@@ -54,7 +56,13 @@ export const specialties: Record<string, string> = {
 
 export function specialtyName(id: string) {
   if (!id) return "";
-  return specialties[id] || id.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return (
+    specialties[id] ||
+    id
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ")
+  );
 }
 
 export function longDate(iso: string) {
@@ -69,7 +77,11 @@ export function longDate(iso: string) {
 
 export function shortDate(iso: string) {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Asia/Kolkata",
+  });
 }
 
 export function relativeDay(iso: string) {
@@ -105,5 +117,3 @@ export function clockTime(isoDateTime: string) {
     timeZone: "Asia/Kolkata",
   });
 }
-
-

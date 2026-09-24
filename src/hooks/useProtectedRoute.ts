@@ -8,7 +8,7 @@ export function useProtectedRoute(redirectUrl: string = "/") {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate({ to: "/login", search: { redirect: redirectUrl } as any });
+      navigate({ to: "/login", search: { redirect: redirectUrl } });
     }
   }, [loading, user, navigate, redirectUrl]);
 

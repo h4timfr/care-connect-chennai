@@ -14,10 +14,16 @@ export const Route = createFileRoute("/clinic/appointments")({
 
 function ClinicAppointments() {
   const { loading, user } = useProtectedRoute();
-  const { clinicAppointments: appointments, activeClinic, setAppointmentStatus, doctorById } = useApp();
+  const {
+    clinicAppointments: appointments,
+    activeClinic,
+    setAppointmentStatus,
+    doctorById,
+  } = useApp();
+
+  const [filter, setFilter] = useState<"all" | "upcoming" | "pending">("all");
 
   if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
-  const [filter, setFilter] = useState<"all" | "upcoming" | "pending">("all");
 
   const clinicAppointments = appointments
     .filter((a) => a.clinicId === activeClinic.id)
@@ -161,5 +167,3 @@ function ClinicAppointments() {
     </ClinicShell>
   );
 }
-
-

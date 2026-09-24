@@ -1,4 +1,4 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Search, SearchX, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PatientShell } from "@/components/layout/PatientShell";
@@ -10,11 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import {
-  LANGUAGES,
-  SPECIALTIES,
-  specialtyName,
-} from "@/lib/format";
+import { LANGUAGES, SPECIALTIES, specialtyName } from "@/lib/format";
 import { addDays, dayPartOf, isoDate } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -81,17 +77,7 @@ function Discover() {
     setLoading(true);
     const timer = setTimeout(() => setLoading(false), 350);
     return () => clearTimeout(timer);
-  }, [
-    text,
-    specialtyId,
-    availability,
-    parts,
-    maxFee,
-    gender,
-    language,
-    minExperience,
-    sort,
-  ]);
+  }, [text, specialtyId, availability, parts, maxFee, gender, language, minExperience, sort]);
 
   const today = isoDate(new Date());
   const tomorrow = isoDate(addDays(new Date(), 1));
@@ -99,7 +85,7 @@ function Discover() {
   const results = useMemo(() => {
     const needle = text.trim().toLowerCase();
     const filtered = doctors.filter((d) => {
-      const clinic = clinics.find(c => d.clinicIds?.includes(c.id));
+      const clinic = clinics.find((c) => d.clinicIds?.includes(c.id));
       if (specialtyId && d.specialtyId !== specialtyId) return false;
       if (needle) {
         const haystack = [
@@ -120,7 +106,6 @@ function Discover() {
       if (language && !d.languages.includes(language)) return false;
       if (d.experienceYears < minExperience) return false;
 
-
       return true;
     });
 
@@ -130,20 +115,7 @@ function Discover() {
       const nb = "9999";
       return na.localeCompare(nb);
     });
-  }, [
-    doctors,
-    text,
-    specialtyId,
-    availability,
-    parts,
-    maxFee,
-    gender,
-    language,
-    minExperience,
-    sort,
-    today,
-    tomorrow,
-  ]);
+  }, [doctors, text, specialtyId, maxFee, gender, language, minExperience, sort, clinics]);
 
   const clinicResults = useMemo(() => {
     const needle = text.trim().toLowerCase();
@@ -243,8 +215,6 @@ function Discover() {
               </Button>
             </div>
 
-            
-
             <div>
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Consultation fee up to ₹{maxFee}
@@ -260,14 +230,8 @@ function Discover() {
             </div>
 
             <div>
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-              </Label>
-              <Slider
-                className="mt-3"
-                min={1}
-                max={15}
-                step={1}
-              />
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground"></Label>
+              <Slider className="mt-3" min={1} max={15} step={1} />
             </div>
 
             <div>
@@ -377,9 +341,9 @@ function Discover() {
                   </>
                 ) : (
                   <EmptyState
-                      icon={SearchX}
-                      title="No doctors match these filters"
-                      description="Try widening the fee range, or clearing the availability filter."
+                    icon={SearchX}
+                    title="No doctors match these filters"
+                    description="Try widening the fee range, or clearing the availability filter."
                     action={
                       <Button variant="outline" size="sm" onClick={resetFilters}>
                         Clear filters
@@ -413,9 +377,3 @@ function Discover() {
     </PatientShell>
   );
 }
-
-
-
-
-
-
