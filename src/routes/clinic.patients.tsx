@@ -1,5 +1,6 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useState, useMemo } from "react";
 import { useApp } from "@/lib/store";
 import type { Patient, Appointment } from "@/lib/types";
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/clinic/patients")({
 });
 
 function ClinicPatients() {
+  const { loading, user } = useProtectedRoute();
   const { clinicAppointments: appointments, activeClinic } = useApp();
 
   if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
@@ -117,4 +119,5 @@ function ClinicPatients() {
     </ClinicShell>
   );
 }
+
 

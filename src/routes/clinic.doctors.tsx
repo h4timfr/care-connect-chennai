@@ -1,5 +1,6 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useApp } from "@/lib/store";
 import { UserPlus, MoreHorizontal } from "lucide-react";
 import { Initials } from "@/components/common";
@@ -67,4 +68,5 @@ function ClinicDoctors() {
     </ClinicShell>
   );
 }
+
 

@@ -6,6 +6,13 @@ DECLARE
     v_new_start TIMESTAMP;
     v_new_end TIMESTAMP;
 BEGIN
+    -- Obtain transaction-level advisory lock to serialize inserts/updates for this doctor & date.
+    -- This prevents race conditions where two concurrent transactions both see an empty slot and insert.
+    PERFORM pg_advisory_xact_lock(
+        hashtext(NEW.doctor_id::text),
+        hashtext(NEW.date::text)
+    );
+
     -- Only check active appointments
     IF NEW.status NOT IN ('pending', 'confirmed', 'arrived') THEN
         RETURN NEW;
@@ -46,7 +53,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 DROP TRIGGER IF EXISTS trg_check_appointment_overlap ON public.appointments;
 CREATE TRIGGER trg_check_appointment_overlap

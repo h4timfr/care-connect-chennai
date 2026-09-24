@@ -1,3 +1,4 @@
+const EMPTY_ARRAY: any[] = [];
 ﻿import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -113,15 +114,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const toggleClinicMut = useToggleSavedClinic();
 
   const patient = patientQuery.data || undefined;
-  const clinics = clinicsQuery.data || [];
-  const doctors = doctorsQuery.data || [];
-  const schedules = schedulesQuery.data || [];
+  const clinics = clinicsQuery.data || EMPTY_ARRAY;
+  const doctors = doctorsQuery.data || EMPTY_ARRAY;
+  const schedules = schedulesQuery.data || EMPTY_ARRAY;
   
   // Merge patient appointments and clinic appointments, removing duplicates by ID
-  const patientAppts = patientAppointments.data || [];
-  const clinicAppts = clinicAppointments.data || [];
+  const patientAppts = patientAppointments.data || EMPTY_ARRAY;
+  const clinicAppts = clinicAppointments.data || EMPTY_ARRAY;
   
-  const conversations = conversationsQuery.data || [];
+  const conversations = conversationsQuery.data || EMPTY_ARRAY;
 
   // The UI currently only supports a single active clinic context.
   // We deterministically use the first authorized clinic membership.

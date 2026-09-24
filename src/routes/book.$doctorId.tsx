@@ -6,6 +6,7 @@ import { inr, longDate, to12h } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export const Route = createFileRoute("/book/$doctorId")({
   component: BookAppointment,
@@ -28,6 +29,7 @@ function BookAppointment() {
   const { doctorId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const { loading, user } = useProtectedRoute(`/book/${doctorId}`);
   const { doctorById, clinicById, patient, bookAppointment } = useApp();
 
   if (!patient) {
@@ -205,4 +207,7 @@ function BookAppointment() {
     </PatientShell>
   );
 }
+
+
+
 

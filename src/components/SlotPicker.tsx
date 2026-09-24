@@ -1,3 +1,4 @@
+import { useApp } from "@/lib/store";
 import { addDays, dayPartOf, isoDate, relativeDay, shortDate, to12h } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -51,14 +52,40 @@ export function SlotGrid({
   value?: string;
   onChange: (time: string) => void;
 }) {
-  // Generate some available slots since we don't have a schedule engine
+  const app = useApp();
   const generateSlots = () => {
-    return [
-      { time: "09:00:00", booked: false },
-      { time: "10:00:00", booked: false },
-      { time: "14:00:00", booked: false },
-      { time: "16:00:00", booked: false }
-    ];
+    const schedule = app.scheduleOf(doctorId);
+    if (!schedule) return [];
+    
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const selectedDate = new Date(`${date}T00:00:00`);
+    const dayName = dayNames[selectedDate.getDay()];
+    if (dayName === undefined || !schedule.workingDays.includes(dayName)) return [];
+    
+    if (schedule.unavailableDates.includes(date)) return [];
+
+    const toMin = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return (h ?? 0) * 60 + (m ?? 0);
+    };
+    const fmt = (mins: number) =>
+      `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+    
+    const out = [];
+    const start = toMin(schedule.workingHours.start);
+    const end = toMin(schedule.workingHours.end);
+    const bStart = toMin(schedule.breakPeriod.start);
+    const bEnd = toMin(schedule.breakPeriod.end);
+    
+    for (let t = start; t < end; t += schedule.slotMinutes) {
+      if (t >= bStart && t < bEnd) continue;
+      const timeStr = fmt(t) + ":00";
+      const isBooked = app.patientAppointments.some(a => a.doctorId === doctorId && a.date === date && a.time.startsWith(fmt(t)) && a.status !== 'cancelled') ||
+                       app.clinicAppointments.some(a => a.doctorId === doctorId && a.date === date && a.time.startsWith(fmt(t)) && a.status !== 'cancelled');
+      
+      out.push({ time: timeStr, booked: isBooked });
+    }
+    return out;
   };
   const slots = generateSlots();
 

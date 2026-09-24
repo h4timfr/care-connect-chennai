@@ -70,3 +70,4 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
   );
 }
 
+

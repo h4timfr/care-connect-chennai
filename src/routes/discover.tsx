@@ -120,13 +120,7 @@ function Discover() {
       if (language && !d.languages.includes(language)) return false;
       if (d.experienceYears < minExperience) return false;
 
-      const targetDate =
-        availability === "today" ? today : availability === "tomorrow" ? tomorrow : null;
-      if (targetDate || parts.length) {
-        // Statically allowing it for now
-        const open = [true];
-        if (!open.length) return false;
-      }
+
       return true;
     });
 
@@ -158,7 +152,7 @@ function Discover() {
       if (!needle) return true;
       return `${c.name} ${c.area} ${c.services.join(" ")}`.toLowerCase().includes(needle);
     });
-  }, [text, specialtyId]);
+  }, [text, specialtyId, clinics]);
 
   const chip = (active: boolean) =>
     cn(
@@ -249,45 +243,7 @@ function Discover() {
               </Button>
             </div>
 
-            <div>
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Availability
-              </Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(["any", "today", "tomorrow"] as const).map((a) => (
-                  <button
-                    key={a}
-                    type="button"
-                    className={chip(availability === a)}
-                    onClick={() => setAvailability(a)}
-                  >
-                    {a === "any" ? "Any day" : a === "today" ? "Available today" : "Tomorrow"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Time of day
-              </Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {["morning", "afternoon", "evening"].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    className={chip(parts.includes(p))}
-                    onClick={() =>
-                      setParts((prev) =>
-                        prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
-                      )
-                    }
-                  >
-                    {p[0]!.toUpperCase() + p.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
+            
 
             <div>
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -457,6 +413,8 @@ function Discover() {
     </PatientShell>
   );
 }
+
+
 
 
 

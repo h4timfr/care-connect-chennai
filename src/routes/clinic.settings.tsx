@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Bell, Calendar, Shield } from "lucide-react";
@@ -89,3 +90,4 @@ function ClinicSettings() {
     </ClinicShell>
   );
 }
+

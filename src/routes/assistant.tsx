@@ -23,7 +23,7 @@ function AssistantView() {
       id: "1",
       role: "ai",
       content:
-        "Hi! I'm the CareConnect Assistant. I can help you find doctors, check clinic availability, and schedule appointments. What are you looking for today?",
+        "Hi! I'm the CareConnect Assistant DEMO. Please note this is a placeholder UI and cannot actually book appointments or provide medical advice.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -47,13 +47,7 @@ function AssistantView() {
       let aiResponse =
         "I'm a demo assistant. In a real application, I would connect to a large language model to help you book appointments or answer logistical questions based on clinic data.";
 
-      if (
-        userMsg.toLowerCase().includes("orthopedic") &&
-        userMsg.toLowerCase().includes("evening")
-      ) {
-        aiResponse =
-          "I found Dr. Karthik Subramanian (Orthopedics) at Anna Nagar Ortho & Physio Centre. He has evening availability starting at 5:00 PM today. Would you like me to show you his profile or help you book?";
-      }
+
 
       setMessages((prev) => [
         ...prev,
@@ -73,7 +67,7 @@ function AssistantView() {
             </div>
             <div>
               <h1 className="font-display font-semibold text-lg flex items-center gap-2">
-                Appointment Assistant <Sparkles className="h-4 w-4 text-primary" />
+                Appointment Assistant (Demo Mode) <Sparkles className="h-4 w-4 text-primary" />
               </h1>
               <p className="text-xs text-muted-foreground">Logistics & Booking Help</p>
             </div>
@@ -156,3 +150,4 @@ function AssistantView() {
     </PatientShell>
   );
 }
+
