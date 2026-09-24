@@ -1,4 +1,5 @@
 import { useApp } from "@/lib/store";
+import { useDoctorAvailability } from "@/lib/supabase/queries";
 import { addDays, dayPartOf, isoDate, relativeDay, shortDate, to12h } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ export function DateStrip({
   );
 }
 
+
 export function SlotGrid({
   doctorId,
   date,
@@ -53,6 +55,9 @@ export function SlotGrid({
   onChange: (time: string) => void;
 }) {
   const app = useApp();
+  const availabilityQuery = useDoctorAvailability(doctorId, date);
+  const availableSlots = availabilityQuery.data || [];
+
   const generateSlots = () => {
     const schedule = app.scheduleOf(doctorId);
     if (!schedule) return [];
@@ -80,14 +85,19 @@ export function SlotGrid({
     for (let t = start; t < end; t += schedule.slotMinutes) {
       if (t >= bStart && t < bEnd) continue;
       const timeStr = fmt(t) + ":00";
-      const isBooked = app.patientAppointments.some(a => a.doctorId === doctorId && a.date === date && a.time.startsWith(fmt(t)) && a.status !== 'cancelled') ||
-                       app.clinicAppointments.some(a => a.doctorId === doctorId && a.date === date && a.time.startsWith(fmt(t)) && a.status !== 'cancelled');
+      // It is booked if it's NOT in the availableSlots list (from the RPC)
+      // and availabilityQuery has finished loading
+      const isBooked = !availabilityQuery.isPending && !availableSlots.includes(timeStr);
       
       out.push({ time: timeStr, booked: isBooked });
     }
     return out;
   };
   const slots = generateSlots();
+
+  if (availabilityQuery.isPending) {
+    return <p className="text-sm text-muted-foreground text-center py-4">Checking availability...</p>;
+  }
 
   if (!slots.length) {
     return (
@@ -137,3 +147,4 @@ export function SlotGrid({
     </div>
   );
 }
+

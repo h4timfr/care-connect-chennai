@@ -214,3 +214,18 @@ export function useToggleSavedClinic() {
 
 
 
+
+export function useDoctorAvailability(doctorId: string, date: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["availability", doctorId, date],
+    enabled: options?.enabled ?? (!!doctorId && !!date),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_doctor_availability", {
+        p_doctor_id: doctorId,
+        p_date: date,
+      });
+      if (error) throw error;
+      return (data || []).map((r: any) => r.available_time);
+    },
+  });
+}
