@@ -105,7 +105,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const doctorsQuery = useDoctors({ enabled: !isAuthPage });
   const schedulesQuery = useSchedules({ enabled: !isAuthPage });
-  const conversationsQuery = useConversations(auth.user?.id, { enabled: isLoggedIn });
+  const conversationsQuery = useConversations(
+    patientQuery.data?.id,
+    authorizedClinicIds,
+    isLoggedIn,
+  );
 
   const bookMut = useBookAppointment();
   const cancelMut = useCancelAppointment();

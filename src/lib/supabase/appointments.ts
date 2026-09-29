@@ -100,27 +100,37 @@ export function useBookAppointment() {
       });
 
       if (error) {
-        // Handle unique constraint violation for double booking
-        if (error.code === "23505" || error.message.includes("unique constraint")) {
+        // Handle unique constraint violation for double booking or overlap
+        if (
+          error.code === "23505" ||
+          error.message.includes("unique constraint") ||
+          error.message.includes("overlap") ||
+          error.message.includes("not available")
+        ) {
           throw new Error("That appointment slot is no longer available.");
         }
-        throw new Error(error.message);
+
+        // Hide raw database errors from the UI
+        console.error("Booking error:", error);
+        throw new Error("Failed to book appointment. Please try again or choose another slot.");
       }
 
-      // Return the actual mapped DB row
+      // The RPC returns the new appointment UUID, not a full row.
+      // Build a partial Appointment from the input; the full row
+      // will be fetched when the appointments query is invalidated.
       return {
-        id: data.id,
-        doctorId: data.doctor_id,
-        clinicId: data.clinic_id,
-        patientId: data.patient_id,
-        date: data.date,
-        time: data.time,
-        status: data.status,
-        reason: data.reason,
-        fee: Number(data.fee),
-        patientName: "You",
-        patientPhone: "",
-        createdAt: data.created_at,
+        id: data as unknown as string,
+        doctorId: appointment.doctorId,
+        clinicId: appointment.clinicId,
+        patientId: appointment.patientId,
+        date: appointment.date,
+        time: appointment.time,
+        status: "pending",
+        reason: appointment.reason || "",
+        fee: appointment.fee,
+        patientName: appointment.patientName,
+        patientPhone: appointment.patientPhone,
+        createdAt: new Date().toISOString(),
       } as Appointment;
     },
     onSuccess: (_, variables) => {

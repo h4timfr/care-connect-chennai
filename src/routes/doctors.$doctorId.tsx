@@ -20,7 +20,11 @@ function DoctorProfile() {
   const app = useApp();
 
   const doctor = app.doctorById(doctorId);
-  const clinic = doctor ? app.clinicById(doctor.clinicIds?.[0] || "") : undefined;
+  const clinics = doctor
+    ? (doctor.clinicIds || [])
+        .map((id) => app.clinicById(id))
+        .filter((c): c is NonNullable<typeof c> => Boolean(c))
+    : [];
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -41,7 +45,6 @@ function DoctorProfile() {
     );
   }
 
-  const schedule = app.scheduleOf(doctor.id);
   const reviews: any[] = [];
 
   return (
@@ -104,7 +107,7 @@ function DoctorProfile() {
               <div className="mt-6">
                 <h3 className="font-medium text-sm mb-2 text-foreground">Qualifications</h3>
                 <p className="text-sm text-muted-foreground">
-                  {((doctor.qualifications as any[]) || []).join(", ")}
+                  {(doctor.qualifications || []).join(", ")}
                 </p>
               </div>
 
@@ -113,7 +116,7 @@ function DoctorProfile() {
                   Services & Specializations
                 </h3>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                  {((doctor.services as any[]) || []).map((s) => (
+                  {(doctor.services || []).map((s) => (
                     <li key={s}>{s}</li>
                   ))}
                 </ul>
@@ -121,26 +124,30 @@ function DoctorProfile() {
             </section>
 
             <section className="surface-card p-6">
-              <h2 className="font-display text-lg font-semibold mb-3 text-foreground">
-                Clinic Info
-              </h2>
-              {clinic && (
-                <div>
-                  <h3 className="font-medium text-foreground">
-                    <Link
-                      to="/clinics/$clinicId"
-                      params={{ clinicId: clinic.id }}
-                      className="hover:underline"
-                    >
-                      {clinic.name}
-                    </Link>
-                  </h3>
-                  <p className="text-sm text-muted-foreground flex items-start gap-1.5 mt-1">
-                    <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
-                    {clinic.address}
-                  </p>
-                </div>
-              )}
+              <h2 className="font-display text-lg font-semibold mb-4 text-foreground">Locations</h2>
+              <div className="space-y-6">
+                {clinics.length > 0 ? (
+                  clinics.map((clinic) => (
+                    <div key={clinic.id} className="border-b last:border-0 pb-4 last:pb-0">
+                      <h3 className="font-medium text-foreground">
+                        <Link
+                          to="/clinics/$clinicId"
+                          params={{ clinicId: clinic.id }}
+                          className="hover:underline"
+                        >
+                          {clinic.name}
+                        </Link>
+                      </h3>
+                      <p className="text-sm text-muted-foreground flex items-start gap-1.5 mt-1">
+                        <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+                        {clinic.address}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No clinic locations found.</p>
+                )}
+              </div>
             </section>
           </div>
 
@@ -149,17 +156,27 @@ function DoctorProfile() {
               <h2 className="font-display text-lg font-semibold mb-4">Availability</h2>
               <div className="space-y-6">
                 <DateStrip value={date} onChange={setDate} />
-                <SlotGrid
-                  doctorId={doctor.id}
-                  date={date}
-                  onChange={(time) =>
-                    router.navigate({
-                      to: "/book/$doctorId",
-                      params: { doctorId: doctor.id },
-                      search: { date, time },
-                    })
-                  }
-                />
+
+                {clinics.map((clinic) => (
+                  <div
+                    key={clinic.id}
+                    className="mt-4 pt-4 border-t first:border-0 first:pt-0 first:mt-0"
+                  >
+                    <h3 className="font-medium text-sm mb-3">{clinic.name}</h3>
+                    <SlotGrid
+                      doctorId={doctor.id}
+                      clinicId={clinic.id}
+                      date={date}
+                      onChange={(time) =>
+                        router.navigate({
+                          to: "/book/$doctorId",
+                          params: { doctorId: doctor.id },
+                          search: { date, time, clinicId: clinic.id },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
               </div>
             </section>
 

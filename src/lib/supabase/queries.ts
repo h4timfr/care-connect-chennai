@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Clinic, Doctor, DoctorSchedule } from "@/lib/types";
@@ -212,19 +212,21 @@ export function useToggleSavedClinic() {
 
 export function useDoctorAvailability(
   doctorId: string,
+  clinicId: string,
   date: string,
   options?: { enabled?: boolean },
 ) {
   return useQuery({
-    queryKey: ["availability", doctorId, date],
-    enabled: options?.enabled ?? (!!doctorId && !!date),
+    queryKey: ["availability", doctorId, clinicId, date],
+    enabled: options?.enabled ?? (!!doctorId && !!clinicId && !!date),
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_doctor_availability", {
+      const { data, error } = await supabase.rpc("get_doctor_slots", {
         p_doctor_id: doctorId,
+        p_clinic_id: clinicId,
         p_date: date,
       });
       if (error) throw error;
-      return (data || []).map((r: any) => r.available_time);
+      return data || [];
     },
   });
 }

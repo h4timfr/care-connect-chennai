@@ -32,8 +32,8 @@ function MessagesView() {
   const myConversations = conversations
     .filter((c) => c.patientId === patient?.id)
     .sort((a, b) => {
-      const lastA = a.messages[a.messages.length - 1]?.sentAt ?? "";
-      const lastB = b.messages[b.messages.length - 1]?.sentAt ?? "";
+      const lastA = a.messages?.[a.messages.length - 1]?.sentAt ?? "";
+      const lastB = b.messages?.[b.messages.length - 1]?.sentAt ?? "";
       return lastB.localeCompare(lastA);
     });
 

@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Calendar, Clock, MapPin, Stethoscope } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 export const Route = createFileRoute("/book/$doctorId")({
   component: BookAppointment,
   validateSearch: (search: Record<string, unknown>) => {
-    const params: { date?: string; time?: string; reschedule?: string } = {};
+    const params: { date?: string; time?: string; reschedule?: string; clinicId?: string } = {};
     if (typeof search["date"] === "string" && search["date"]) {
       params.date = search["date"];
     }
@@ -20,6 +20,9 @@ export const Route = createFileRoute("/book/$doctorId")({
     }
     if (typeof search["reschedule"] === "string" && search["reschedule"]) {
       params.reschedule = search["reschedule"];
+    }
+    if (typeof search["clinicId"] === "string" && search["clinicId"]) {
+      params.clinicId = search["clinicId"];
     }
     return params;
   },
@@ -53,7 +56,8 @@ function BookAppointment() {
   }
 
   const doctor = doctorById(doctorId);
-  const clinic = doctor ? clinicById(doctor.clinicIds?.[0] || "") : undefined;
+  const resolvedClinicId = search.clinicId || doctor?.clinicIds?.[0] || "";
+  const clinic = doctor ? clinicById(resolvedClinicId) : undefined;
 
   if (!doctor) {
     return (
@@ -79,7 +83,7 @@ function BookAppointment() {
     try {
       await bookAppointment({
         doctorId: doctor.id,
-        clinicId: doctor.clinicIds?.[0] || "",
+        clinicId: resolvedClinicId,
         date: search.date!,
         time: search.time!,
         reason: reason || "Routine consultation",

@@ -43,56 +43,20 @@ export function DateStrip({
 }
 
 export function SlotGrid({
+  clinicId,
   doctorId,
   date,
   value,
   onChange,
 }: {
   doctorId: string;
+  clinicId: string;
   date: string;
   value?: string;
   onChange: (time: string) => void;
 }) {
-  const app = useApp();
-  const availabilityQuery = useDoctorAvailability(doctorId, date);
-  const availableSlots = availabilityQuery.data || [];
-
-  const generateSlots = () => {
-    const schedule = app.scheduleOf(doctorId);
-    if (!schedule) return [];
-
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const selectedDate = new Date(`${date}T00:00:00`);
-    const dayName = dayNames[selectedDate.getDay()];
-    if (dayName === undefined || !schedule.workingDays.includes(dayName)) return [];
-
-    if (schedule.unavailableDates.includes(date)) return [];
-
-    const toMin = (t: string) => {
-      const [h, m] = t.split(":").map(Number);
-      return (h ?? 0) * 60 + (m ?? 0);
-    };
-    const fmt = (mins: number) =>
-      `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
-
-    const out = [];
-    const start = toMin(schedule.workingHours.start);
-    const end = toMin(schedule.workingHours.end);
-    const bStart = toMin(schedule.breakPeriod.start);
-    const bEnd = toMin(schedule.breakPeriod.end);
-
-    for (let t = start; t < end; t += schedule.slotMinutes) {
-      if (t >= bStart && t < bEnd) continue;
-      const timeStr = fmt(t) + ":00";
-      // It is booked if it's NOT in the availableSlots list (from the RPC)
-      // and availabilityQuery has finished loading
-      const isBooked = !availabilityQuery.isPending && !availableSlots.includes(timeStr);
-
-      out.push({ time: timeStr, booked: isBooked });
-    }
-    return out;
-  };
-  const slots = generateSlots();
+  const availabilityQuery = useDoctorAvailability(doctorId, clinicId, date);
+  const slots = (availabilityQuery.data || []) as { slot_time: string; available: boolean }[];
 
   if (availabilityQuery.isPending) {
     return (
@@ -111,7 +75,7 @@ export function SlotGrid({
   return (
     <div className="space-y-4">
       {PARTS.map((part) => {
-        const partSlots = slots.filter((s) => dayPartOf(s.time) === part);
+        const partSlots = slots.filter((s) => dayPartOf(s.slot_time) === part);
         if (!partSlots.length) return null;
         return (
           <div key={part}>
@@ -121,24 +85,24 @@ export function SlotGrid({
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
               {partSlots.map((slot) => (
                 <button
-                  key={slot.time}
+                  key={slot.slot_time}
                   type="button"
-                  disabled={slot.booked}
-                  aria-pressed={value === slot.time}
-                  onClick={() => onChange(slot.time)}
+                  disabled={!slot.available}
+                  aria-pressed={value === slot.slot_time}
+                  onClick={() => onChange(slot.slot_time)}
                   className={cn(
                     "rounded-lg border px-2 py-2 text-sm font-medium transition-colors",
-                    slot.booked &&
+                    !slot.available &&
                       "cursor-not-allowed bg-muted text-muted-foreground/50 line-through",
-                    !slot.booked &&
-                      value === slot.time &&
+                    slot.available &&
+                      value === slot.slot_time &&
                       "border-primary bg-primary text-primary-foreground",
-                    !slot.booked &&
-                      value !== slot.time &&
+                    slot.available &&
+                      value !== slot.slot_time &&
                       "bg-card hover:border-primary hover:text-primary",
                   )}
                 >
-                  {to12h(slot.time)}
+                  {to12h(slot.slot_time)}
                 </button>
               ))}
             </div>

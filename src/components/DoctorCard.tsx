@@ -1,4 +1,4 @@
-﻿import { Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Bookmark, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Initials, Rating } from "@/components/common";
@@ -50,11 +50,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
         <p className="text-sm text-muted-foreground">{doctor.languages.join(" · ")}</p>
       ) : null}
 
-      <div className="rounded-lg bg-primary-soft/60 px-3 py-2.5">
-        <p className="text-xs text-muted-foreground">No open slots in the next 14 days</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 mt-2">
         <Button asChild variant="outline" size="sm">
           <Link to="/doctors/$doctorId" params={{ doctorId: doctor.id }}>
             View profile

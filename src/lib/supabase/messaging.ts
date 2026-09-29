@@ -5,19 +5,12 @@ import { supabase } from "./client";
 import type { Conversation } from "@/lib/types";
 import { useAuthorizedClinics } from "./queries";
 
-export function useConversations(userId?: string, options?: { enabled?: boolean }) {
-  const enabled = options?.enabled;
+export function useConversations(patientId?: string, clinicIds: string[] = [], enabled?: boolean) {
   const queryClient = useQueryClient();
-  const authorizedClinicsQuery = useAuthorizedClinics(userId);
-
-  const clinicIds = useMemo(() => {
-    const clinics = authorizedClinicsQuery.data;
-    if (!clinics) return [];
-    return clinics.map((c: { id: string }) => c.id);
-  }, [authorizedClinicsQuery.data]);
+  const clinicIdsStr = clinicIds.join(",");
 
   useEffect(() => {
-    if (!userId || (options && options.enabled === false)) return;
+    if ((!patientId && clinicIdsStr.length === 0) || enabled === false) return;
 
     // Subscribe to new messages
     const channel = supabase
@@ -30,8 +23,7 @@ export function useConversations(userId?: string, options?: { enabled?: boolean 
           table: "messages",
         },
         () => {
-          // Invalidate conversations to fetch new messages
-          queryClient.invalidateQueries({ queryKey: ["conversations", userId, clinicIds] });
+          queryClient.invalidateQueries({ queryKey: ["conversations", patientId, clinicIdsStr] });
         },
       )
       .subscribe();
@@ -39,12 +31,12 @@ export function useConversations(userId?: string, options?: { enabled?: boolean 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, clinicIds, queryClient, enabled, options]);
+  }, [patientId, clinicIdsStr, queryClient, enabled]);
 
   return useQuery({
-    queryKey: ["conversations", userId, clinicIds],
+    queryKey: ["conversations", patientId, clinicIdsStr],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!patientId && clinicIds.length === 0) return [];
 
       let query = supabase.from("conversations").select(
         `
@@ -55,10 +47,12 @@ export function useConversations(userId?: string, options?: { enabled?: boolean 
         `,
       );
 
-      if (clinicIds.length > 0) {
-        query = query.or(`patient_id.eq.${userId},clinic_id.in.(${clinicIds.join(",")})`);
-      } else {
-        query = query.eq("patient_id", userId);
+      if (clinicIds.length > 0 && patientId) {
+        query = query.or(`patient_id.eq.${patientId},clinic_id.in.(${clinicIds.join(",")})`);
+      } else if (clinicIds.length > 0) {
+        query = query.in("clinic_id", clinicIds);
+      } else if (patientId) {
+        query = query.eq("patient_id", patientId);
       }
 
       const { data, error } = await query.order("created_at", { ascending: false });
@@ -89,7 +83,7 @@ export function useConversations(userId?: string, options?: { enabled?: boolean 
           ),
       })) as Conversation[];
     },
-    enabled: (enabled ?? !!userId) && !authorizedClinicsQuery.isLoading,
+    enabled: enabled ?? (!!patientId || clinicIds.length > 0),
   });
 }
 

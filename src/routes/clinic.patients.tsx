@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useState, useMemo } from "react";
@@ -79,11 +79,17 @@ function ClinicPatients() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {filteredPatients.map((p: Patient) => {
-                const sortedApts: Appointment[] = [];
-                // Temporarily typed as any to prevent TS narrowing to 'never' on unassigned const
-                const lastVisit: Appointment | undefined = undefined;
-                const completed = 0;
+              {filteredPatients.map((p: Patient & { appointments: Appointment[] }) => {
+                const sortedApts: Appointment[] = [...p.appointments].sort(
+                  (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+                );
+
+                const lastVisit = sortedApts.find(
+                  (a) => a.status === "completed" || a.status === "arrived",
+                );
+                const completed = sortedApts.filter(
+                  (a) => a.status === "completed" || a.status === "arrived",
+                ).length;
 
                 return (
                   <tr key={p.id} className="hover:bg-muted/30 transition-colors cursor-pointer">
@@ -98,7 +104,7 @@ function ClinicPatients() {
                         <Phone className="h-3 w-3" /> {p.phone}
                       </div>
                     </td>
-                    <td className="p-4">{0}</td>
+                    <td className="p-4">{sortedApts.length}</td>
                     <td className="p-4">{lastVisit ? shortDate(lastVisit.date) : "N/A"}</td>
                     <td className="p-4">
                       {completed > 0 ? (

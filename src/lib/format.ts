@@ -1,4 +1,4 @@
-﻿export const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
+export const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
 export function to12h(time: string) {
   const parts = time.split(":");
@@ -66,21 +66,23 @@ export function specialtyName(id: string) {
 }
 
 export function longDate(iso: string) {
-  const d = new Date(`${iso}T00:00:00`);
+  if (!iso) return "Not set";
+  const d = new Date(`${iso}T12:00:00Z`); // use noon UTC to avoid any timezone shifts
+  if (isNaN(d.getTime())) return "Not set";
   return d.toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
     month: "long",
-    timeZone: "Asia/Kolkata",
+    timeZone: "UTC",
   });
 }
 
 export function shortDate(iso: string) {
-  const d = new Date(`${iso}T00:00:00`);
+  const d = new Date(`${iso}T12:00:00Z`);
   return d.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
-    timeZone: "Asia/Kolkata",
+    timeZone: "UTC",
   });
 }
 

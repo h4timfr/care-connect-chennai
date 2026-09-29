@@ -5,6 +5,7 @@ import { PatientShell } from "@/components/layout/PatientShell";
 import { Initials } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
+import { longDate } from "@/lib/format";
 import { useAuth } from "@/lib/supabase/auth";
 
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
@@ -94,9 +95,7 @@ function ProfilePage() {
               </div>
               <div>
                 <dt className="text-muted-foreground mb-0.5">Date of Birth</dt>
-                <dd className="font-medium">
-                  {new Date(patient.dateOfBirth).toLocaleDateString()}
-                </dd>
+                <dd className="font-medium">{longDate(patient.dateOfBirth)}</dd>
               </div>
             </dl>
           </section>

@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, CalendarDays, Search, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { PatientShell } from "@/components/layout/PatientShell";
@@ -8,7 +8,7 @@ import { DemoBanner, SectionHeader, SpecialtyIcon } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { SPECIALTIES } from "@/lib/format";
 import { useApp } from "@/lib/store";
-import { longDate, to12h } from "@/lib/format";
+import { isoDate, longDate, to12h } from "@/lib/format";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -47,12 +47,12 @@ function Home() {
       (a) =>
         a.patientId === patient?.id &&
         (a.status === "confirmed" || a.status === "pending") &&
-        a.date >= new Date().toISOString().slice(0, 10),
+        a.date >= isoDate(new Date()),
     )
     .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))[0];
   const upcomingDoctor = upcoming ? doctors.find((d) => d.id === upcoming.doctorId) : undefined;
 
-  const nearYou = doctors.slice().slice(0, 6);
+  const featuredDoctors = doctors.slice().slice(0, 6);
 
   return (
     <PatientShell>
@@ -132,8 +132,8 @@ function Home() {
 
         <section>
           <SectionHeader
-            title="Near you"
-            subtitle={`Doctors consulting close to ${patient?.area ?? "you"}`}
+            title="Featured Doctors"
+            subtitle="Explore doctors across Chennai"
             action={
               <Button asChild variant="ghost" size="sm">
                 <Link to="/discover" search={{}}>
@@ -143,7 +143,7 @@ function Home() {
             }
           />
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {nearYou.map((d) => (
+            {featuredDoctors.map((d) => (
               <DoctorCard key={d.id} doctor={d} />
             ))}
           </div>

@@ -33,13 +33,13 @@ export const Route = createFileRoute("/discover")({
   },
   head: () => ({
     meta: [
-      { title: "Find doctors and clinics in Chennai — CareConnect" },
+      { title: "Find doctors and clinics in Chennai - CareConnect" },
       {
         name: "description",
         content:
-          "Search demo doctors by specialty, area, availability, fee, language and experience across Chennai neighbourhoods.",
+          "Search doctors by specialty, area, availability, fee, language and experience across Chennai neighbourhoods.",
       },
-      { property: "og:title", content: "Find doctors in Chennai — CareConnect" },
+      { property: "og:title", content: "Find doctors in Chennai - CareConnect" },
       {
         property: "og:description",
       },
@@ -148,7 +148,7 @@ function Discover() {
         <div>
           <h1 className="font-display text-2xl font-bold">Find doctors</h1>
           <p className="text-sm text-muted-foreground">
-            Search demo providers by specialty, clinic, area or doctor name.
+            Search providers by specialty, clinic, area or doctor name.
           </p>
         </div>
 
