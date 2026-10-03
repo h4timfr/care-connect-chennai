@@ -76,8 +76,6 @@ export interface DoctorSchedule {
   slotMinutes: number;
   workingDays: string[];
   workingHours: { start: string; end: string };
-  breakPeriod: { start: string; end: string };
-  unavailableDates: string[];
 }
 
 /** A concrete bookable slot on a given date. */

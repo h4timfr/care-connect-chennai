@@ -100,11 +100,12 @@ export function useBookAppointment() {
       });
 
       if (error) {
-        // Handle unique constraint violation for double booking or overlap
+        // Handle unique constraint violation for double booking, overlap, or a slot the schedule does not offer
         if (
           error.code === "23505" ||
           error.message.includes("unique constraint") ||
           error.message.includes("overlap") ||
+          error.message.includes("no longer available") ||
           error.message.includes("not available")
         ) {
           throw new Error("That appointment slot is no longer available.");
@@ -115,22 +116,21 @@ export function useBookAppointment() {
         throw new Error("Failed to book appointment. Please try again or choose another slot.");
       }
 
-      // The RPC returns the new appointment UUID, not a full row.
-      // Build a partial Appointment from the input; the full row
-      // will be fetched when the appointments query is invalidated.
+      // The RPC returns the full inserted public.appointments row. The server is authoritative for
+      // patient_id, fee, status and the stored date/time, so map the row rather than echoing the input.
       return {
-        id: data as unknown as string,
-        doctorId: appointment.doctorId,
-        clinicId: appointment.clinicId,
-        patientId: appointment.patientId,
-        date: appointment.date,
-        time: appointment.time,
-        status: "pending",
-        reason: appointment.reason || "",
-        fee: appointment.fee,
+        id: data.id,
+        doctorId: data.doctor_id,
+        clinicId: data.clinic_id,
+        patientId: data.patient_id,
+        date: data.date,
+        time: data.time,
+        status: data.status as AppointmentStatus,
+        reason: data.reason ?? "",
+        fee: Number(data.fee),
         patientName: appointment.patientName,
         patientPhone: appointment.patientPhone,
-        createdAt: new Date().toISOString(),
+        createdAt: data.created_at,
       } as Appointment;
     },
     onSuccess: (_, variables) => {
