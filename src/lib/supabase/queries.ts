@@ -91,8 +91,6 @@ export function useSchedules(options?: { enabled?: boolean }) {
             slotMinutes: s.slot_minutes,
             workingDays: [],
             workingHours: { start: s.start_time.substring(0, 5), end: s.end_time.substring(0, 5) },
-            breakPeriod: { start: "13:00", end: "14:00" },
-            unavailableDates: [],
           });
         }
         const schedule = scheduleMap.get(key)!;

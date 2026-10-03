@@ -18,8 +18,20 @@ INSERT INTO public.clinics (id, name, address, phone, email) VALUES
 INSERT INTO public.doctors (id, user_id, name, consultation_fee) VALUES 
 ('55555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-000000000004', 'Doctor A', 500);
 
-INSERT INTO public.clinic_doctors (clinic_id, doctor_id) VALUES 
-('33333333-3333-3333-3333-333333333333', '55555555-5555-5555-5555-555555555555');
+-- Verification state can only be set by a platform admin (check_clinic_doctor_update forces 'pending' otherwise),
+-- so the fixture is created while authenticated as one.
+INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
+('00000000-0000-0000-0000-000000000009', 'adminA@test.com', now(), now());
+INSERT INTO public.user_roles (user_id, role) VALUES ('00000000-0000-0000-0000-000000000009', 'platform_admin');
+
+-- Doctor A is active and verified at Clinic A only, with a 09:00-17:00 / 30 minute schedule on every weekday
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000009", "role": "authenticated"}';
+INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES 
+('33333333-3333-3333-3333-333333333333', '55555555-5555-5555-5555-555555555555', true, 'verified');
+
+INSERT INTO public.doctor_schedules (doctor_id, clinic_id, day_of_week, start_time, end_time, slot_minutes)
+SELECT '55555555-5555-5555-5555-555555555555', '33333333-3333-3333-3333-333333333333', dow, '09:00', '17:00', 30
+FROM generate_series(0, 6) AS dow;
 
 -- Authenticate as Patient A
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000001", "role": "authenticated"}';
@@ -53,7 +65,7 @@ SELECT extensions.throws_ok(
 SELECT extensions.throws_ok(
     $$ SELECT public.book_appointment('55555555-5555-5555-5555-555555555555', '44444444-4444-4444-4444-444444444444', CURRENT_DATE + 1, '10:00', 'Reason') $$,
     'P0001',
-    'Validation Failed: Doctor does not operate at this clinic.',
+    'Validation Failed: Doctor is not currently active or verified at this clinic.',
     'Forged clinic relationship should fail'
 );
 
@@ -69,12 +81,12 @@ SELECT extensions.is(
     'Fee should be strictly derived from doctor profile, ignoring client'
 );
 
--- Test: Double Booking (Concurrency constraint)
+-- Test: Double Booking is rejected (the RPC pre-check raises first; the unique index is the race-time backstop)
 SELECT extensions.throws_ok(
     $$ SELECT public.book_appointment('55555555-5555-5555-5555-555555555555', '33333333-3333-3333-3333-333333333333', CURRENT_DATE + 1, '10:00', 'Parallel attempt') $$,
-    '23505',
-    NULL,
-    'Double booking should throw Postgres Unique Constraint violation'
+    'P0001',
+    'Validation Failed: That time slot is no longer available.',
+    'Double booking should be rejected'
 );
 
 -- Test: 5 Active Bookings Limit
