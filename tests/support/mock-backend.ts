@@ -44,6 +44,8 @@ export interface MockState {
   /** Rows returned for doctor requests that carry filters (searches), and an optional delay. */
   doctorSearch: Row[] | null;
   doctorSearchDelayMs: number;
+  /** Artificial latency per table or RPC path segment, e.g. { clinic_memberships: 800 }. */
+  delays: Record<string, number>;
 }
 
 export interface MockBackend {
@@ -139,6 +141,7 @@ export function defaultState(): MockState {
     signupResponse: null,
     doctorSearch: null,
     doctorSearchDelayMs: 0,
+    delays: {},
   };
 }
 
@@ -290,6 +293,8 @@ export async function mockBackend(
 
     // ---- Tables
     const table = path.replace("/rest/v1/", "");
+    const delay = state.delays[table];
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
     switch (table) {
       case "clinics":
         return respond(state.clinics);

@@ -88,7 +88,8 @@ const Ctx = createContext<AppState | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isAuthPage = pathname === "/login";
+  // Sign-in and password-reset screens show no listings.
+  const isAuthPage = pathname === "/login" || pathname === "/reset-password";
   const isLoggedIn = !!auth.user && !auth.loading;
 
   const patientQuery = usePatient(auth.user?.id, auth.user?.email, { enabled: isLoggedIn });
@@ -96,7 +97,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { refetch: refetchPatientQuery } = patientQuery;
   // Private data is fetched only on the pages that show it.
   const onPatientAppointmentsPage = pathname === "/" || pathname.startsWith("/appointments");
-  const onClinicPortal = pathname === "/clinic" || pathname.startsWith("/clinic/");
+  // Clinic pages that list appointments (doctors, profile and messages don't).
+  const onClinicAppointmentsPage = [
+    "/clinic",
+    "/clinic/appointments",
+    "/clinic/calendar",
+    "/clinic/patients",
+  ].includes(pathname);
   const patientAppointmentsQuery = usePatientAppointments(patient?.id, {
     enabled: isLoggedIn && onPatientAppointmentsPage,
   });
@@ -111,7 +118,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [authorizedClinics],
   );
   const clinicAppointmentsQuery = useClinicAppointments(authorizedClinicIds, {
-    enabled: isLoggedIn && onClinicPortal,
+    enabled: isLoggedIn && onClinicAppointmentsPage,
   });
 
   // Conversations (with every message) are only loaded, and subscribed to, where they're shown.
@@ -120,7 +127,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const conversationsQuery = useConversations(
     patient?.id,
     authorizedClinicIds,
-    isLoggedIn && onMessagesPage,
+    // Wait for memberships: starting earlier fetches twice, because the query key changes
+    // when the clinic ids arrive.
+    isLoggedIn && onMessagesPage && !authorizedClinicsQuery.isPending,
   );
 
   // useMutation returns a new object every render, but its mutate/mutateAsync functions are stable.
@@ -288,7 +297,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       conversations,
       conversationsStatus: {
-        isLoading: conversationsEnabled && conversationsPending,
+        isLoading:
+          (conversationsEnabled && conversationsPending) ||
+          (isLoggedIn && onMessagesPage && clinicAccessPending),
         error: conversationsError,
         refetch: () => void refetchConversations(),
       },
@@ -331,6 +342,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       conversations,
       conversationsEnabled,
       conversationsPending,
+      onMessagesPage,
       conversationsError,
       refetchConversations,
       sendMessage,

@@ -499,6 +499,28 @@ test.describe("Booking", () => {
 });
 
 test.describe("Messages", () => {
+  test("the inbox never claims to be empty while it is still loading", async ({
+    page,
+    backend,
+  }) => {
+    const seen: string[] = [];
+    await backend({
+      conversations: [conversationRow([{ from: "clinic", body: "Hello from the clinic" }])],
+      delays: { clinic_memberships: 1200, conversations: 400 },
+    });
+    await page.exposeFunction("recordText", (text: string) => seen.push(text));
+    await page.addInitScript(() => {
+      new MutationObserver(() => {
+        if (document.body?.innerText.includes("No conversations yet")) {
+          (window as unknown as { recordText: (t: string) => void }).recordText("empty");
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await page.goto("/messages");
+    await expect(page.getByText("Hello from the clinic")).toBeVisible();
+    expect(seen).toEqual([]);
+  });
+
   test("empty inbox is distinct from a failed load", async ({ page, backend }) => {
     const mock = await backend({ conversations: "error" });
     await page.goto("/messages");
