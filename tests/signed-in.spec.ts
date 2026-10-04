@@ -224,6 +224,21 @@ test.describe("Auth edge cases", () => {
     await expect(page.getByRole("alert")).toContainText("weak and easy to guess");
   });
 
+  test("the email confirmation link signs the new patient in", async ({ page, backend }) => {
+    await backend({}, { signedIn: false });
+    const hash = new URLSearchParams({
+      access_token: fakeAccessToken(),
+      refresh_token: "test-refresh-token",
+      expires_in: "3600",
+      expires_at: String(Math.floor(Date.now() / 1000) + 3600),
+      token_type: "bearer",
+      type: "signup",
+    });
+    await page.goto(`/login#${hash}`);
+    await expect(page).toHaveURL(/localhost:\d+\/$/);
+    await expect(page.getByRole("link", { name: "Your profile" })).toBeVisible();
+  });
+
   test("an expired session that can't be refreshed signs the user out", async ({
     page,
     backend,

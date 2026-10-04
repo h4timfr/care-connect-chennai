@@ -98,6 +98,19 @@ test("every page meets the structural accessibility checks", async ({ page }) =>
   expect(mock.unhandled).toEqual([]);
 });
 
+test("the skip link is the first stop and moves focus to the main content", async ({ page }) => {
+  await mockBackend(page, { signedIn: false });
+  await page.goto("/discover");
+  await page.keyboard.press("Tab");
+  const skip = page.getByRole("link", { name: "Skip to content" });
+  await expect(skip).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#main-content$/);
+  await page.keyboard.press("Tab");
+  // The next stop is inside <main> (the search box), not back in the header.
+  await expect(page.locator("#discover-search")).toBeFocused();
+});
+
 test("pages reachable while signed out also pass", async ({ page }) => {
   await mockBackend(page, { signedIn: false });
   for (const path of ["/login", "/login?signup=true", "/reset-password", "/does-not-exist"]) {
