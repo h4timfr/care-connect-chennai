@@ -228,9 +228,14 @@ export async function mockBackend(
     await page.addInitScript(
       ([key, value]) => {
         // Only seed once per test, so a sign-out inside the test is not undone on reload.
-        if (!sessionStorage.getItem("__mock_seeded")) {
-          localStorage.setItem(key, value);
-          sessionStorage.setItem("__mock_seeded", "1");
+        // (Storage is unavailable on about:blank, e.g. after going back past the first page.)
+        try {
+          if (!sessionStorage.getItem("__mock_seeded")) {
+            localStorage.setItem(key, value);
+            sessionStorage.setItem("__mock_seeded", "1");
+          }
+        } catch {
+          // not an app origin
         }
       },
       [`sb-${PROJECT_REF}-auth-token`, JSON.stringify(session)] as const,

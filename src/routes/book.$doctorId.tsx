@@ -216,9 +216,12 @@ function BookingForm({
         reason: reason.trim(),
       });
       toast.success("Appointment requested. The clinic will review your request.");
+      // Replace the booking form in history: Back shouldn't return to a form for an
+      // appointment that now exists.
       navigate({
         to: "/appointments/$appointmentId",
         params: { appointmentId: appointment.id },
+        replace: true,
       });
     } catch (err) {
       const message = describeBookingError(err);

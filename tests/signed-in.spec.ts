@@ -548,7 +548,9 @@ test.describe("Booking", () => {
     backend,
   }) => {
     const mock = await backend();
-    await page.goto(`/book/${ids.doctorVerified}`);
+    await page.goto(`/doctors/${ids.doctorVerified}`);
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("link", { name: "Book appointment" }).click();
     await expect(page.getByRole("button", { name: "9:00 AM, unavailable" })).toBeDisabled();
     await page.getByRole("button", { name: "6:30 PM" }).click();
     await page.getByLabel("Reason for visit (optional)").fill("Follow-up");
@@ -566,6 +568,10 @@ test.describe("Booking", () => {
     });
     // The browser never inserts appointment rows directly.
     expect(mock.callsTo("POST", "/rest/v1/appointments")).toEqual([]);
+
+    // Back skips the submitted booking form and returns to the doctor's profile.
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/doctors/${ids.doctorVerified}$`));
   });
 
   test("after booking, the new appointment page never flashes 'not found'", async ({
