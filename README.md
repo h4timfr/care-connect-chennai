@@ -118,10 +118,13 @@ These need backend or operational changes and are intentionally **not** worked a
   online booking is unavailable for every doctor until a platform admin verifies them.
 - **All current clinics and doctors are sample records** (`is_demo = true`). They are labelled
   "Sample listing" and their seeded ratings are hidden.
-- **`audit_logs` and `user_roles` reach their RLS policies for anonymous callers**, which then fail
-  with `42P17` (infinite recursion). No rows are exposed and the app never queries these tables, but
-  reaching a policy means anon still holds a privilege on them (likely inherited from `PUBLIC`). The
-  backend should revoke it and fix the recursive policies.
+- **Every read of `audit_logs` and `user_roles` fails with `42P17`** (infinite recursion) in
+  production, for anonymous callers, signed-in users and platform admins alike: the admin read
+  policies from migration 00006 query `user_roles` from inside a `user_roles` policy. No rows are
+  exposed: anon holds no privilege on either table (Postgres expands RLS policies before it checks
+  table privileges, so the recursion error surfaces first), and the app never queries these tables.
+  Migration `00052_user_roles_audit_logs_rls_fix.sql` (tested by `supabase/tests/008_*`) fixes it
+  but **has not been deployed**.
 - **Unread message counts are not maintained** by any trigger or RPC, so the UI does not show
   unread badges.
 - The conversations query loads every message of every conversation; it should be paginated
