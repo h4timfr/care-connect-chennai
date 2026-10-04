@@ -1,6 +1,7 @@
 import { useEffect, useId } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
+import { codeOf } from "./errors";
 import type { Conversation } from "@/lib/types";
 
 export function useConversations(patientId?: string, clinicIds: string[] = [], enabled = true) {
@@ -110,16 +111,21 @@ export function useEnsureConversation() {
       appointmentId?: string;
       patientId: string;
     }) => {
-      const { data: existing, error: fetchError } = await supabase
-        .from("conversations")
-        .select("id")
-        .eq("clinic_id", clinicId)
-        .eq("patient_id", patientId)
-        .limit(1)
-        .maybeSingle();
+      const findExisting = async () => {
+        const { data, error } = await supabase
+          .from("conversations")
+          .select("id")
+          .eq("clinic_id", clinicId)
+          .eq("patient_id", patientId)
+          .order("created_at")
+          .limit(1)
+          .maybeSingle();
+        if (error) throw error;
+        return data?.id ?? null;
+      };
 
-      if (fetchError) throw fetchError;
-      if (existing) return existing.id;
+      const existing = await findExisting();
+      if (existing) return existing;
 
       const { data, error } = await supabase
         .from("conversations")
@@ -133,7 +139,15 @@ export function useEnsureConversation() {
         .select("id")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Another tab or request created it between the check and the insert; the unique index
+        // (patient, clinic) rejected the duplicate, so use the conversation that now exists.
+        if (codeOf(error) === "23505") {
+          const created = await findExisting();
+          if (created) return created;
+        }
+        throw error;
+      }
       return data.id;
     },
     onSuccess: () => {

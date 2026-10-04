@@ -46,6 +46,11 @@ export interface MockState {
   doctorSearchDelayMs: number;
   /** Artificial latency per table or RPC path segment, e.g. { clinic_memberships: 800 }. */
   delays: Record<string, number>;
+  /**
+   * Simulates a concurrent creation: the next conversation insert is rejected by the unique
+   * index (23505) and this row appears, as if another request had just created it.
+   */
+  concurrentConversation: Row | null;
 }
 
 export interface MockBackend {
@@ -142,6 +147,7 @@ export function defaultState(): MockState {
     doctorSearch: null,
     doctorSearchDelayMs: 0,
     delays: {},
+    concurrentConversation: null,
   };
 }
 
@@ -341,6 +347,18 @@ export async function mockBackend(
         return respond(state.appointments);
       }
       case "conversations": {
+        if (method === "POST" && state.concurrentConversation) {
+          if (Array.isArray(state.conversations)) {
+            state.conversations.push(state.concurrentConversation);
+          }
+          state.concurrentConversation = null;
+          return json(route, 409, {
+            code: "23505",
+            message: "duplicate key value violates unique constraint",
+            details: "",
+            hint: "",
+          });
+        }
         if (method === "POST") {
           const created = {
             id: ids.conversation,

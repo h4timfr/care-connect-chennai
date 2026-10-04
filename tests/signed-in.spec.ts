@@ -621,6 +621,19 @@ test.describe("Messages", () => {
     });
   });
 
+  test("a conversation created concurrently elsewhere is reused, not reported as an error", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({
+      concurrentConversation: { ...conversationRow([]), id: "conv-created-elsewhere" },
+    });
+    await page.goto(`/doctors/${ids.doctorVerified}`);
+    await page.getByRole("button", { name: "Message clinic" }).first().click();
+    await expect(page).toHaveURL(/\/messages\?c=conv-created-elsewhere$/);
+    expect(mock.callsTo("POST", "/rest/v1/conversations")).toHaveLength(1);
+  });
+
   test("message clinic from a doctor profile opens a real conversation", async ({
     page,
     backend,
