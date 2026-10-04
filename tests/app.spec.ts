@@ -104,10 +104,40 @@ test.describe("UI States", () => {
     await page.goto("/this-route-does-not-exist");
     await expect(page.getByText("404").first()).toBeVisible();
     await expect(page.getByText("Page not found").first()).toBeVisible();
+    await expect(page).toHaveTitle("Page not found — CareConnect");
   });
 
   test("removed assistant route is gone", async ({ page }) => {
     await page.goto("/assistant");
     await expect(page.getByText("Page not found")).toBeVisible();
+  });
+});
+
+test.describe("Production hardening", () => {
+  test("security headers are sent", async ({ request }) => {
+    const response = await request.get("/");
+    const csp = response.headers()["content-security-policy"];
+    test.skip(!csp, "Security headers are added by the production (Nitro) server only");
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("font-src 'self' https://fonts.gstatic.com");
+    expect(csp).not.toContain("unsafe-eval");
+    expect(csp).not.toMatch(/(^|\s)\*(\s|;|$)/);
+    expect(response.headers()["x-frame-options"]).toBe("DENY");
+    expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  });
+
+  test("pages load without CSP violations or console errors", async ({ page }) => {
+    const problems: string[] = [];
+    page.on("console", (m) => {
+      if (m.type() === "error" || /content security policy/i.test(m.text()))
+        problems.push(m.text());
+    });
+    page.on("pageerror", (e) => problems.push(String(e)));
+    for (const path of ["/", "/discover", "/login", "/doctors/does-not-exist"]) {
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+    }
+    expect(problems).toEqual([]);
   });
 });

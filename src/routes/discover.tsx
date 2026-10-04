@@ -8,7 +8,7 @@ import { CardGridSkeleton, EmptyState, ErrorState } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { SPECIALTIES, inr, pluralize } from "@/lib/format";
+import { SPECIALTIES, inr, pluralize, specialtyInfo } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import {
   SEARCH_RESULT_LIMIT,
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/discover")({
   validateSearch: ({ q, specialty, tab }: Record<string, unknown>): DiscoverSearch => {
     const params: DiscoverSearch = {};
     if (typeof q === "string" && q.trim()) params.q = q.trim().slice(0, 100);
-    if (typeof specialty === "string" && specialty) params.specialty = specialty;
+    if (typeof specialty === "string" && specialtyInfo(specialty)) params.specialty = specialty;
     if (tab === "clinics") params.tab = "clinics";
     return params;
   },
@@ -271,7 +271,7 @@ function Discover() {
           </div>
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
           <aside
             id="discover-filters"
             aria-label="Doctor filters"

@@ -24,7 +24,7 @@ export function MessageClinicButton({
   className?: string;
 }) {
   const { user } = useAuth();
-  const { patient, ensureConversation } = useApp();
+  const { patient, isLoadingPatient, ensureConversation } = useApp();
   const navigate = useNavigate();
   const href = useRouterState({ select: (s) => s.location.href });
   const [opening, setOpening] = useState(false);
@@ -54,7 +54,13 @@ export function MessageClinicButton({
   };
 
   return (
-    <Button variant={variant} size={size} className={className} onClick={open} disabled={opening}>
+    <Button
+      variant={variant}
+      size={size}
+      className={className}
+      onClick={open}
+      disabled={opening || (!!user && isLoadingPatient)}
+    >
       {opening ? (
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
       ) : (

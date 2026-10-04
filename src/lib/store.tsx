@@ -78,8 +78,9 @@ interface AppState {
     appointmentId?: string;
   }) => Promise<string>;
 
-  toggleSavedDoctor: (id: string) => void;
-  toggleSavedClinic: (id: string) => void;
+  /** Resolves once the saved state is stored; rejects with the backend error. */
+  toggleSavedDoctor: (id: string) => Promise<void>;
+  toggleSavedClinic: (id: string) => Promise<void>;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -117,8 +118,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { mutateAsync: updateStatus } = useUpdateAppointmentStatus();
   const { mutateAsync: send } = useSendMessage();
   const { mutateAsync: createConversation } = useEnsureConversation();
-  const { mutate: toggleDoctor } = useToggleSavedDoctor();
-  const { mutate: toggleClinic } = useToggleSavedClinic();
+  const { mutateAsync: toggleDoctor } = useToggleSavedDoctor();
+  const { mutateAsync: toggleClinic } = useToggleSavedClinic();
 
   const clinics = clinicsQuery.data ?? NO_CLINICS;
   const doctors = doctorsQuery.data ?? NO_DOCTORS;
@@ -219,15 +220,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleSavedDoctor = useCallback(
-    (id: string) => {
-      if (patient) toggleDoctor(id);
+    async (id: string) => {
+      if (!patient) throw new Error("Sign in to save doctors.");
+      await toggleDoctor(id);
     },
     [patient, toggleDoctor],
   );
 
   const toggleSavedClinic = useCallback(
-    (id: string) => {
-      if (patient) toggleClinic(id);
+    async (id: string) => {
+      if (!patient) throw new Error("Sign in to save clinics.");
+      await toggleClinic(id);
     },
     [patient, toggleClinic],
   );

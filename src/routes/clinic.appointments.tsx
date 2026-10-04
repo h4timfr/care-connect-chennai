@@ -115,76 +115,99 @@ function AppointmentTable({ rows }: { rows: Appointment[] }) {
     }
   };
 
-  return (
-    <div className="surface-card overflow-x-auto">
-      <table className="w-full min-w-[680px] text-left text-sm">
-        <thead className="bg-muted/50 text-muted-foreground">
-          <tr>
-            <th scope="col" className="p-4 font-medium">
-              Patient
-            </th>
-            <th scope="col" className="p-4 font-medium">
-              Date & time (IST)
-            </th>
-            <th scope="col" className="p-4 font-medium">
-              Doctor
-            </th>
-            <th scope="col" className="p-4 font-medium">
-              Reason
-            </th>
-            <th scope="col" className="p-4 font-medium">
-              Status
-            </th>
-            <th scope="col" className="p-4 font-medium">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {rows.map((a) => (
-            <tr key={a.id} className="align-top transition-colors hover:bg-muted/30">
-              <td className="p-4 font-medium">{a.patientName}</td>
-              <td className="whitespace-nowrap p-4">
-                {shortDate(a.date)}
-                <span className="block text-xs text-muted-foreground">{to12h(a.time)}</span>
-              </td>
-              <td className="p-4">{doctorById(a.doctorId)?.name ?? "—"}</td>
-              <td className="max-w-[180px] truncate p-4" title={a.reason || undefined}>
-                {a.reason || <span className="text-muted-foreground">—</span>}
-              </td>
-              <td className="p-4">
-                <StatusBadge status={a.status} />
-              </td>
-              <td className="p-4">
-                <div className="flex flex-wrap gap-2">
-                  {(ACTIONS[a.status] ?? []).map((action) => (
-                    <Button
-                      key={action.status}
-                      size="sm"
-                      variant="outline"
-                      disabled={updatingId !== null}
-                      className={cn(
-                        "h-8 text-xs",
-                        action.danger && "text-destructive hover:bg-destructive/10",
-                      )}
-                      onClick={() => update(a.id, action.status)}
-                    >
-                      {action.label}
-                    </Button>
-                  ))}
-                </div>
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                No appointments match this filter.
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
+  const actionsFor = (a: Appointment) => (
+    <div className="flex flex-wrap gap-2">
+      {(ACTIONS[a.status] ?? []).map((action) => (
+        <Button
+          key={action.status}
+          size="sm"
+          variant="outline"
+          disabled={updatingId !== null}
+          className={cn("h-8 text-xs", action.danger && "text-destructive hover:bg-destructive/10")}
+          onClick={() => update(a.id, action.status)}
+        >
+          {action.label}
+        </Button>
+      ))}
     </div>
+  );
+
+  if (rows.length === 0) {
+    return (
+      <p className="surface-card p-8 text-center text-muted-foreground">
+        No appointments match this filter.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      {/* Phones: one card per appointment so status and actions stay visible. */}
+      <ul className="space-y-3 md:hidden">
+        {rows.map((a) => (
+          <li key={a.id} className="surface-card space-y-3 p-4 text-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-medium">{a.patientName}</p>
+                <p className="text-muted-foreground">
+                  {shortDate(a.date)} · {to12h(a.time)} IST
+                </p>
+              </div>
+              <StatusBadge status={a.status} />
+            </div>
+            <p className="text-muted-foreground">
+              {[doctorById(a.doctorId)?.name, a.reason].filter(Boolean).join(" · ")}
+            </p>
+            {actionsFor(a)}
+          </li>
+        ))}
+      </ul>
+
+      <div className="surface-card hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[680px] text-left text-sm">
+          <thead className="bg-muted/50 text-muted-foreground">
+            <tr>
+              <th scope="col" className="p-4 font-medium">
+                Patient
+              </th>
+              <th scope="col" className="p-4 font-medium">
+                Date & time (IST)
+              </th>
+              <th scope="col" className="p-4 font-medium">
+                Doctor
+              </th>
+              <th scope="col" className="p-4 font-medium">
+                Reason
+              </th>
+              <th scope="col" className="p-4 font-medium">
+                Status
+              </th>
+              <th scope="col" className="p-4 font-medium">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {rows.map((a) => (
+              <tr key={a.id} className="align-top transition-colors hover:bg-muted/30">
+                <td className="p-4 font-medium">{a.patientName}</td>
+                <td className="whitespace-nowrap p-4">
+                  {shortDate(a.date)}
+                  <span className="block text-xs text-muted-foreground">{to12h(a.time)}</span>
+                </td>
+                <td className="p-4">{doctorById(a.doctorId)?.name ?? "—"}</td>
+                <td className="max-w-[180px] truncate p-4" title={a.reason || undefined}>
+                  {a.reason || <span className="text-muted-foreground">—</span>}
+                </td>
+                <td className="p-4">
+                  <StatusBadge status={a.status} />
+                </td>
+                <td className="p-4">{actionsFor(a)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

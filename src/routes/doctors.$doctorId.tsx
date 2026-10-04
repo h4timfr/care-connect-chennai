@@ -111,7 +111,7 @@ function DoctorProfile() {
           </div>
         </section>
 
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <div className="space-y-6">
             <section className="surface-card space-y-5 p-5 sm:p-6" aria-labelledby="about-heading">
               <h2 id="about-heading" className="font-display text-lg font-semibold">

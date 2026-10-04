@@ -89,6 +89,20 @@ test.describe("Patient account", () => {
   });
 });
 
+test.describe("Saved doctors", () => {
+  test("bookmark calls the toggle RPC once per click", async ({ page, backend }) => {
+    const mock = await backend();
+    await page.goto("/discover");
+    await page.getByRole("button", { name: "Save Dr. Verified Tester" }).click();
+    await expect
+      .poll(() => mock.callsTo("POST", "/rest/v1/rpc/toggle_saved_doctor").length)
+      .toBe(1);
+    expect(mock.callsTo("POST", "/rest/v1/rpc/toggle_saved_doctor")[0]?.body).toEqual({
+      p_doctor_id: ids.doctorVerified,
+    });
+  });
+});
+
 test.describe("Sign-in redirects", () => {
   test("returns to the original page after signing in", async ({ page, backend }) => {
     await backend({}, { signedIn: false });

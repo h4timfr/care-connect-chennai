@@ -74,7 +74,7 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label="Today's visits" value={String(todays.length)} icon={CalendarDays} />
         <Stat label="Awaiting confirmation" value={String(pending.length)} icon={Users} />
         <Stat label="Fees for today's confirmed visits" value={inr(expectedFees)} icon={Banknote} />

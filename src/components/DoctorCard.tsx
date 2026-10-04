@@ -1,10 +1,13 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Bookmark, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Initials, Rating, SampleBadge } from "@/components/common";
 import { inr, pluralize, specialtyName } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { bookableClinicIds } from "@/lib/supabase/queries";
+import { describeDataError } from "@/lib/supabase/errors";
 import { cn } from "@/lib/utils";
 import type { Doctor } from "@/lib/types";
 
@@ -13,6 +16,18 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
   const clinic = clinicById(doctor.clinicIds[0] ?? "");
   const canBookOnline = bookableClinicIds(doctor).length > 0;
   const saved = patient?.savedDoctorIds.includes(doctor.id) ?? false;
+  const [saving, setSaving] = useState(false);
+
+  const toggleSaved = async () => {
+    setSaving(true);
+    try {
+      await toggleSavedDoctor(doctor.id);
+    } catch (err) {
+      toast.error(`Couldn't update saved doctors. ${describeDataError(err)}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <article className="surface-card flex flex-col gap-4 p-4 transition-shadow hover:shadow-pop sm:p-5">
@@ -42,7 +57,8 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
         {patient ? (
           <button
             type="button"
-            onClick={() => toggleSavedDoctor(doctor.id)}
+            onClick={toggleSaved}
+            disabled={saving}
             aria-label={saved ? `Remove ${doctor.name} from saved doctors` : `Save ${doctor.name}`}
             aria-pressed={saved}
             className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
