@@ -25,11 +25,14 @@ const sentLabel = (iso: string) => `${shortDate(isoDate(new Date(iso)))}, ${cloc
 
 function ClinicMessages() {
   const { conversations, conversationsStatus: status, activeClinic } = useApp();
+  const { c: requestedId } = Route.useSearch();
+  const awaitingRequested =
+    !!requestedId && status.isFetching && !conversations.some((c) => c.id === requestedId);
 
   let body;
   if (!activeClinic) {
     body = null; // ClinicShell renders the loading / access states.
-  } else if (status.isLoading) {
+  } else if (status.isLoading || awaitingRequested) {
     body = <PageLoader label="Loading messages…" />;
   } else if (status.error) {
     body = (

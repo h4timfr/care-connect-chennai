@@ -684,6 +684,30 @@ test.describe("Messages", () => {
     });
   });
 
+  test("a newly started conversation never shows as unavailable", async ({ page, backend }) => {
+    const seen: string[] = [];
+    await backend({ delays: { conversations: 800 } });
+    await page.exposeFunction("recordText", (text: string) => seen.push(text));
+    await page.addInitScript(() => {
+      new MutationObserver(() => {
+        const text = document.body?.innerText ?? "";
+        const record = (window as unknown as { recordText: (t: string) => void }).recordText;
+        if (text.includes("isn't available")) record("unavailable");
+        if (text.includes("No conversations yet")) record("empty");
+      }).observe(document, { childList: true, subtree: true, characterData: true });
+    });
+    // Visit messages first so conversations are cached (without the new one).
+    await page.goto("/messages");
+    await expect(page.getByText("No conversations yet")).toBeVisible();
+    await page.getByRole("link", { name: "Find doctors" }).first().click();
+    await page.getByRole("link", { name: "Dr. Verified Tester" }).click();
+    seen.length = 0; // the first visit's empty inbox was accurate
+    await page.getByRole("button", { name: "Message clinic" }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/messages\\?c=${ids.conversation}$`));
+    await expect(page.getByLabel("Message", { exact: true })).toBeVisible();
+    expect(seen).toEqual([]);
+  });
+
   test("a conversation created concurrently elsewhere is reused, not reported as an error", async ({
     page,
     backend,

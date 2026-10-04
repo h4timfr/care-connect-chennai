@@ -185,6 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   } = patientAppointmentsQuery;
   const {
     isPending: conversationsPending,
+    isFetching: conversationsFetching,
     isEnabled: conversationsEnabled,
     error: conversationsError,
     refetch: refetchConversations,
@@ -329,6 +330,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isLoading:
           (conversationsEnabled && conversationsPending) ||
           (isLoggedIn && onMessagesPage && clinicAccessPending),
+        isFetching: conversationsFetching,
         error: conversationsError,
         refetch: () => void refetchConversations(),
       },
@@ -374,6 +376,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       conversations,
       conversationsEnabled,
       conversationsPending,
+      conversationsFetching,
       onMessagesPage,
       conversationsError,
       refetchConversations,

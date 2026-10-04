@@ -36,9 +36,14 @@ function MessagesView() {
     patientError,
   } = useApp();
   const { loading, user } = useProtectedRoute();
+  const { c: requestedId } = Route.useSearch();
+  // A conversation that was just started can be newer than the cached list: wait for the
+  // refetch rather than briefly claiming the inbox is empty or the conversation unavailable.
+  const awaitingRequested =
+    !!requestedId && status.isFetching && !conversations.some((c) => c.id === requestedId);
 
   let body;
-  if (loading || !user || isLoadingPatient || status.isLoading) {
+  if (loading || !user || isLoadingPatient || status.isLoading || awaitingRequested) {
     body = <PageLoader label="Loading messages…" />;
   } else if (patientError || status.error) {
     body = (
