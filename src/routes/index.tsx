@@ -12,9 +12,11 @@ import {
   SpecialtyIcon,
 } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import { SPECIALTIES, isoDate, longDate, to12h } from "@/lib/format";
+import { SPECIALTIES, isoDate } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { describeDataError } from "@/lib/supabase/errors";
+import { useI18n } from "@/lib/i18n";
+import { useDayPeriod } from "@/hooks/useDayPeriod";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,20 +32,6 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-/** Greeting by the hour in India, so server-rendered and client-rendered output agree. */
-function greeting() {
-  const h = Number(
-    new Intl.DateTimeFormat("en-US", {
-      hour: "numeric",
-      hourCycle: "h23",
-      timeZone: "Asia/Kolkata",
-    }).format(new Date()),
-  );
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 const FEATURED_COUNT = 6;
 
 function Home() {
@@ -51,6 +39,9 @@ function Home() {
     useApp();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const { t, fmt } = useI18n();
+  // The viewer's local time of day (their own time zone, not the clinic's).
+  const period = useDayPeriod();
 
   const upcoming = useMemo(() => {
     const today = isoDate(new Date());
@@ -65,18 +56,18 @@ function Home() {
     return SPECIALTIES.filter((s) => present.has(s.id));
   }, [doctors]);
 
-  const catalogError = catalog.error ? describeDataError(catalog.error) : null;
+  const catalogError = catalog.error ? t(describeDataError(catalog.error)) : null;
 
   return (
     <PatientShell>
       <div className="space-y-10">
         <section aria-labelledby="home-heading">
           <h1 id="home-heading" className="font-display text-2xl font-bold sm:text-3xl">
-            {patient?.name ? `${greeting()}, ${patient.name}` : "Find a doctor in Chennai"}
+            {patient?.name && period
+              ? t(`home.greeting.${period}`, { name: patient.name })
+              : t("home.title")}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Search clinics and doctors, book appointments and message your clinic.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("home.subtitle")}</p>
 
           <form
             className="mt-5"
@@ -88,7 +79,7 @@ function Home() {
             }}
           >
             <label htmlFor="home-search" className="sr-only">
-              Search doctors and clinics
+              {t("home.searchLabel")}
             </label>
             <div className="surface-card flex items-center gap-2 p-2 pl-4 focus-within:ring-2 focus-within:ring-ring">
               <Search className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
@@ -97,40 +88,38 @@ function Home() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Specialty, doctor, clinic or area"
+                placeholder={t("home.searchPlaceholder")}
                 className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
               />
               <Button type="submit" size="sm" className="shrink-0">
-                Search
+                {t("home.search")}
               </Button>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Try “pediatrician Adyar”, a doctor's name or a clinic name.
-            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{t("home.searchHint")}</p>
           </form>
         </section>
 
         {upcoming ? (
           <section
-            aria-label="Next appointment"
+            aria-label={t("home.nextAppointment")}
             className="surface-card grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-primary/25 bg-primary-soft/50 p-4 sm:p-5"
           >
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-primary">
                 <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                Next appointment
+                {t("home.nextAppointment")}
               </p>
               <p className="mt-1 truncate font-display font-semibold">
-                {doctorById(upcoming.doctorId)?.name ?? "Your doctor"}
+                {doctorById(upcoming.doctorId)?.name ?? t("home.yourDoctor")}
               </p>
               <p className="truncate text-sm text-muted-foreground">
-                {longDate(upcoming.date)} · {to12h(upcoming.time)}
+                {fmt.longDate(upcoming.date)} · {fmt.time(upcoming.time)}
                 {clinicById(upcoming.clinicId) ? ` · ${clinicById(upcoming.clinicId)?.name}` : ""}
               </p>
             </div>
             <Button asChild variant="outline" size="sm">
               <Link to="/appointments/$appointmentId" params={{ appointmentId: upcoming.id }}>
-                View
+                {t("common.view")}
               </Link>
             </Button>
           </section>
@@ -138,14 +127,14 @@ function Home() {
 
         {catalogError ? (
           <ErrorState
-            title="We couldn't load doctors and clinics"
+            title={t("home.catalogError")}
             message={catalogError}
             onRetry={catalog.refetch}
           />
         ) : (
           <>
             <section aria-labelledby="specialties-heading">
-              <SectionHeader id="specialties-heading" title="Browse by specialty" />
+              <SectionHeader id="specialties-heading" title={t("home.browseBySpecialty")} />
               {catalog.isLoading ? (
                 <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5" aria-hidden>
                   {Array.from({ length: 5 }, (_, i) => (
@@ -164,31 +153,34 @@ function Home() {
                         <span className="grid h-10 w-10 place-items-center rounded-full bg-primary-soft text-primary">
                           <SpecialtyIcon icon={s.icon} />
                         </span>
-                        <span className="text-xs font-medium leading-tight">{s.name}</span>
+                        <span className="text-xs font-medium leading-tight">
+                          {fmt.specialty(s.id)}
+                        </span>
                       </Link>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No specialties are listed yet.</p>
+                <p className="text-sm text-muted-foreground">{t("home.noSpecialties")}</p>
               )}
             </section>
 
             <section aria-labelledby="doctors-heading">
               <SectionHeader
                 id="doctors-heading"
-                title="Doctors on CareConnect"
-                subtitle="Listed alphabetically"
+                title={t("home.doctorsHeading")}
+                subtitle={t("home.doctorsSubtitle")}
                 action={
                   <Button asChild variant="ghost" size="sm">
                     <Link to="/discover">
-                      See all <ArrowRight className="h-4 w-4" aria-hidden />
+                      {t("common.seeAll")}{" "}
+                      <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden />
                     </Link>
                   </Button>
                 }
               />
               {catalog.isLoading ? (
-                <CardGridSkeleton count={4} label="Loading doctors" />
+                <CardGridSkeleton count={4} label={t("home.loadingDoctors")} />
               ) : doctors.length ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {doctors.slice(0, FEATURED_COUNT).map((d) => (
@@ -198,8 +190,8 @@ function Home() {
               ) : (
                 <EmptyState
                   icon={SearchX}
-                  title="No doctors listed yet"
-                  description="Doctors will appear here once clinics add them to CareConnect."
+                  title={t("home.noDoctorsTitle")}
+                  description={t("home.noDoctorsBody")}
                 />
               )}
             </section>
@@ -207,18 +199,19 @@ function Home() {
             <section aria-labelledby="clinics-heading">
               <SectionHeader
                 id="clinics-heading"
-                title="Clinics"
-                subtitle="Independent clinics across Chennai"
+                title={t("home.clinicsHeading")}
+                subtitle={t("home.clinicsSubtitle")}
                 action={
                   <Button asChild variant="ghost" size="sm">
                     <Link to="/discover" search={{ tab: "clinics" }}>
-                      See all <ArrowRight className="h-4 w-4" aria-hidden />
+                      {t("common.seeAll")}{" "}
+                      <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden />
                     </Link>
                   </Button>
                 }
               />
               {catalog.isLoading ? (
-                <CardGridSkeleton count={2} label="Loading clinics" />
+                <CardGridSkeleton count={2} label={t("home.loadingClinics")} />
               ) : clinics.length ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {clinics.slice(0, 3).map((c) => (
@@ -228,8 +221,8 @@ function Home() {
               ) : (
                 <EmptyState
                   icon={SearchX}
-                  title="No clinics listed yet"
-                  description="Clinics will appear here once they join CareConnect."
+                  title={t("home.noClinicsTitle")}
+                  description={t("home.noClinicsBody")}
                 />
               )}
             </section>

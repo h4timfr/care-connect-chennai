@@ -28,12 +28,23 @@ test.describe("Public Routes", () => {
     }
   });
 
-  test("no assistant, language switcher or demo banner", async ({ page }) => {
+  test("no assistant or demo banner, and one working language selector", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("article").first()).toBeVisible();
     await expect(page.getByText(/assistant/i)).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /language/i })).toHaveCount(0);
     await expect(page.getByText(/demo prototype|fictional sample data/i)).toHaveCount(0);
+    const selector = page.getByRole("button", { name: /change language/i });
+    await expect(selector).toHaveCount(1);
+    await selector.click();
+    await expect(page.getByRole("menuitemradio")).toHaveText([
+      /English/,
+      /हिन्दी/,
+      /اردو/,
+      /മലയാളം/,
+      /தமிழ்/,
+      /తెలుగు/,
+    ]);
+    await page.keyboard.press("Escape");
     const html = await page.content();
     expect(html.toLowerCase()).not.toContain("lovable");
   });

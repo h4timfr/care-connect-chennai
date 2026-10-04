@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { supabase } from "@/lib/supabase/client";
 import { describeAuthError } from "@/lib/supabase/errors";
 import { endPasswordRecovery, useIsPasswordRecovery } from "@/lib/supabase/recovery";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({ meta: [{ title: "Choose a new password — CareConnect" }] }),
@@ -22,6 +23,7 @@ function ResetPasswordPage() {
   const { user, loading } = useAuth();
   const recovering = useIsPasswordRecovery();
   const [linkError, setLinkError] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     // Expired or already-used links come back as #error=...&error_code=otp_expired.
@@ -42,18 +44,12 @@ function ResetPasswordPage() {
   if (!user || !recovering) {
     return (
       <AuthCard
-        title={linkError ? "This link has expired" : "Reset link needed"}
-        subtitle={
-          linkError
-            ? "Password reset links can be used once and expire after a while."
-            : "Open the password reset link from your email to choose a new password."
-        }
+        title={linkError ? t("reset.expiredTitle") : t("reset.neededTitle")}
+        subtitle={linkError ? t("reset.expiredSubtitle") : t("reset.neededSubtitle")}
       >
-        <p className="mb-4 text-sm text-muted-foreground">
-          To get a new link, go to sign in and choose “Forgot password?”.
-        </p>
+        <p className="mb-4 text-sm text-muted-foreground">{t("reset.getNewLink")}</p>
         <Button asChild className="w-full">
-          <Link to="/login">Go to sign in</Link>
+          <Link to="/login">{t("reset.goToSignIn")}</Link>
         </Button>
       </AuthCard>
     );
@@ -69,12 +65,17 @@ function NewPasswordForm({ email }: { email: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const { t } = useI18n();
+  const describeAuth = (err: unknown) => {
+    const { key, vars } = describeAuthError(err);
+    return t(key, vars);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (inFlight.current) return;
     if (password !== confirm) {
-      setError("The two passwords don't match.");
+      setError(t("reset.mismatch"));
       return;
     }
     inFlight.current = true;
@@ -83,14 +84,14 @@ function NewPasswordForm({ email }: { email: string }) {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
-        setError(describeAuthError(updateError));
+        setError(describeAuth(updateError));
         return;
       }
       endPasswordRecovery();
-      toast.success("Your password has been updated.");
+      toast.success(t("reset.updated"));
       navigate({ to: "/", replace: true });
     } catch (err) {
-      setError(describeAuthError(err));
+      setError(describeAuth(err));
     } finally {
       inFlight.current = false;
       setSubmitting(false);
@@ -99,12 +100,12 @@ function NewPasswordForm({ email }: { email: string }) {
 
   return (
     <AuthCard
-      title="Choose a new password"
-      subtitle={email ? `For ${email}` : "Enter a new password for your account."}
+      title={t("reset.title")}
+      subtitle={email ? t("reset.forEmail", { email }) : t("reset.forAccount")}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="new-password">New password</Label>
+          <Label htmlFor="new-password">{t("reset.newPassword")}</Label>
           <Input
             id="new-password"
             type="password"
@@ -116,11 +117,11 @@ function NewPasswordForm({ email }: { email: string }) {
             aria-describedby="new-password-hint"
           />
           <p id="new-password-hint" className="text-xs text-muted-foreground">
-            At least {MIN_PASSWORD_LENGTH} characters.
+            {t("auth.passwordHint", { count: MIN_PASSWORD_LENGTH })}
           </p>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="confirm-password">Confirm new password</Label>
+          <Label htmlFor="confirm-password">{t("reset.confirmPassword")}</Label>
           <Input
             id="confirm-password"
             type="password"
@@ -134,7 +135,7 @@ function NewPasswordForm({ email }: { email: string }) {
         {error ? <FormAlert>{error}</FormAlert> : null}
         <Button type="submit" className="w-full" disabled={submitting}>
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          {submitting ? "Saving…" : "Save new password"}
+          {submitting ? t("common.saving") : t("reset.save")}
         </Button>
       </form>
     </AuthCard>

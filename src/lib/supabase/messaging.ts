@@ -50,7 +50,7 @@ export function useConversations(patientId?: string, clinicIds: string[] = [], e
         clinicId: c.clinic_id,
         doctorId: c.doctor_id ?? undefined,
         patientId: c.patient_id,
-        patientName: c.patients?.full_name || "Unknown patient",
+        patientName: c.patients?.full_name ?? "",
         kind: c.kind,
         appointmentId: c.appointment_id ?? undefined,
         messages: (c.messages ?? [])

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mailtoHref, pluralize, telHref } from "../src/lib/format";
+import { inr, longDate, mailtoHref, telHref, to12h } from "../src/lib/format";
 
 test.describe("contact links", () => {
   test("tel: keeps only digits and a leading +", () => {
@@ -19,8 +19,27 @@ test.describe("contact links", () => {
   });
 });
 
-test("pluralize", () => {
-  expect(pluralize(1, "year")).toBe("1 year");
-  expect(pluralize(0, "doctor")).toBe("0 doctors");
-  expect(pluralize(2, "child", "children")).toBe("2 children");
+test.describe("locale-aware formatting", () => {
+  test("English keeps the 12-hour clock patients know", () => {
+    expect(to12h("19:30")).toBe("7:30 PM");
+    expect(to12h("00:05:00")).toBe("12:05 AM");
+    expect(to12h("12:00")).toBe("12:00 PM");
+  });
+
+  test("other languages use their own clock format with Latin digits", () => {
+    expect(to12h("19:30", "ta-IN")).toMatch(/7:30/);
+    expect(to12h("19:30", "ur")).toMatch(/7:30/);
+  });
+
+  test("fees use Indian digit grouping", () => {
+    expect(inr(150000)).toBe("₹1,50,000");
+    expect(inr(500, "hi-IN")).toBe("₹500");
+  });
+
+  test("dates are localized and invalid dates are empty, not 'Invalid Date'", () => {
+    expect(longDate("2030-10-07")).toContain("October");
+    expect(longDate("2030-10-07", "hi-IN")).toContain("अक्तूबर");
+    expect(longDate("2030-13-45")).toBe("");
+    expect(longDate("")).toBe("");
+  });
 });

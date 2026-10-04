@@ -4,6 +4,7 @@ import { codeOf, describeDataError, isNetworkError, messageOf } from "./errors";
 import type { Database } from "@/lib/database.types";
 import { isoDate } from "@/lib/format";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
+import type { MessageKey } from "@/lib/i18n";
 
 type AppointmentRow = Database["public"]["Tables"]["appointments"]["Row"];
 
@@ -55,38 +56,35 @@ export function useClinicAppointments(clinicIds: string[], options?: { enabled?:
         .order("date", { ascending: false });
 
       if (error) throw error;
-      return data.map((a) => mapAppointment(a, a.patients?.full_name || "Unknown patient"));
+      return data.map((a) => mapAppointment(a, a.patients?.full_name ?? ""));
     },
   });
 }
 
 /** Maps the booking RPC's validation exceptions to messages a patient can act on. */
-export function describeBookingError(error: unknown): string {
+export function describeBookingError(error: unknown): MessageKey {
   if (isNetworkError(error)) return describeDataError(error);
   const message = messageOf(error);
   const code = codeOf(error);
 
   if (code === "23505" || /no longer available|not available|overlap/i.test(message)) {
-    return "That time slot is no longer available. Please choose another time.";
+    return "bookingError.slotTaken";
   }
-  if (/not currently active or verified/i.test(message)) {
-    return "This doctor isn't accepting online bookings at this clinic right now.";
-  }
-  if (/in the past/i.test(message))
-    return "That time has already passed. Please choose a later slot.";
-  if (/horizon exceeds/i.test(message)) return "Appointments can be booked up to 90 days ahead.";
-  if (/exceeds 500 characters/i.test(message)) {
-    return "Please keep the reason for your visit under 500 characters.";
-  }
-  if (/Rate Limit Exceeded/i.test(message)) {
-    return "You already have 5 upcoming appointments. Please cancel one before booking another.";
-  }
-  if (/Only registered patients/i.test(message)) {
-    return "Only patient accounts can book appointments, and this account has no patient profile.";
-  }
+  if (/not currently active or verified/i.test(message)) return "bookingError.notBookable";
+  if (/in the past/i.test(message)) return "bookingError.past";
+  if (/horizon exceeds/i.test(message)) return "bookingError.horizon";
+  if (/exceeds 500 characters/i.test(message)) return "bookingError.reasonTooLong";
+  if (/Rate Limit Exceeded/i.test(message)) return "bookingError.rateLimit";
+  if (/Only registered patients/i.test(message)) return "bookingError.notPatient";
   if (code || message) return describeDataError(error);
-  return "We couldn't book this appointment. Please try again.";
+  return "bookingError.generic";
 }
+
+/** Booking failures after which the chosen time should be cleared. */
+export const SLOT_GONE_ERRORS: readonly MessageKey[] = [
+  "bookingError.slotTaken",
+  "bookingError.past",
+];
 
 export interface BookingRequest {
   doctorId: string;
@@ -146,17 +144,17 @@ export function isCancellable(appointment: Appointment) {
   );
 }
 
-export function describeCancelError(error: unknown): string {
+export function describeCancelError(error: unknown): MessageKey {
   const message = messageOf(error);
-  if (/terminal|only cancel/i.test(message)) return "This appointment can no longer be cancelled.";
+  if (/terminal|only cancel/i.test(message)) return "appointment.cannotCancel";
   return describeDataError(error);
 }
 
 /** Messages for clinic-side status changes rejected by the check_appointment_update trigger. */
-export function describeStatusError(error: unknown): string {
+export function describeStatusError(error: unknown): MessageKey {
   const message = messageOf(error);
   if (/Terminal states|can only be|cannot/i.test(message)) {
-    return "This appointment's status has already changed. Refresh to see the latest.";
+    return "clinicAppointments.statusChanged";
   }
   return describeDataError(error);
 }

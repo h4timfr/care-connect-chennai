@@ -6,6 +6,7 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";
 import { describeDataError } from "@/lib/supabase/errors";
+import { useI18n } from "@/lib/i18n";
 
 /** Opens (or starts) the patient's conversation with a clinic. */
 export function MessageClinicButton({
@@ -28,6 +29,7 @@ export function MessageClinicButton({
   const navigate = useNavigate();
   const href = useRouterState({ select: (s) => s.location.href });
   const [opening, setOpening] = useState(false);
+  const { t } = useI18n();
 
   const open = async () => {
     if (!user) {
@@ -35,7 +37,7 @@ export function MessageClinicButton({
       return;
     }
     if (!patient) {
-      toast.error("Your account has no patient profile, so it can't message clinics.");
+      toast.error(t("messageClinic.noProfile"));
       return;
     }
     setOpening(true);
@@ -47,7 +49,7 @@ export function MessageClinicButton({
       });
       navigate({ to: "/messages", search: { c: conversationId } });
     } catch (err) {
-      toast.error(describeDataError(err));
+      toast.error(t(describeDataError(err)));
     } finally {
       setOpening(false);
     }
@@ -66,7 +68,7 @@ export function MessageClinicButton({
       ) : (
         <MessageCircle className="h-4 w-4" aria-hidden />
       )}
-      Message clinic
+      {t("messageClinic.button")}
     </Button>
   );
 }

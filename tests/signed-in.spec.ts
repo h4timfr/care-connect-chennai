@@ -1,57 +1,16 @@
-import { test as base, expect } from "@playwright/test";
 import {
   appointmentRow,
   conversationRow,
   defaultState,
   fakeAccessToken,
   ids,
-  mockBackend,
   TEST_EMAIL,
   TEST_NAME,
-  type MockBackend,
-  type MockState,
 } from "./support/mock-backend";
+import { expect, test } from "./support/fixtures";
 
 // Signed-in flows against a fully mocked backend (see tests/support/mock-backend.ts). No request
 // in this file reaches a real Supabase project.
-
-const test = base.extend<{
-  backend: (
-    state?: Partial<MockState>,
-    options?: { signedIn?: boolean; expiredSession?: boolean },
-  ) => Promise<MockBackend>;
-  consoleErrors: string[];
-}>({
-  consoleErrors: [
-    async ({ page }, provide) => {
-      const errors: string[] = [];
-      page.on("pageerror", (e) => errors.push(String(e)));
-      page.on("console", (m) => {
-        // Failed requests the test provokes on purpose are logged by the browser itself.
-        if (m.type() === "error" && !m.text().includes("Failed to load resource")) {
-          errors.push(m.text());
-        }
-      });
-      await provide(errors);
-      // No React warnings, unhandled rejections or app errors in any signed-in flow.
-      expect(errors).toEqual([]);
-    },
-    { auto: true },
-  ],
-  backend: async ({ page }, provide) => {
-    let installed: MockBackend | undefined;
-    await provide(async (state = {}, options = {}) => {
-      installed = await mockBackend(page, {
-        state,
-        signedIn: options.signedIn ?? true,
-        expiredSession: options.expiredSession ?? false,
-      });
-      return installed;
-    });
-    // Every request must have been understood by the mock.
-    expect(installed?.unhandled ?? []).toEqual([]);
-  },
-});
 
 test.describe("Patient account", () => {
   test("header and profile show the signed-in patient", async ({ page, backend }) => {
@@ -185,7 +144,7 @@ test.describe("Discover URL state", () => {
     await page.goto("/discover");
     await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
     await page.getByRole("button", { name: "Female" }).click();
-    await page.getByRole("button", { name: "English" }).click();
+    await page.getByRole("button", { name: "English", exact: true }).click();
     await page.getByLabel("Sort by").selectOption("experience");
     await expect(page).toHaveURL(/gender=female/);
     await expect(page).toHaveURL(/lang=English/);
@@ -196,7 +155,7 @@ test.describe("Discover URL state", () => {
       "aria-pressed",
       "true",
     );
-    await expect(page.getByRole("button", { name: "English" })).toHaveAttribute(
+    await expect(page.getByRole("button", { name: "English", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -405,7 +364,8 @@ test.describe("Auth edge cases", () => {
     await page.getByLabel("Email").fill(TEST_EMAIL);
     await page.getByLabel("Password").fill("password123");
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page.getByRole("alert")).toContainText("weak and easy to guess");
+    // The server says why (here: found in a breach); patients get that reason in their language.
+    await expect(page.getByRole("alert")).toContainText("appeared in a data breach");
   });
 
   test("the email confirmation link signs the new patient in", async ({ page, backend }) => {

@@ -3,20 +3,27 @@ import { UserX } from "lucide-react";
 import { EmptyState } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/supabase/auth";
+import { useI18n } from "@/lib/i18n";
 
 /**
  * Signed in, but no `patients` row exists. Profiles are provisioned by database triggers at
  * registration, so the browser must not try to create one itself.
  */
-export function MissingProfile({ action }: { action: string }) {
+export function MissingProfile({
+  action,
+}: {
+  /** What the page needed the profile for. */
+  action: "profile" | "book" | "appointments" | "messages";
+}) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   return (
     <EmptyState
       icon={UserX}
-      title="Patient profile not found"
-      description={`You're signed in${user?.email ? ` as ${user.email}` : ""}, but this account has no patient profile, so it can't ${action}. Profiles are created automatically when an account is registered, so this account needs to be repaired by a CareConnect administrator.`}
+      title={t("missingProfile.title")}
+      description={t(`missingProfile.${action}`, { email: user?.email ?? "" })}
       action={
         <Button
           variant="outline"
@@ -26,7 +33,7 @@ export function MissingProfile({ action }: { action: string }) {
             navigate({ to: "/login" });
           }}
         >
-          Sign out
+          {t("common.signOut")}
         </Button>
       }
     />

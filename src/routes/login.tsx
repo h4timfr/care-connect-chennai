@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { safeRedirect } from "@/lib/redirect";
 import { MIN_PASSWORD_LENGTH } from "@/lib/passwords";
+import { Trans, useI18n, type MessageKey } from "@/lib/i18n";
 
 interface LoginSearch {
   redirect?: string | undefined;
@@ -32,26 +33,9 @@ export const Route = createFileRoute("/login")({
 
 type Mode = "signin" | "signup" | "reset";
 
-const COPY: Record<Mode, { title: string; subtitle: string; submit: string; busy: string }> = {
-  signin: {
-    title: "Sign in to CareConnect",
-    subtitle: "Welcome back. Sign in to manage your appointments.",
-    submit: "Sign in",
-    busy: "Signing in…",
-  },
-  signup: {
-    title: "Create your account",
-    subtitle: "Book appointments and message clinics in one place.",
-    submit: "Create account",
-    busy: "Creating account…",
-  },
-  reset: {
-    title: "Reset your password",
-    subtitle: "Enter your account email and we'll send you a link to choose a new password.",
-    submit: "Send reset link",
-    busy: "Sending…",
-  },
-};
+const COPY_KEY = { signin: "signin", signup: "signup", reset: "reset" } as const;
+const copyKey = (mode: Mode, part: "title" | "subtitle" | "submit" | "busy") =>
+  `auth.${COPY_KEY[mode]}.${part}` as MessageKey;
 
 function LoginPage() {
   const { user, loading: authLoading } = useAuth();
@@ -65,6 +49,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
   const [notice, setNotice] = useState<{ kind: "confirm" | "reset"; email: string } | null>(null);
   const inFlight = useRef(false);
 
@@ -80,6 +65,11 @@ function LoginPage() {
     setMode(next);
     setError(null);
     setNotice(null);
+  };
+
+  const describeAuth = (err: unknown) => {
+    const { key, vars } = describeAuthError(err);
+    return t(key, vars);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -101,10 +91,10 @@ function LoginPage() {
           },
         });
         if (signUpError) {
-          setError(describeAuthError(signUpError));
+          setError(describeAuth(signUpError));
         } else if (data.user && data.user.identities?.length === 0) {
           // Supabase returns an empty identity list instead of an error for an existing address.
-          setError("An account with this email already exists. Try signing in instead.");
+          setError(t("authError.emailExists"));
         } else if (!data.session) {
           setNotice({ kind: "confirm", email: address });
         }
@@ -114,17 +104,17 @@ function LoginPage() {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         // Supabase does not reveal whether the address has an account, and neither do we.
-        if (resetError) setError(describeAuthError(resetError));
+        if (resetError) setError(describeAuth(resetError));
         else setNotice({ kind: "reset", email: address });
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: address,
           password,
         });
-        if (signInError) setError(describeAuthError(signInError));
+        if (signInError) setError(describeAuth(signInError));
       }
     } catch (err) {
-      setError(describeAuthError(err));
+      setError(describeAuth(err));
     } finally {
       inFlight.current = false;
       setSubmitting(false);
@@ -135,10 +125,8 @@ function LoginPage() {
     return <div className="min-h-screen bg-muted/30" aria-busy="true" />;
   }
 
-  const copy = COPY[mode];
-
   return (
-    <AuthCard title={copy.title} subtitle={copy.subtitle}>
+    <AuthCard title={t(copyKey(mode, "title"))} subtitle={t(copyKey(mode, "subtitle"))}>
       {!isSupabaseConfigured ? (
         <div className="mb-4">
           <FormAlert>{supabaseConfigMessage}</FormAlert>
@@ -151,30 +139,23 @@ function LoginPage() {
             <MailCheck className="h-6 w-6" aria-hidden />
           </span>
           <div>
-            <h2 className="font-semibold">Check your email</h2>
+            <h2 className="font-semibold">{t("auth.checkEmail")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {notice.kind === "confirm" ? (
-                <>
-                  We sent a confirmation link to <strong>{notice.email}</strong>. Open it to
-                  activate your account, then sign in.
-                </>
-              ) : (
-                <>
-                  If an account exists for <strong>{notice.email}</strong>, we've sent a link to
-                  reset its password. The link can be used once.
-                </>
-              )}
+              <Trans
+                k={notice.kind === "confirm" ? "auth.confirmSent" : "auth.resetSent"}
+                values={{ email: <strong dir="ltr">{notice.email}</strong> }}
+              />
             </p>
           </div>
           <Button variant="outline" className="w-full" onClick={() => changeMode("signin")}>
-            Back to sign in
+            {t("auth.backToSignIn")}
           </Button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" ? (
             <div className="space-y-1.5">
-              <Label htmlFor="full-name">Full name</Label>
+              <Label htmlFor="full-name">{t("auth.fullName")}</Label>
               <Input
                 id="full-name"
                 autoComplete="name"
@@ -186,7 +167,7 @@ function LoginPage() {
             </div>
           ) : null}
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("auth.email")}</Label>
             <Input
               id="email"
               type="email"
@@ -195,20 +176,21 @@ function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="you@example.com"
+              placeholder={t("auth.emailPlaceholder")}
+              dir="ltr"
             />
           </div>
           {mode !== "reset" ? (
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 {mode === "signin" ? (
                   <button
                     type="button"
                     onClick={() => changeMode("reset")}
                     className="text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
                   >
-                    Forgot password?
+                    {t("auth.forgotPassword")}
                   </button>
                 ) : null}
               </div>
@@ -224,7 +206,7 @@ function LoginPage() {
               />
               {mode === "signup" ? (
                 <p id="password-hint" className="text-xs text-muted-foreground">
-                  At least {MIN_PASSWORD_LENGTH} characters.
+                  {t("auth.passwordHint", { count: MIN_PASSWORD_LENGTH })}
                 </p>
               ) : null}
             </div>
@@ -235,7 +217,7 @@ function LoginPage() {
           <div className="flex flex-col gap-2 pt-1">
             <Button type="submit" disabled={submitting || !isSupabaseConfigured}>
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              {submitting ? copy.busy : copy.submit}
+              {submitting ? t(copyKey(mode, "busy")) : t(copyKey(mode, "submit"))}
             </Button>
             <Button
               type="button"
@@ -244,10 +226,10 @@ function LoginPage() {
               disabled={submitting}
             >
               {mode === "signin"
-                ? "New to CareConnect? Create an account"
+                ? t("auth.toSignUp")
                 : mode === "signup"
-                  ? "Already have an account? Sign in"
-                  : "Back to sign in"}
+                  ? t("auth.toSignIn")
+                  : t("auth.backToSignIn")}
             </Button>
           </div>
         </form>

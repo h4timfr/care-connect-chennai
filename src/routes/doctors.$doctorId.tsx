@@ -1,5 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, GraduationCap, Languages, MapPin, Phone, SearchX } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarX,
+  GraduationCap,
+  Languages,
+  MapPin,
+  Phone,
+  SearchX,
+} from "lucide-react";
 import { useState } from "react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import {
@@ -14,7 +22,8 @@ import {
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { DateStrip, SlotGrid } from "@/components/SlotPicker";
 import { Button } from "@/components/ui/button";
-import { inr, isoDate, pluralize, specialtyName, telHref } from "@/lib/format";
+import { isoDate, telHref } from "@/lib/format";
+import { Trans, useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { describeDataError } from "@/lib/supabase/errors";
 import { bookableClinicIds } from "@/lib/supabase/queries";
@@ -29,6 +38,7 @@ function DoctorProfile() {
   const { doctorById, clinicById, catalog } = useApp();
   const navigate = useNavigate();
   const [date, setDate] = useState(() => isoDate(new Date()));
+  const { t, fmt } = useI18n();
 
   const doctor = doctorById(doctorId);
 
@@ -36,21 +46,21 @@ function DoctorProfile() {
     return (
       <PatientShell>
         {catalog.isLoading ? (
-          <PageLoader label="Loading doctor…" />
+          <PageLoader label={t("doctor.loading")} />
         ) : catalog.error ? (
           <ErrorState
-            title="We couldn't load this doctor"
-            message={describeDataError(catalog.error)}
+            title={t("doctor.loadError")}
+            message={t(describeDataError(catalog.error))}
             onRetry={catalog.refetch}
           />
         ) : (
           <EmptyState
             icon={SearchX}
-            title="Doctor not found"
-            description="This doctor isn't listed on CareConnect, or the link is out of date."
+            title={t("doctor.notFoundTitle")}
+            description={t("doctor.notFoundBody")}
             action={
               <Button asChild variant="outline" size="sm">
-                <Link to="/discover">Find doctors</Link>
+                <Link to="/discover">{t("common.findDoctors")}</Link>
               </Button>
             }
           />
@@ -71,7 +81,7 @@ function DoctorProfile() {
           to="/discover"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Back to search
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden /> {t("doctor.backToSearch")}
         </Link>
 
         <section className="surface-card p-5 sm:p-6">
@@ -80,23 +90,25 @@ function DoctorProfile() {
             <div className="min-w-0 flex-1 space-y-3">
               <div>
                 <h1 className="font-display text-2xl font-bold">{doctor.name}</h1>
-                <p className="text-lg text-primary">{specialtyName(doctor.specialtyId)}</p>
+                <p className="text-lg text-primary">{fmt.specialty(doctor.specialtyId)}</p>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <GraduationCap className="h-4 w-4" aria-hidden />{" "}
-                  {pluralize(doctor.experienceYears, "year")} experience
+                  {t.plural("common.experience", doctor.experienceYears)}
                 </span>
                 {doctor.languages.length ? (
                   <span className="flex items-center gap-1">
-                    <Languages className="h-4 w-4" aria-hidden /> {doctor.languages.join(", ")}
+                    <Languages className="h-4 w-4" aria-hidden />{" "}
+                    <span className="sr-only">{t("common.languages")}: </span>
+                    {doctor.languages.map(fmt.languageName).join(" · ")}
                   </span>
                 ) : null}
                 <Rating value={doctor.rating} count={doctor.reviewCount} sample={doctor.isSample} />
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="rounded-full bg-muted px-3 py-1 font-medium">
-                  {inr(doctor.consultationFee)} consultation
+                  {t("common.consultationFee", { fee: fmt.inr(doctor.consultationFee) })}
                 </span>
                 {doctor.isSample ? <SampleBadge /> : null}
               </div>
@@ -104,27 +116,40 @@ function DoctorProfile() {
             {bookable.size ? (
               <Button asChild size="lg" className="w-full sm:w-auto">
                 <Link to="/book/$doctorId" params={{ doctorId: doctor.id }}>
-                  Book appointment
+                  {t("doctor.bookAppointment")}
                 </Link>
               </Button>
             ) : null}
           </div>
+          {/* Booking opens automatically once a clinic link is verified (bookableClinicIds). */}
+          {!bookable.size ? (
+            <div
+              className="mt-5 flex items-start gap-3 rounded-lg border bg-muted/50 p-4 text-sm"
+              data-testid="booking-unavailable"
+            >
+              <CalendarX className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              <div>
+                <p className="font-medium">{t("doctor.bookingUnavailable")}</p>
+                <p className="mt-0.5 text-muted-foreground">{t("doctor.bookingUnavailableBody")}</p>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <div className="space-y-6">
             <section className="surface-card space-y-5 p-5 sm:p-6" aria-labelledby="about-heading">
               <h2 id="about-heading" className="font-display text-lg font-semibold">
-                About
+                {t("doctor.about")}
               </h2>
               {doctor.about ? (
                 <p className="text-sm leading-relaxed text-muted-foreground">{doctor.about}</p>
               ) : (
-                <p className="text-sm text-muted-foreground">No description provided.</p>
+                <p className="text-sm text-muted-foreground">{t("doctor.noDescription")}</p>
               )}
               {doctor.qualifications.length ? (
                 <div>
-                  <h3 className="mb-1 text-sm font-medium">Qualifications</h3>
+                  <h3 className="mb-1 text-sm font-medium">{t("doctor.qualifications")}</h3>
                   <p className="text-sm text-muted-foreground">
                     {doctor.qualifications.join(", ")}
                   </p>
@@ -132,7 +157,7 @@ function DoctorProfile() {
               ) : null}
               {doctor.services.length ? (
                 <div>
-                  <h3 className="mb-1 text-sm font-medium">Services</h3>
+                  <h3 className="mb-1 text-sm font-medium">{t("doctor.services")}</h3>
                   <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
                     {doctor.services.map((s) => (
                       <li key={s}>{s}</li>
@@ -151,7 +176,7 @@ function DoctorProfile() {
             aria-labelledby="locations-heading"
           >
             <h2 id="locations-heading" className="font-display text-lg font-semibold">
-              Locations & availability
+              {t("doctor.locations")}
             </h2>
             {locations.length ? (
               <>
@@ -195,19 +220,25 @@ function DoctorProfile() {
                         />
                       ) : (
                         <InfoNotice>
-                          Online booking isn't available for this doctor at {clinic.name} yet.
+                          {t("doctor.notBookableAt", { clinic: clinic.name })}
                           {telHref(clinic.phone) ? (
                             <>
                               {" "}
-                              To book, call the clinic on{" "}
-                              <a
-                                href={telHref(clinic.phone) ?? undefined}
-                                className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-2 hover:underline"
-                              >
-                                <Phone className="h-3 w-3" aria-hidden />
-                                {clinic.phone}
-                              </a>
-                              .
+                              <Trans
+                                k="doctor.callToBook"
+                                values={{
+                                  phone: (
+                                    <a
+                                      href={telHref(clinic.phone) ?? undefined}
+                                      dir="ltr"
+                                      className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-2 hover:underline"
+                                    >
+                                      <Phone className="h-3 w-3" aria-hidden />
+                                      {clinic.phone}
+                                    </a>
+                                  ),
+                                }}
+                              />
                             </>
                           ) : null}
                         </InfoNotice>
@@ -217,9 +248,7 @@ function DoctorProfile() {
                 </ul>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                This doctor isn't currently practising at any listed clinic.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("doctor.noLocations")}</p>
             )}
           </section>
         </div>

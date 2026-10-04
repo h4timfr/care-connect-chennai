@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, Stethoscope } from "lucide-react";
 import type { ReactNode } from "react";
+import { useI18n } from "@/lib/i18n";
+import { LanguageSelect } from "@/components/LanguageSelect";
 
 /** Centered card used by the sign-in, sign-up and password-reset screens. */
 export function AuthCard({
@@ -12,14 +14,18 @@ export function AuthCard({
   subtitle: string;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
+    <div className="relative flex min-h-screen items-center justify-center bg-muted/30 px-4 py-16">
+      <div className="absolute end-4 top-4">
+        <LanguageSelect />
+      </div>
       <div className="surface-card w-full max-w-sm rounded-2xl p-6 sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <Link
             to="/"
             className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground"
-            aria-label="CareConnect home"
+            aria-label={t("nav.homeLink")}
           >
             <Stethoscope className="h-6 w-6" aria-hidden />
           </Link>

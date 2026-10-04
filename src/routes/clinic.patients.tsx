@@ -5,7 +5,8 @@ import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, Initials, PageLoader } from "@/components/common";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/lib/store";
-import { isoDate, shortDate } from "@/lib/format";
+import { isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { describeStatusError } from "@/lib/supabase/appointments";
 import type { Appointment } from "@/lib/types";
 
@@ -21,17 +22,18 @@ interface PatientSummary {
 
 function ClinicPatients() {
   const { activeClinic, clinicAppointmentsStatus: status } = useApp();
+  const { t } = useI18n();
 
   let body;
   if (!activeClinic) {
     body = null;
   } else if (status.isLoading) {
-    body = <PageLoader label="Loading patients…" />;
+    body = <PageLoader label={t("clinicPatients.loading")} />;
   } else if (status.error) {
     body = (
       <ErrorState
-        title="We couldn't load patients"
-        message={describeStatusError(status.error)}
+        title={t("clinicPatients.loadError")}
+        message={t(describeStatusError(status.error))}
         onRetry={status.refetch}
       />
     );
@@ -40,7 +42,7 @@ function ClinicPatients() {
   }
 
   return (
-    <ClinicShell title="Patients" description="Patients who have booked with your clinic">
+    <ClinicShell title={t("clinicPatients.title")} description={t("clinicPatients.subtitle")}>
       {body}
     </ClinicShell>
   );
@@ -49,6 +51,7 @@ function ClinicPatients() {
 function PatientList({ clinicId }: { clinicId: string }) {
   const { clinicAppointments } = useApp();
   const [search, setSearch] = useState("");
+  const { t, fmt } = useI18n();
 
   const patients = useMemo(() => {
     const byId = new Map<string, PatientSummary>();
@@ -56,14 +59,14 @@ function PatientList({ clinicId }: { clinicId: string }) {
       if (a.clinicId !== clinicId) continue;
       const entry = byId.get(a.patientId) ?? {
         id: a.patientId,
-        name: a.patientName,
+        name: a.patientName || t("common.unknownPatient"),
         appointments: [],
       };
       entry.appointments.push(a);
       byId.set(a.patientId, entry);
     }
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [clinicAppointments, clinicId]);
+  }, [clinicAppointments, clinicId, t]);
 
   const today = isoDate(new Date());
   const needle = search.trim().toLowerCase();
@@ -74,35 +77,35 @@ function PatientList({ clinicId }: { clinicId: string }) {
   return (
     <div className="space-y-4">
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden />
+        <Search className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden />
         <label htmlFor="patient-search" className="sr-only">
-          Search patients by name
+          {t("clinicPatients.searchLabel")}
         </label>
         <Input
           id="patient-search"
           type="search"
-          placeholder="Search patients by name…"
-          className="pl-9"
+          placeholder={t("clinicPatients.searchPlaceholder")}
+          className="ps-9"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
       <div className="surface-card overflow-x-auto">
-        <table className="w-full min-w-[520px] text-left text-sm">
+        <table className="w-full min-w-[520px] text-start text-sm">
           <thead className="bg-muted/50 text-muted-foreground">
             <tr>
-              <th scope="col" className="p-4 font-medium">
-                Patient
+              <th scope="col" className="p-4 text-start font-medium">
+                {t("clinicPatients.col.patient")}
               </th>
-              <th scope="col" className="p-4 font-medium">
-                Appointments
+              <th scope="col" className="p-4 text-start font-medium">
+                {t("clinicPatients.col.appointments")}
               </th>
-              <th scope="col" className="p-4 font-medium">
-                Last completed visit
+              <th scope="col" className="p-4 text-start font-medium">
+                {t("clinicPatients.col.lastVisit")}
               </th>
-              <th scope="col" className="p-4 font-medium">
-                Next appointment
+              <th scope="col" className="p-4 text-start font-medium">
+                {t("clinicPatients.col.next")}
               </th>
             </tr>
           </thead>
@@ -129,9 +132,9 @@ function PatientList({ clinicId }: { clinicId: string }) {
                       <span className="font-medium">{p.name}</span>
                     </div>
                   </td>
-                  <td className="p-4">{p.appointments.length}</td>
-                  <td className="p-4">{lastVisit ? shortDate(lastVisit) : "—"}</td>
-                  <td className="p-4">{next ? shortDate(next) : "—"}</td>
+                  <td className="p-4">{fmt.number(p.appointments.length)}</td>
+                  <td className="p-4">{lastVisit ? fmt.shortDate(lastVisit) : "—"}</td>
+                  <td className="p-4">{next ? fmt.shortDate(next) : "—"}</td>
                 </tr>
               );
             })}
@@ -139,8 +142,8 @@ function PatientList({ clinicId }: { clinicId: string }) {
               <tr>
                 <td colSpan={4} className="p-8 text-center text-muted-foreground">
                   {patients.length === 0
-                    ? "No patients have booked appointments yet."
-                    : "No patients match that name."}
+                    ? t("clinicPatients.noneYet")
+                    : t("clinicPatients.noMatch")}
                 </td>
               </tr>
             ) : null}

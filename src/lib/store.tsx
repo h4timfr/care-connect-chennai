@@ -1,5 +1,15 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { toast } from "sonner";
 import { useRouterState } from "@tanstack/react-router";
 import type {
   Appointment,
@@ -25,11 +35,15 @@ import {
   usePatient,
   useToggleSavedDoctor,
   useToggleSavedClinic,
+  useUpdatePreferredLanguage,
+  type MemberClinic,
 } from "@/lib/supabase/queries";
+import { normalizeLanguage, translateIn, useI18n, type Language } from "@/lib/i18n";
 import { useConversations, useSendMessage, useEnsureConversation } from "@/lib/supabase/messaging";
 
 const NO_DOCTORS: Doctor[] = [];
 const NO_CLINICS: Clinic[] = [];
+const NO_MEMBER_CLINICS: MemberClinic[] = [];
 const NO_APPOINTMENTS: Appointment[] = [];
 const NO_CONVERSATIONS: Conversation[] = [];
 const ACTIVE_CLINIC_KEY = "careconnect.activeClinic";
@@ -53,9 +67,10 @@ interface AppState {
   clinics: Clinic[];
   /** Status of the doctor + clinic listings shared across the app. */
   catalog: QueryStatus;
-  activeClinic: Clinic | undefined;
+  /** The clinic the portal is showing, with the user's role there (display only; RLS enforces). */
+  activeClinic: MemberClinic | undefined;
   /** Every clinic the signed-in user is an active member of (from clinic_memberships). */
-  memberClinics: Clinic[];
+  memberClinics: MemberClinic[];
   /** Switches the clinic portal to another of the user's member clinics. */
   setActiveClinicId: (clinicId: string) => void;
   /** True until clinic memberships for the signed-in user are known. */
@@ -88,6 +103,9 @@ interface AppState {
   /** Resolves once the saved state is stored; rejects with the backend error. */
   toggleSavedDoctor: (id: string) => Promise<void>;
   toggleSavedClinic: (id: string) => Promise<void>;
+
+  /** Switches the UI language and, when signed in, saves it to the patient profile. */
+  changeLanguage: (lang: Language) => Promise<void>;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -148,6 +166,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { mutateAsync: createConversation } = useEnsureConversation();
   const { mutateAsync: toggleDoctor } = useToggleSavedDoctor();
   const { mutateAsync: toggleClinic } = useToggleSavedClinic();
+  const { mutateAsync: savePreferredLanguage } = useUpdatePreferredLanguage();
+  const { lang, setLanguage } = useI18n();
+
+  // The language saved on the account applies when that account's profile first loads (sign-in,
+  // a refresh, or switching accounts); after that the selector is the source of truth.
+  const languageAppliedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!patient || languageAppliedFor.current === patient.userId) return;
+    languageAppliedFor.current = patient.userId;
+    const saved = normalizeLanguage(patient.preferredLanguage);
+    if (saved && saved !== lang) void setLanguage(saved);
+  }, [patient, lang, setLanguage]);
+  useEffect(() => {
+    if (!auth.user && !auth.loading) languageAppliedFor.current = null;
+  }, [auth.user, auth.loading]);
+
+  const changeLanguage = useCallback(
+    async (next: Language) => {
+      await setLanguage(next);
+      if (!patient || normalizeLanguage(patient.preferredLanguage) === next) return;
+      try {
+        await savePreferredLanguage({ patientId: patient.id, language: next });
+      } catch {
+        // In the language just chosen (the closure's own translator is the previous language's).
+        toast.error(translateIn(next, "language.saveFailed"));
+      }
+    },
+    [patient, savePreferredLanguage, setLanguage],
+  );
 
   const clinics = clinicsQuery.data ?? NO_CLINICS;
   const doctors = doctorsQuery.data ?? NO_DOCTORS;
@@ -165,7 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
-  const memberClinics = authorizedClinics ?? NO_CLINICS;
+  const memberClinics = authorizedClinics ?? NO_MEMBER_CLINICS;
   const activeClinic = memberClinics.find((c) => c.id === selectedClinicId) ?? memberClinics[0];
   const setActiveClinicId = useCallback((clinicId: string) => {
     setSelectedClinicId(clinicId);
@@ -338,6 +385,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ensureConversation,
       toggleSavedDoctor,
       toggleSavedClinic,
+      changeLanguage,
     }),
     [
       patient,
@@ -384,6 +432,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ensureConversation,
       toggleSavedDoctor,
       toggleSavedClinic,
+      changeLanguage,
     ],
   );
 

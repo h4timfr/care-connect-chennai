@@ -3,13 +3,14 @@ import { MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Rating, SampleBadge } from "@/components/common";
 import { useApp } from "@/lib/store";
-import { inr, specialtyName } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import type { Clinic } from "@/lib/types";
 
 export function ClinicCard({ clinic }: { clinic: Clinic }) {
   const { doctorsOfClinic } = useApp();
   const doctorCount = doctorsOfClinic(clinic.id).length;
   const [minFee, maxFee] = clinic.feeRange;
+  const { t, fmt } = useI18n();
 
   return (
     <article className="surface-card flex flex-col overflow-hidden transition-shadow hover:shadow-pop">
@@ -36,13 +37,13 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
         </div>
 
         {clinic.specialtyIds.length ? (
-          <ul className="flex flex-wrap gap-1.5" aria-label="Specialties">
+          <ul className="flex flex-wrap gap-1.5" aria-label={t("common.specialties")}>
             {clinic.specialtyIds.map((id) => (
               <li
                 key={id}
                 className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
               >
-                {specialtyName(id)}
+                {fmt.specialty(id)}
               </li>
             ))}
           </ul>
@@ -50,17 +51,21 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
 
         <dl className="grid gap-1.5 text-sm text-muted-foreground">
           <div>
-            <dt className="sr-only">Phone</dt>
+            <dt className="sr-only">{t("common.phone")}</dt>
             <dd className="flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="truncate">{clinic.phone}</span>
+              <span className="truncate" dir="ltr">
+                {clinic.phone}
+              </span>
             </dd>
           </div>
           <div>
-            <dt className="sr-only">Doctors and fees</dt>
+            <dt className="sr-only">{t("clinic.doctorsAndFees")}</dt>
             <dd>
-              {doctorCount} {doctorCount === 1 ? "doctor" : "doctors"}
-              {maxFee > 0 ? ` · ${inr(minFee)}–${inr(maxFee)}` : ""}
+              {t.plural("common.doctors", doctorCount)}
+              {maxFee > 0
+                ? ` · ${t("common.feeRange", { min: fmt.inr(minFee), max: fmt.inr(maxFee) })}`
+                : ""}
             </dd>
           </div>
         </dl>
@@ -70,7 +75,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
 
         <Button asChild className="mt-auto w-full" size="sm">
           <Link to="/clinics/$clinicId" params={{ clinicId: clinic.id }}>
-            View clinic
+            {t("clinic.viewClinic")}
           </Link>
         </Button>
       </div>

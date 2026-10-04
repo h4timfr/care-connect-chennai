@@ -17,9 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { inr, isoDate, longDate, specialtyName, to12h } from "@/lib/format";
+import { isoDate } from "@/lib/format";
+import { Trans, useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
-import { describeBookingError } from "@/lib/supabase/appointments";
+import { SLOT_GONE_ERRORS, describeBookingError } from "@/lib/supabase/appointments";
 import { describeDataError } from "@/lib/supabase/errors";
 import { bookableClinicIds } from "@/lib/supabase/queries";
 import { cn } from "@/lib/utils";
@@ -57,11 +58,12 @@ function BookAppointment() {
   const search = Route.useSearch();
   const { loading: authLoading, user } = useProtectedRoute();
   const { doctorById, clinicById, patient, isLoadingPatient, patientError, catalog } = useApp();
+  const { t, fmt } = useI18n();
 
   if (authLoading || !user) {
     return (
       <PatientShell>
-        <PageLoader label={authLoading ? "Loading…" : "Redirecting to sign in…"} />
+        <PageLoader label={authLoading ? undefined : t("common.redirectingToSignIn")} />
       </PatientShell>
     );
   }
@@ -80,8 +82,8 @@ function BookAppointment() {
     return (
       <PatientShell>
         <ErrorState
-          title="We couldn't load the booking page"
-          message={describeDataError(patientError ?? catalog.error)}
+          title={t("book.loadError")}
+          message={t(describeDataError(patientError ?? catalog.error))}
           onRetry={catalog.refetch}
         />
       </PatientShell>
@@ -91,7 +93,7 @@ function BookAppointment() {
   if (!patient) {
     return (
       <PatientShell>
-        <MissingProfile action="book appointments" />
+        <MissingProfile action="book" />
       </PatientShell>
     );
   }
@@ -101,11 +103,11 @@ function BookAppointment() {
       <PatientShell>
         <EmptyState
           icon={SearchX}
-          title="Doctor not found"
-          description="This doctor isn't listed on CareConnect, or the link is out of date."
+          title={t("doctor.notFoundTitle")}
+          description={t("doctor.notFoundBody")}
           action={
             <Button asChild variant="outline" size="sm">
-              <Link to="/discover">Find doctors</Link>
+              <Link to="/discover">{t("common.findDoctors")}</Link>
             </Button>
           }
         />
@@ -125,16 +127,17 @@ function BookAppointment() {
           params={{ doctorId: doctor.id }}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Back to {doctor.name}
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />{" "}
+          {t("book.backTo", { name: doctor.name })}
         </Link>
 
-        <h1 className="font-display text-2xl font-bold">Book an appointment</h1>
+        <h1 className="font-display text-2xl font-bold">{t("book.title")}</h1>
 
         <section className="surface-card flex items-center gap-4 p-5">
           <Initials name={doctor.name} className="h-14 w-14 text-lg" />
           <div className="min-w-0">
             <p className="truncate font-display text-lg font-semibold">{doctor.name}</p>
-            <p className="text-sm text-primary">{specialtyName(doctor.specialtyId)}</p>
+            <p className="text-sm text-primary">{fmt.specialty(doctor.specialtyId)}</p>
             {doctor.isSample ? <SampleBadge className="mt-1" /> : null}
           </div>
         </section>
@@ -149,16 +152,21 @@ function BookAppointment() {
           />
         ) : (
           <InfoNotice className="text-sm">
-            {doctor.name} isn't accepting online bookings right now. You can still contact the
-            clinic from the{" "}
-            <Link
-              to="/doctors/$doctorId"
-              params={{ doctorId: doctor.id }}
-              className="font-medium text-foreground underline underline-offset-2"
-            >
-              doctor's profile
-            </Link>
-            .
+            <Trans
+              k="book.notAccepting"
+              values={{
+                name: doctor.name,
+                link: (
+                  <Link
+                    to="/doctors/$doctorId"
+                    params={{ doctorId: doctor.id }}
+                    className="font-medium text-foreground underline underline-offset-2"
+                  >
+                    {t("book.doctorsProfile")}
+                  </Link>
+                ),
+              }}
+            />
           </InfoNotice>
         )}
       </div>
@@ -188,6 +196,7 @@ function BookingForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const { t, fmt } = useI18n();
 
   const clinic = clinics.find((c) => c.id === clinicId);
 
@@ -215,7 +224,7 @@ function BookingForm({
         time,
         reason: reason.trim(),
       });
-      toast.success("Appointment requested. The clinic will review your request.");
+      toast.success(t("book.requested"));
       // Replace the booking form in history: Back shouldn't return to a form for an
       // appointment that now exists.
       navigate({
@@ -224,9 +233,9 @@ function BookingForm({
         replace: true,
       });
     } catch (err) {
-      const message = describeBookingError(err);
-      setError(message);
-      if (/no longer available|already passed/i.test(message)) setTime("");
+      const key = describeBookingError(err);
+      setError(t(key));
+      if (SLOT_GONE_ERRORS.includes(key)) setTime("");
     } finally {
       inFlight.current = false;
       setSubmitting(false);
@@ -238,7 +247,7 @@ function BookingForm({
       {clinics.length > 1 ? (
         <section className="surface-card space-y-3 p-5" aria-labelledby="clinic-heading">
           <h2 id="clinic-heading" className="font-medium">
-            Clinic
+            {t("book.clinic")}
           </h2>
           <div role="radiogroup" aria-labelledby="clinic-heading" className="grid gap-2">
             {clinics.map((c) => (
@@ -249,7 +258,7 @@ function BookingForm({
                 aria-checked={c.id === clinicId}
                 onClick={() => selectClinic(c.id)}
                 className={cn(
-                  "rounded-lg border p-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "rounded-lg border p-3 text-start text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   c.id === clinicId ? "border-primary bg-primary-soft/50" : "hover:bg-muted",
                 )}
               >
@@ -264,7 +273,7 @@ function BookingForm({
       <section className="surface-card space-y-4 p-5" aria-labelledby="time-heading">
         <div>
           <h2 id="time-heading" className="font-medium">
-            Date & time
+            {t("book.dateTime")}
           </h2>
           {clinic && clinics.length === 1 ? (
             <p className="text-sm text-muted-foreground">
@@ -286,35 +295,37 @@ function BookingForm({
       </section>
 
       <section className="surface-card space-y-2 p-5">
-        <Label htmlFor="reason">Reason for visit (optional)</Label>
+        <Label htmlFor="reason">{t("book.reasonLabel")}</Label>
         <Textarea
           id="reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           maxLength={MAX_REASON_LENGTH}
           rows={3}
-          placeholder="E.g. routine check-up, follow-up visit"
+          placeholder={t("book.reasonPlaceholder")}
           aria-describedby="reason-hint"
         />
         <p id="reason-hint" className="text-xs text-muted-foreground">
-          Shared with the clinic only. {reason.length}/{MAX_REASON_LENGTH}
+          {t("book.reasonHint", { count: reason.length, max: MAX_REASON_LENGTH })}
         </p>
       </section>
 
       <section className="surface-card space-y-4 p-5" aria-labelledby="summary-heading">
         <h2 id="summary-heading" className="sr-only">
-          Summary
+          {t("book.summary")}
         </h2>
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground">When</dt>
+            <dt className="text-muted-foreground">{t("book.when")}</dt>
             <dd className="font-medium">
-              {time ? `${longDate(date)} at ${to12h(time)} IST` : "Choose a time above"}
+              {time
+                ? t("common.dateAtTime", { date: fmt.longDate(date), time: fmt.time(time) })
+                : t("book.chooseTime")}
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Consultation fee</dt>
-            <dd className="font-medium">{inr(fee)}</dd>
+            <dt className="text-muted-foreground">{t("book.fee")}</dt>
+            <dd className="font-medium">{fmt.inr(fee)}</dd>
           </div>
         </dl>
 
@@ -330,11 +341,9 @@ function BookingForm({
 
         <Button size="lg" className="w-full" disabled={!time || submitting} onClick={confirm}>
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          {submitting ? "Requesting appointment…" : "Request appointment"}
+          {submitting ? t("book.requesting") : t("book.request")}
         </Button>
-        <p className="text-center text-xs text-muted-foreground">
-          No payment is taken online. Your request stays pending until the clinic confirms it.
-        </p>
+        <p className="text-center text-xs text-muted-foreground">{t("book.noPayment")}</p>
       </section>
     </>
   );

@@ -12,6 +12,7 @@ import { useApp } from "@/lib/store";
 import { isoDate } from "@/lib/format";
 import { describeDataError } from "@/lib/supabase/errors";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { useI18n } from "@/lib/i18n";
 import type { Appointment } from "@/lib/types";
 
 export const Route = createFileRoute("/appointments/")({
@@ -32,6 +33,7 @@ function AppointmentsList() {
     patientError,
   } = useApp();
   const { loading, user } = useProtectedRoute();
+  const { t } = useI18n();
 
   const { upcoming, past, cancelled } = useMemo(() => {
     const today = isoDate(new Date());
@@ -53,24 +55,28 @@ function AppointmentsList() {
 
   let body;
   if (loading || !user || isLoadingPatient || status.isLoading) {
-    body = <PageLoader label="Loading appointments…" />;
+    body = <PageLoader label={t("appointments.loading")} />;
   } else if (patientError || status.error) {
     body = (
       <ErrorState
-        title="We couldn't load your appointments"
-        message={describeDataError(patientError ?? status.error)}
+        title={t("appointments.loadError")}
+        message={t(describeDataError(patientError ?? status.error))}
         onRetry={status.refetch}
       />
     );
   } else if (!patient) {
-    body = <MissingProfile action="have appointments" />;
+    body = <MissingProfile action="appointments" />;
   } else {
     body = (
       <Tabs defaultValue="upcoming">
         <TabsList>
-          <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
-          <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
-          <TabsTrigger value="cancelled">Cancelled ({cancelled.length})</TabsTrigger>
+          <TabsTrigger value="upcoming">
+            {t("appointments.upcoming", { count: upcoming.length })}
+          </TabsTrigger>
+          <TabsTrigger value="past">{t("appointments.past", { count: past.length })}</TabsTrigger>
+          <TabsTrigger value="cancelled">
+            {t("appointments.cancelledTab", { count: cancelled.length })}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="upcoming" className="mt-4">
@@ -79,11 +85,11 @@ function AppointmentsList() {
             empty={
               <EmptyState
                 icon={CalendarX}
-                title="No upcoming appointments"
-                description="When you book an appointment it will appear here."
+                title={t("appointments.noUpcomingTitle")}
+                description={t("appointments.noUpcomingBody")}
                 action={
                   <Button asChild size="sm">
-                    <Link to="/discover">Find a doctor</Link>
+                    <Link to="/discover">{t("common.findADoctor")}</Link>
                   </Button>
                 }
               />
@@ -93,13 +99,13 @@ function AppointmentsList() {
         <TabsContent value="past" className="mt-4">
           <AppointmentList
             items={past}
-            empty={<EmptyState icon={SearchX} title="No past appointments" />}
+            empty={<EmptyState icon={SearchX} title={t("appointments.noPast")} />}
           />
         </TabsContent>
         <TabsContent value="cancelled" className="mt-4">
           <AppointmentList
             items={cancelled}
-            empty={<EmptyState icon={SearchX} title="No cancelled appointments" />}
+            empty={<EmptyState icon={SearchX} title={t("appointments.noCancelled")} />}
           />
         </TabsContent>
       </Tabs>
@@ -110,10 +116,8 @@ function AppointmentsList() {
     <PatientShell>
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-2xl font-bold">My appointments</h1>
-          <p className="text-sm text-muted-foreground">
-            Your upcoming visits and appointment history.
-          </p>
+          <h1 className="font-display text-2xl font-bold">{t("appointments.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("appointments.subtitle")}</p>
         </div>
         <CatalogNotice />
         {body}

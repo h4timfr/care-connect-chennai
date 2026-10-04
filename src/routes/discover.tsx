@@ -8,7 +8,7 @@ import { CardGridSkeleton, EmptyState, ErrorState } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { SPECIALTIES, inr, pluralize, specialtyInfo } from "@/lib/format";
+import { SPECIALTIES, specialtyInfo } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import {
   SEARCH_RESULT_LIMIT,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/supabase/queries";
 import type { Clinic, Doctor } from "@/lib/types";
 import { describeDataError } from "@/lib/supabase/errors";
+import { useI18n, type MessageKey } from "@/lib/i18n";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 
@@ -101,17 +102,18 @@ function withParam<K extends keyof DiscoverSearch>(
 }
 const FEE_STEP = 100;
 
-const SORT_OPTIONS: { value: DoctorSort; label: string }[] = [
-  { value: "name", label: "Name (A–Z)" },
-  { value: "fee_asc", label: "Fee: low to high" },
-  { value: "fee_desc", label: "Fee: high to low" },
-  { value: "experience", label: "Most experienced" },
+const SORT_OPTIONS: { value: DoctorSort; label: MessageKey }[] = [
+  { value: "name", label: "discover.sort.name" },
+  { value: "fee_asc", label: "discover.sort.feeAsc" },
+  { value: "fee_desc", label: "discover.sort.feeDesc" },
+  { value: "experience", label: "discover.sort.experience" },
 ];
 
 function Discover() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/discover" });
   const { doctors: catalogDoctors, clinics: catalogClinics, catalog } = useApp();
+  const { t, fmt } = useI18n();
 
   const [text, setText] = useState(search.q ?? "");
   const debouncedText = useDebouncedValue(text.trim(), SEARCH_DEBOUNCE_MS);
@@ -276,10 +278,8 @@ function Discover() {
     <PatientShell>
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-2xl font-bold">Find doctors</h1>
-          <p className="text-sm text-muted-foreground">
-            Search providers by specialty, clinic, area or doctor name.
-          </p>
+          <h1 className="font-display text-2xl font-bold">{t("discover.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("discover.subtitle")}</p>
         </div>
 
         <form
@@ -289,14 +289,14 @@ function Discover() {
         >
           <Search className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
           <label htmlFor="discover-search" className="sr-only">
-            Search doctors and clinics
+            {t("discover.searchLabel")}
           </label>
           <input
             id="discover-search"
             type="search"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Pediatrician Adyar, Dr. Rao, Little Steps Clinic…"
+            placeholder={t("discover.searchPlaceholder")}
             maxLength={100}
             autoComplete="off"
             className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
@@ -308,7 +308,7 @@ function Discover() {
               size="icon"
               className="h-8 w-8 shrink-0"
               onClick={() => setText("")}
-              aria-label="Clear search"
+              aria-label={t("discover.clearSearch")}
             >
               <X className="h-4 w-4" aria-hidden />
             </Button>
@@ -323,8 +323,9 @@ function Discover() {
             aria-controls="discover-filters"
           >
             <SlidersHorizontal className="h-4 w-4" aria-hidden />
-            Filters
-            {activeFilterCount ? ` (${activeFilterCount})` : ""}
+            {activeFilterCount
+              ? t("discover.filtersCount", { count: activeFilterCount })
+              : t("discover.filters")}
           </Button>
         </form>
 
@@ -332,7 +333,7 @@ function Discover() {
           <div
             className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
             role="group"
-            aria-label="Specialty"
+            aria-label={t("discover.specialty")}
           >
             <button
               type="button"
@@ -340,7 +341,7 @@ function Discover() {
               aria-pressed={!specialtyId}
               onClick={() => setSpecialty("")}
             >
-              All specialties
+              {t("discover.allSpecialties")}
             </button>
             {specialtyOptions.map((s) => (
               <button
@@ -350,7 +351,7 @@ function Discover() {
                 aria-pressed={specialtyId === s.id}
                 onClick={() => setSpecialty(specialtyId === s.id ? "" : s.id)}
               >
-                {s.name}
+                {fmt.specialty(s.id)}
               </button>
             ))}
           </div>
@@ -359,38 +360,42 @@ function Discover() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
           <aside
             id="discover-filters"
-            aria-label="Doctor filters"
+            aria-label={t("discover.doctorFilters")}
             className={cn(
               "surface-card h-fit space-y-5 p-4 lg:sticky lg:top-24 lg:block",
               showFilters ? "block" : "hidden",
             )}
           >
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Filters</h2>
+              <h2 className="font-semibold">{t("discover.filters")}</h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={resetFilters}
                 disabled={activeFilterCount === 0}
               >
-                Reset
+                {t("discover.reset")}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">These filters apply to doctors.</p>
+            <p className="text-xs text-muted-foreground">{t("discover.filtersApply")}</p>
 
             {feeBounds ? (
               <FilterGroup
                 label={
                   maxFee === null
-                    ? "Consultation fee: any"
-                    : `Consultation fee up to ${inr(maxFee)}`
+                    ? t("discover.feeAny")
+                    : t("discover.feeUpTo", { fee: fmt.inr(maxFee) })
                 }
                 id="fee-filter"
               >
                 <Slider
                   aria-labelledby="fee-filter"
-                  thumbLabel="Maximum consultation fee"
-                  valueText={maxFee === null ? "Any fee" : `Up to ${inr(maxFee)}`}
+                  thumbLabel={t("discover.feeThumb")}
+                  valueText={
+                    maxFee === null
+                      ? t("discover.feeAnyValue")
+                      : t("discover.feeUpToValue", { fee: fmt.inr(maxFee) })
+                  }
                   className="mt-3"
                   min={feeBounds.min}
                   max={feeBounds.max}
@@ -407,16 +412,22 @@ function Discover() {
               <FilterGroup
                 label={
                   minExperience > 0
-                    ? `Minimum experience: ${pluralize(minExperience, "year")}`
-                    : "Minimum experience: any"
+                    ? t("discover.experienceMin", {
+                        years: t.plural("common.years", minExperience),
+                      })
+                    : t("discover.experienceAny")
                 }
                 id="experience-filter"
               >
                 <Slider
                   aria-labelledby="experience-filter"
-                  thumbLabel="Minimum years of experience"
+                  thumbLabel={t("discover.experienceThumb")}
                   valueText={
-                    minExperience > 0 ? `${pluralize(minExperience, "year")} or more` : "Any"
+                    minExperience > 0
+                      ? t("discover.experienceOrMore", {
+                          years: t.plural("common.years", minExperience),
+                        })
+                      : t("common.any")
                   }
                   className="mt-3"
                   min={0}
@@ -428,7 +439,7 @@ function Discover() {
               </FilterGroup>
             ) : null}
 
-            <FilterGroup label="Doctor's gender" id="gender-filter">
+            <FilterGroup label={t("discover.gender")} id="gender-filter">
               <div
                 className="mt-2 flex flex-wrap gap-2"
                 role="group"
@@ -442,14 +453,16 @@ function Discover() {
                     aria-pressed={gender === g}
                     onClick={() => setGender(g)}
                   >
-                    {g === "any" ? "Any" : g === "female" ? "Female" : "Male"}
+                    {t(
+                      g === "any" ? "common.any" : g === "female" ? "common.female" : "common.male",
+                    )}
                   </button>
                 ))}
               </div>
             </FilterGroup>
 
             {languageOptions.length ? (
-              <FilterGroup label="Language spoken" id="language-filter">
+              <FilterGroup label={t("discover.language")} id="language-filter">
                 <div
                   className="mt-2 flex flex-wrap gap-2"
                   role="group"
@@ -461,7 +474,7 @@ function Discover() {
                     aria-pressed={!language}
                     onClick={() => setLanguage("")}
                   >
-                    Any
+                    {t("common.any")}
                   </button>
                   {languageOptions.map((l) => (
                     <button
@@ -471,7 +484,7 @@ function Discover() {
                       aria-pressed={language === l}
                       onClick={() => setLanguage(language === l ? "" : l)}
                     >
-                      {l}
+                      {fmt.languageName(l)}
                     </button>
                   ))}
                 </div>
@@ -484,16 +497,20 @@ function Discover() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <TabsList>
                   <TabsTrigger value="doctors">
-                    Doctors{doctors ? ` (${doctors.length})` : ""}
+                    {doctors
+                      ? t("discover.doctorsTabCount", { count: fmt.number(doctors.length) })
+                      : t("discover.doctorsTab")}
                   </TabsTrigger>
                   <TabsTrigger value="clinics">
-                    Clinics{clinics ? ` (${clinics.length})` : ""}
+                    {clinics
+                      ? t("discover.clinicsTabCount", { count: fmt.number(clinics.length) })
+                      : t("discover.clinicsTab")}
                   </TabsTrigger>
                 </TabsList>
                 {tab === "doctors" ? (
                   <div className="flex items-center gap-2">
                     <label htmlFor="sort" className="text-xs text-muted-foreground">
-                      Sort by
+                      {t("discover.sortBy")}
                     </label>
                     <select
                       id="sort"
@@ -506,7 +523,7 @@ function Discover() {
                     >
                       {SORT_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
-                          {o.label}
+                          {t(o.label)}
                         </option>
                       ))}
                     </select>
@@ -520,7 +537,8 @@ function Discover() {
               >
                 {updating ? (
                   <>
-                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> Updating results…
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden />{" "}
+                    {t("discover.updating")}
                   </>
                 ) : null}
               </p>
@@ -528,30 +546,23 @@ function Discover() {
               <TabsContent value="doctors" className="mt-1">
                 <ResultsState
                   query={doctorResults}
-                  noun="doctors"
-                  loadingLabel="Loading doctors"
-                  emptyTitle="No matching doctors"
+                  errorTitle={t("discover.loadErrorDoctors")}
+                  loadingLabel={t("discover.loadingDoctors")}
+                  emptyTitle={t("discover.noDoctorsTitle")}
                   emptyDescription={
-                    hasAnyCriteria
-                      ? "No doctors match your search and filters. Try a different search or clear the filters."
-                      : "No doctors are listed on CareConnect yet."
+                    hasAnyCriteria ? t("discover.noDoctorsFiltered") : t("discover.noDoctorsListed")
                   }
                   onClear={hasAnyCriteria ? clearEverything : undefined}
                 >
                   {(list) => (
                     <>
                       <p className="mb-3 text-sm text-muted-foreground">
-                        {list.length}{" "}
-                        {hasAnyCriteria
-                          ? list.length === 1
-                            ? "doctor matches your search"
-                            : "doctors match your search"
-                          : list.length === 1
-                            ? "doctor listed"
-                            : "doctors listed"}
-                        .
+                        {t.plural(
+                          hasAnyCriteria ? "discover.matches" : "discover.listed",
+                          list.length,
+                        )}
                         {list.length >= SEARCH_RESULT_LIMIT
-                          ? ` Showing the first ${SEARCH_RESULT_LIMIT} — refine your search to narrow it down.`
+                          ? ` ${t("discover.limitNote", { limit: fmt.number(SEARCH_RESULT_LIMIT) })}`
                           : ""}
                       </p>
                       <div className="grid gap-4 md:grid-cols-2">
@@ -567,13 +578,13 @@ function Discover() {
               <TabsContent value="clinics" className="mt-1">
                 <ResultsState
                   query={clinicResults}
-                  noun="clinics"
-                  loadingLabel="Loading clinics"
-                  emptyTitle="No matching clinics"
+                  errorTitle={t("discover.loadErrorClinics")}
+                  loadingLabel={t("discover.loadingClinics")}
+                  emptyTitle={t("discover.noClinicsTitle")}
                   emptyDescription={
                     debouncedText || specialtyId
-                      ? "No clinics match your search. Try another area, specialty or clinic name."
-                      : "No clinics are listed on CareConnect yet."
+                      ? t("discover.noClinicsFiltered")
+                      : t("discover.noClinicsListed")
                   }
                   onClear={debouncedText || specialtyId ? clearEverything : undefined}
                 >
@@ -615,7 +626,7 @@ function FilterGroup({ label, id, children }: { label: string; id: string; child
 
 function ResultsState<T>({
   query,
-  noun,
+  errorTitle,
   loadingLabel,
   emptyTitle,
   emptyDescription,
@@ -623,19 +634,20 @@ function ResultsState<T>({
   children,
 }: {
   query: ResultsSource<T>;
-  noun: string;
+  errorTitle: string;
   loadingLabel: string;
   emptyTitle: string;
   emptyDescription: string;
   onClear: (() => void) | undefined;
   children: (list: T[]) => ReactNode;
 }) {
+  const { t } = useI18n();
   // An error always wins: never show results from a previous search as if they matched this one.
   if (query.error) {
     return (
       <ErrorState
-        title={`We couldn't load ${noun}`}
-        message={describeDataError(query.error)}
+        title={errorTitle}
+        message={t(describeDataError(query.error))}
         onRetry={() => void query.refetch()}
       />
     );
@@ -650,7 +662,7 @@ function ResultsState<T>({
         action={
           onClear ? (
             <Button variant="outline" size="sm" onClick={onClear}>
-              Clear search and filters
+              {t("discover.clearAll")}
             </Button>
           ) : undefined
         }

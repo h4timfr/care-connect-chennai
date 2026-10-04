@@ -13,7 +13,8 @@ import { DoctorCard } from "@/components/DoctorCard";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
-import { inr, mailtoHref, specialtyName, telHref } from "@/lib/format";
+import { mailtoHref, telHref } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { describeDataError } from "@/lib/supabase/errors";
 
 export const Route = createFileRoute("/clinics/$clinicId")({
@@ -26,27 +27,28 @@ function ClinicProfile() {
   const { clinicById, doctorsOfClinic, catalog } = useApp();
 
   const clinic = clinicById(clinicId);
+  const { t, fmt } = useI18n();
 
   if (!clinic) {
     return (
       <PatientShell>
         {catalog.isLoading ? (
-          <PageLoader label="Loading clinic…" />
+          <PageLoader label={t("clinic.loading")} />
         ) : catalog.error ? (
           <ErrorState
-            title="We couldn't load this clinic"
-            message={describeDataError(catalog.error)}
+            title={t("clinic.loadError")}
+            message={t(describeDataError(catalog.error))}
             onRetry={catalog.refetch}
           />
         ) : (
           <EmptyState
             icon={SearchX}
-            title="Clinic not found"
-            description="This clinic isn't listed on CareConnect, or the link is out of date."
+            title={t("clinic.notFoundTitle")}
+            description={t("clinic.notFoundBody")}
             action={
               <Button asChild variant="outline" size="sm">
                 <Link to="/discover" search={{ tab: "clinics" }}>
-                  Browse clinics
+                  {t("clinic.browse")}
                 </Link>
               </Button>
             }
@@ -67,7 +69,7 @@ function ClinicProfile() {
           search={{ tab: "clinics" }}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Back to clinics
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden /> {t("clinic.backToClinics")}
         </Link>
 
         <section className="surface-card overflow-hidden">
@@ -81,7 +83,7 @@ function ClinicProfile() {
                 <Rating value={clinic.rating} count={clinic.reviewCount} sample={clinic.isSample} />
                 {maxFee > 0 ? (
                   <span className="text-muted-foreground">
-                    Consultations {inr(minFee)} – {inr(maxFee)}
+                    {t("clinic.consultations", { min: fmt.inr(minFee), max: fmt.inr(maxFee) })}
                   </span>
                 ) : null}
                 {clinic.isSample ? <SampleBadge /> : null}
@@ -94,18 +96,18 @@ function ClinicProfile() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-8">
             <section aria-labelledby="clinic-about">
-              <SectionHeader id="clinic-about" title="About" />
+              <SectionHeader id="clinic-about" title={t("clinic.about")} />
               <p className="leading-relaxed text-muted-foreground">
-                {clinic.about || "No description provided."}
+                {clinic.about || t("doctor.noDescription")}
               </p>
               {clinic.specialtyIds.length ? (
-                <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Specialties">
+                <ul className="mt-4 flex flex-wrap gap-1.5" aria-label={t("common.specialties")}>
                   {clinic.specialtyIds.map((id) => (
                     <li
                       key={id}
                       className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
                     >
-                      {specialtyName(id)}
+                      {fmt.specialty(id)}
                     </li>
                   ))}
                 </ul>
@@ -113,7 +115,7 @@ function ClinicProfile() {
             </section>
 
             <section aria-labelledby="clinic-doctors">
-              <SectionHeader id="clinic-doctors" title="Doctors" />
+              <SectionHeader id="clinic-doctors" title={t("clinic.doctors")} />
               {doctors.length ? (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {doctors.map((d) => (
@@ -121,15 +123,13 @@ function ClinicProfile() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No doctors are currently listed at this clinic.
-                </p>
+                <p className="text-sm text-muted-foreground">{t("clinic.noDoctors")}</p>
               )}
             </section>
 
             {clinic.services.length ? (
               <section aria-labelledby="clinic-services">
-                <SectionHeader id="clinic-services" title="Services" />
+                <SectionHeader id="clinic-services" title={t("clinic.services")} />
                 <ul className="list-inside list-disc space-y-1 text-muted-foreground">
                   {clinic.services.map((s) => (
                     <li key={s}>{s}</li>
@@ -140,7 +140,7 @@ function ClinicProfile() {
 
             {clinic.facilities.length ? (
               <section aria-labelledby="clinic-facilities">
-                <SectionHeader id="clinic-facilities" title="Facilities" />
+                <SectionHeader id="clinic-facilities" title={t("clinic.facilities")} />
                 <ul className="flex flex-wrap gap-2">
                   {clinic.facilities.map((f) => (
                     <li key={f} className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium">
@@ -155,7 +155,7 @@ function ClinicProfile() {
           <aside className="space-y-6">
             <section className="surface-card space-y-4 p-5" aria-labelledby="clinic-contact">
               <h2 id="clinic-contact" className="font-display text-lg font-semibold">
-                Contact
+                {t("clinic.contact")}
               </h2>
               <div className="space-y-3 text-sm text-muted-foreground">
                 <p className="flex items-start gap-2">
@@ -168,7 +168,7 @@ function ClinicProfile() {
                     className="flex items-center gap-2 hover:text-foreground"
                   >
                     <Phone className="h-4 w-4 text-foreground" aria-hidden />
-                    {clinic.phone}
+                    <span dir="ltr">{clinic.phone}</span>
                   </a>
                 ) : null}
                 {mailtoHref(clinic.email) ? (
@@ -177,7 +177,7 @@ function ClinicProfile() {
                     className="flex items-center gap-2 break-all hover:text-foreground"
                   >
                     <Mail className="h-4 w-4 shrink-0 text-foreground" aria-hidden />
-                    {clinic.email}
+                    <span dir="ltr">{clinic.email}</span>
                   </a>
                 ) : null}
               </div>
@@ -185,7 +185,7 @@ function ClinicProfile() {
 
             <section className="surface-card space-y-3 p-5" aria-labelledby="clinic-hours">
               <h2 id="clinic-hours" className="font-display text-lg font-semibold">
-                Opening hours
+                {t("clinic.openingHours")}
               </h2>
               {clinic.openingHours.length ? (
                 <dl className="space-y-2 text-sm">
@@ -195,14 +195,12 @@ function ClinicProfile() {
                       className="flex justify-between border-b pb-2 last:border-0 last:pb-0"
                     >
                       <dt className="text-muted-foreground">{h.day}</dt>
-                      <dd className="text-right font-medium">{h.hours}</dd>
+                      <dd className="text-end font-medium">{h.hours}</dd>
                     </div>
                   ))}
                 </dl>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Opening hours haven't been listed. Please call the clinic to check.
-                </p>
+                <p className="text-sm text-muted-foreground">{t("clinic.noOpeningHours")}</p>
               )}
             </section>
           </aside>

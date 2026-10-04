@@ -15,17 +15,24 @@ export function mailtoHref(email: string): string | null {
     : null;
 }
 
-/** "1 doctor", "3 doctors". */
-export function pluralize(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
+const DEFAULT_LOCALE = "en-IN";
+const isEnglish = (locale: string) => locale.startsWith("en");
 
-export const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
+export const inr = (value: number, locale = DEFAULT_LOCALE) =>
+  `₹${value.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
 
-export function to12h(time: string) {
+/** "19:30" -> "7:30 PM" (English) or the locale's own clock format. */
+export function to12h(time: string, locale = DEFAULT_LOCALE) {
   const parts = time.split(":");
   const h = Number(parts[0] ?? 0);
   const m = Number(parts[1] ?? 0);
+  if (!isEnglish(locale)) {
+    return new Intl.DateTimeFormat(locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "UTC",
+    }).format(new Date(Date.UTC(2000, 0, 1, h, m)));
+  }
   const suffix = h >= 12 ? "PM" : "AM";
   const hour = h % 12 === 0 ? 12 : h % 12;
   return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
@@ -157,11 +164,12 @@ function needsYear(iso: string) {
   return iso.slice(0, 4) !== isoDate(new Date()).slice(0, 4);
 }
 
-export function longDate(iso: string) {
-  if (!iso) return "Not set";
+/** "Monday, 5 October"; empty for a missing or invalid date. */
+export function longDate(iso: string, locale = DEFAULT_LOCALE) {
+  if (!iso) return "";
   const d = new Date(`${iso}T12:00:00Z`); // use noon UTC to avoid any timezone shifts
-  if (isNaN(d.getTime())) return "Not set";
-  return d.toLocaleDateString("en-IN", {
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -171,11 +179,11 @@ export function longDate(iso: string) {
 }
 
 /** A calendar date without weekday, always with the year (e.g. dates of birth). */
-export function fullDate(iso: string) {
+export function fullDate(iso: string, locale = DEFAULT_LOCALE) {
   if (!iso) return "";
   const d = new Date(`${iso}T12:00:00Z`);
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-IN", {
+  return d.toLocaleDateString(locale, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -183,22 +191,15 @@ export function fullDate(iso: string) {
   });
 }
 
-export function shortDate(iso: string) {
+export function shortDate(iso: string, locale = DEFAULT_LOCALE) {
   const d = new Date(`${iso}T12:00:00Z`);
-  return d.toLocaleDateString("en-IN", {
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     ...(needsYear(iso) ? { year: "numeric" } : {}),
     timeZone: "UTC",
   });
-}
-
-export function relativeDay(iso: string) {
-  const today = isoDate(new Date());
-  const tomorrow = isoDate(addDays(new Date(), 1));
-  if (iso === today) return "Today";
-  if (iso === tomorrow) return "Tomorrow";
-  return shortDate(iso);
 }
 
 export function dayPartOf(time: string): "morning" | "afternoon" | "evening" {
@@ -208,19 +209,8 @@ export function dayPartOf(time: string): "morning" | "afternoon" | "evening" {
   return "evening";
 }
 
-export function timeAgo(isoDateTime: string) {
-  const diff = Date.now() - new Date(isoDateTime).getTime();
-  const mins = Math.round(diff / 60000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.round(hours / 24);
-  return `${days}d`;
-}
-
-export function clockTime(isoDateTime: string) {
-  return new Date(isoDateTime).toLocaleTimeString("en-IN", {
+export function clockTime(isoDateTime: string, locale = DEFAULT_LOCALE) {
+  return new Date(isoDateTime).toLocaleTimeString(locale, {
     hour: "numeric",
     minute: "2-digit",
     timeZone: "Asia/Kolkata",

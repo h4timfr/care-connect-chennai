@@ -1,12 +1,12 @@
 import { Loader2 } from "lucide-react";
 import { useDoctorAvailability } from "@/lib/supabase/queries";
 import { describeDataError } from "@/lib/supabase/errors";
-import { addDays, dayPartOf, isoDate, longDate, relativeDay, shortDate, to12h } from "@/lib/format";
+import { addDays, dayPartOf, isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const PARTS = ["morning", "afternoon", "evening"] as const;
-const PART_LABEL = { morning: "Morning", afternoon: "Afternoon", evening: "Evening" };
 
 export function DateStrip({
   value,
@@ -18,11 +18,12 @@ export function DateStrip({
   days?: number;
 }) {
   const dates = Array.from({ length: days }, (_, i) => isoDate(addDays(new Date(), i)));
+  const { t, fmt } = useI18n();
   return (
     <div
       className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
       role="group"
-      aria-label="Choose a date"
+      aria-label={t("slots.chooseDate")}
     >
       {dates.map((date) => {
         const active = date === value;
@@ -32,7 +33,7 @@ export function DateStrip({
             type="button"
             onClick={() => onChange(date)}
             aria-pressed={active}
-            aria-label={longDate(date)}
+            aria-label={fmt.longDate(date)}
             className={cn(
               "min-w-20 shrink-0 rounded-xl border px-3 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
@@ -40,8 +41,8 @@ export function DateStrip({
                 : "bg-card hover:bg-muted",
             )}
           >
-            <span className="block text-xs opacity-80">{relativeDay(date)}</span>
-            <span className="block text-sm font-semibold">{shortDate(date)}</span>
+            <span className="block text-xs opacity-80">{fmt.relativeDay(date)}</span>
+            <span className="block text-sm font-semibold">{fmt.shortDate(date)}</span>
           </button>
         );
       })}
@@ -63,6 +64,7 @@ export function SlotGrid({
   onChange: (time: string) => void;
 }) {
   const availability = useDoctorAvailability(doctorId, clinicId, date);
+  const { t, fmt } = useI18n();
 
   if (availability.isPending) {
     return (
@@ -70,7 +72,7 @@ export function SlotGrid({
         role="status"
         className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground"
       >
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Checking availability…
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {t("slots.checking")}
       </p>
     );
   }
@@ -79,10 +81,10 @@ export function SlotGrid({
     return (
       <div role="alert" className="rounded-xl border border-dashed px-4 py-6 text-center text-sm">
         <p className="text-muted-foreground">
-          Couldn't load available times. {describeDataError(availability.error)}
+          {t("slots.loadError", { reason: t(describeDataError(availability.error)) })}
         </p>
         <Button variant="outline" size="sm" className="mt-3" onClick={() => availability.refetch()}>
-          Try again
+          {t("common.tryAgain")}
         </Button>
       </div>
     );
@@ -92,7 +94,7 @@ export function SlotGrid({
   if (!slots.length) {
     return (
       <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-        No appointments are offered on {longDate(date)}. Please choose another day.
+        {t("slots.noneOnDay", { date: fmt.longDate(date) })}
       </p>
     );
   }
@@ -102,17 +104,15 @@ export function SlotGrid({
   return (
     <div className="space-y-4">
       {!anyAvailable ? (
-        <p className="text-sm text-muted-foreground">
-          Every slot on this date is booked or has already passed. Please choose another day.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("slots.allTaken")}</p>
       ) : null}
       {PARTS.map((part) => {
         const partSlots = slots.filter((s) => dayPartOf(s.slot_time) === part);
         if (!partSlots.length) return null;
         return (
-          <div key={part} role="group" aria-label={PART_LABEL[part]}>
+          <div key={part} role="group" aria-label={t(`slots.${part}`)}>
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {PART_LABEL[part]}
+              {t(`slots.${part}`)}
             </p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {partSlots.map((slot) => {
@@ -123,7 +123,11 @@ export function SlotGrid({
                     type="button"
                     disabled={!slot.available}
                     aria-pressed={selected}
-                    aria-label={`${to12h(slot.slot_time)}${slot.available ? "" : ", unavailable"}`}
+                    aria-label={
+                      slot.available
+                        ? fmt.time(slot.slot_time)
+                        : t("slots.unavailableSlot", { time: fmt.time(slot.slot_time) })
+                    }
                     onClick={() => onChange(slot.slot_time)}
                     className={cn(
                       "rounded-lg border px-2 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -137,7 +141,7 @@ export function SlotGrid({
                         "bg-card hover:border-primary hover:text-primary",
                     )}
                   >
-                    {to12h(slot.slot_time)}
+                    {fmt.time(slot.slot_time)}
                   </button>
                 );
               })}
@@ -145,7 +149,7 @@ export function SlotGrid({
           </div>
         );
       })}
-      <p className="text-xs text-muted-foreground">Times are shown in India Standard Time (IST).</p>
+      <p className="text-xs text-muted-foreground">{t("slots.istNote")}</p>
     </div>
   );
 }

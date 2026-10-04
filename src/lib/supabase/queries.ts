@@ -406,22 +406,30 @@ export function usePatient(
   });
 }
 
+/** A clinic the signed-in user is an active member of, with their role there. */
+export interface MemberClinic extends Clinic {
+  memberRole: Database["public"]["Enums"]["user_role"];
+}
+
 export function useAuthorizedClinics(userId?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["authorized_clinics", userId],
     enabled: (options?.enabled ?? true) && !!userId,
-    queryFn: async () => {
+    queryFn: async (): Promise<MemberClinic[]> => {
       if (!userId) return [];
       const { data, error } = await supabase
         .from("clinic_memberships")
-        .select(`clinic_id, clinics!inner(${CLINIC_COLUMNS})` as const)
+        .select(`clinic_id, role, clinics!inner(${CLINIC_COLUMNS})` as const)
         .eq("user_id", userId)
         .eq("active", true);
 
       if (error) throw error;
-      return data.map((row) =>
-        mapClinic(Array.isArray(row.clinics) ? row.clinics[0] : row.clinics),
-      );
+      return data
+        .map((row) => ({
+          ...mapClinic(Array.isArray(row.clinics) ? row.clinics[0] : row.clinics),
+          memberRole: row.role,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 }
@@ -454,6 +462,27 @@ export function useUpdatePatientDetails() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["patient"] }),
+  });
+}
+
+/** Saves only the UI language on the patient's own row, leaving every other detail untouched. */
+export function useUpdatePreferredLanguage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ patientId, language }: { patientId: string; language: string }) => {
+      const { error } = await supabase
+        .from("patients")
+        .update({ preferred_language: language })
+        .eq("id", patientId)
+        .select("id")
+        .single();
+      if (error) throw error;
+    },
+    onSuccess: (_data, { language }) => {
+      queryClient.setQueriesData<Patient | null>({ queryKey: ["patient"] }, (previous) =>
+        previous ? { ...previous, preferredLanguage: language } : previous,
+      );
+    },
   });
 }
 

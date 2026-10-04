@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
+import { useI18n } from "@/lib/i18n";
 import { describeDataError } from "@/lib/supabase/errors";
 
 /**
@@ -9,6 +10,7 @@ import { describeDataError } from "@/lib/supabase/errors";
  */
 export function CatalogNotice() {
   const { catalog } = useApp();
+  const { t } = useI18n();
   if (!catalog.error) return null;
   return (
     <div
@@ -17,13 +19,10 @@ export function CatalogNotice() {
     >
       <p className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-        <span>
-          Doctor and clinic details couldn't be loaded, so some names may be missing.{" "}
-          {describeDataError(catalog.error)}
-        </span>
+        <span>{t("catalog.notice", { reason: t(describeDataError(catalog.error)) })}</span>
       </p>
       <Button variant="outline" size="sm" onClick={catalog.refetch}>
-        Try again
+        {t("common.tryAgain")}
       </Button>
     </div>
   );

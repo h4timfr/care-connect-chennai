@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { Bookmark, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Initials, Rating, SampleBadge } from "@/components/common";
-import { inr, pluralize, specialtyName } from "@/lib/format";
 import { useApp } from "@/lib/store";
+import { useI18n } from "@/lib/i18n";
 import { bookableClinicIds } from "@/lib/supabase/queries";
 import { describeDataError } from "@/lib/supabase/errors";
 import { cn } from "@/lib/utils";
@@ -17,13 +17,14 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
   const canBookOnline = bookableClinicIds(doctor).length > 0;
   const saved = patient?.savedDoctorIds.includes(doctor.id) ?? false;
   const [saving, setSaving] = useState(false);
+  const { t, fmt } = useI18n();
 
   const toggleSaved = async () => {
     setSaving(true);
     try {
       await toggleSavedDoctor(doctor.id);
     } catch (err) {
-      toast.error(`Couldn't update saved doctors. ${describeDataError(err)}`);
+      toast.error(t("doctor.saveFailed", { reason: t(describeDataError(err)) }));
     } finally {
       setSaving(false);
     }
@@ -43,7 +44,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
               {doctor.name}
             </Link>
           </h3>
-          <p className="truncate text-sm text-primary">{specialtyName(doctor.specialtyId)}</p>
+          <p className="truncate text-sm text-primary">{fmt.specialty(doctor.specialtyId)}</p>
           {clinic ? (
             <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -59,7 +60,11 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
             type="button"
             onClick={toggleSaved}
             disabled={saving}
-            aria-label={saved ? `Remove ${doctor.name} from saved doctors` : `Save ${doctor.name}`}
+            aria-label={
+              saved
+                ? t("doctor.unsave", { name: doctor.name })
+                : t("doctor.save", { name: doctor.name })
+            }
             aria-pressed={saved}
             className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
@@ -69,34 +74,34 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">{inr(doctor.consultationFee)}</span>
-        <span>{pluralize(doctor.experienceYears, "year")} experience</span>
+        <span className="font-medium text-foreground">{fmt.inr(doctor.consultationFee)}</span>
+        <span>{t.plural("common.experience", doctor.experienceYears)}</span>
         <Rating value={doctor.rating} count={doctor.reviewCount} sample={doctor.isSample} />
         {doctor.isSample ? <SampleBadge /> : null}
       </div>
 
       {!compact && doctor.languages.length ? (
         <p className="text-sm text-muted-foreground">
-          <span className="sr-only">Languages: </span>
-          {doctor.languages.join(" · ")}
+          <span className="sr-only">{t("common.languages")}: </span>
+          {doctor.languages.map(fmt.languageName).join(" · ")}
         </p>
       ) : null}
 
       <div className="mt-auto grid grid-cols-2 gap-2">
         <Button asChild variant="outline" size="sm">
           <Link to="/doctors/$doctorId" params={{ doctorId: doctor.id }}>
-            View profile
+            {t("doctor.viewProfile")}
           </Link>
         </Button>
         {canBookOnline ? (
           <Button asChild size="sm">
             <Link to="/book/$doctorId" params={{ doctorId: doctor.id }}>
-              Book
+              {t("doctor.book")}
             </Link>
           </Button>
         ) : (
           <p className="flex items-center justify-center rounded-md bg-muted px-2 text-center text-xs text-muted-foreground">
-            Online booking unavailable
+            {t("doctor.bookingUnavailable")}
           </p>
         )}
       </div>

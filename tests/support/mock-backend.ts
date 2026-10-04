@@ -53,6 +53,16 @@ export interface MockState {
   concurrentConversation: Row | null;
   /** Tables whose reads fail with a server error (e.g. ["doctors"]). */
   failTables: string[];
+  /**
+   * Profile photo storage: "none" (no photo yet), "photo" (one exists), "noBucket" (the avatars
+   * bucket isn't set up), "noPolicies" (a bucket without migration 00053's policies: reads find
+   * nothing and every write is refused by RLS) or "error" (storage failing).
+   */
+  avatar: "none" | "photo" | "noBucket" | "noPolicies" | "error";
+  /** Makes the next avatar upload fail with a storage error. */
+  failAvatarUpload: boolean;
+  /** Content types of avatar uploads received, in order. */
+  avatarUploads: string[];
 }
 
 export interface MockBackend {
@@ -151,8 +161,17 @@ export function defaultState(): MockState {
     delays: {},
     concurrentConversation: null,
     failTables: [],
+    avatar: "none",
+    failAvatarUpload: false,
+    avatarUploads: [],
   };
 }
+
+/** A 1x1 PNG, served as the stored profile photo. */
+const PIXEL_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 function base64Url(value: object) {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -282,6 +301,57 @@ export async function mockBackend(
     }
     if (path === "/auth/v1/logout") return route.fulfill({ status: 204, headers: corsHeaders() });
     if (path === "/auth/v1/recover") return json(route, 200, {});
+
+    // ---- Storage (profile photos; the bucket and path rules mirror migration 00053)
+    if (path.startsWith("/storage/v1/")) {
+      const avatarPath = `${ids.user}/avatar`;
+      const storageError = (status: number, error: string, message: string) =>
+        json(route, status, { statusCode: String(status), error, message });
+      if (state.avatar === "noBucket")
+        return storageError(400, "Bucket not found", "Bucket not found");
+      if (state.avatar === "error")
+        return storageError(500, "internal", "simulated storage failure");
+      if (path === `/storage/v1/object/sign/avatars/${avatarPath}`) {
+        if (state.avatar !== "photo") return storageError(400, "not_found", "Object not found");
+        if (method === "GET") {
+          return route.fulfill({ status: 200, contentType: "image/png", body: PIXEL_PNG });
+        }
+        return json(route, 200, {
+          signedURL: `/object/sign/avatars/${avatarPath}?token=test-token-${state.avatarUploads.length}`,
+        });
+      }
+      // Any other account's object: storage RLS hides it, which the API reports as not found.
+      if (path.startsWith("/storage/v1/object/sign/")) {
+        return storageError(400, "not_found", "Object not found");
+      }
+      if (
+        path === `/storage/v1/object/avatars/${avatarPath}` &&
+        (method === "POST" || method === "PUT")
+      ) {
+        if (state.avatar === "noPolicies") {
+          return storageError(403, "Unauthorized", "new row violates row-level security policy");
+        }
+        if (state.failAvatarUpload) {
+          state.failAvatarUpload = false;
+          return storageError(500, "internal", "simulated upload failure");
+        }
+        // storage-js sends a Blob as multipart form data; the file part carries the image type.
+        const header = request.headers()["content-type"] ?? "";
+        const partType = header.startsWith("multipart/")
+          ? /content-type:\s*([^\r\n]+)/i.exec(
+              request.postDataBuffer()?.toString("latin1") ?? "",
+            )?.[1]
+          : header;
+        state.avatarUploads.push(partType?.trim() ?? "");
+        state.avatar = "photo";
+        return json(route, 200, { Key: `avatars/${avatarPath}`, Id: "test-object" });
+      }
+      if (path === "/storage/v1/object/avatars" && method === "DELETE") {
+        const removed = state.avatar === "photo" ? [{ name: avatarPath }] : [];
+        state.avatar = "none";
+        return json(route, 200, removed);
+      }
+    }
 
     // ---- RPC
     if (path === "/rest/v1/rpc/get_doctor_slots") return json(route, 200, state.slots);

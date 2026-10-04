@@ -12,22 +12,44 @@ import {
 import { useRef, type ReactNode } from "react";
 import { useFocusMainOnNavigate } from "@/hooks/useFocusMainOnNavigate";
 import { cn } from "@/lib/utils";
+import { LanguageSelect } from "@/components/LanguageSelect";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ErrorState, PageLoader } from "@/components/common";
 import { describeDataError } from "@/lib/supabase/errors";
 import { useApp } from "@/lib/store";
+import { useI18n, type MessageKey } from "@/lib/i18n";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { Button } from "@/components/ui/button";
+import type { MemberClinic } from "@/lib/supabase/queries";
 
-const NAV = [
-  { to: "/clinic", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/clinic/appointments", label: "Appointments", icon: CalendarDays },
-  { to: "/clinic/calendar", label: "Calendar", icon: CalendarRange },
-  { to: "/clinic/doctors", label: "Doctors", icon: UserRound },
-  { to: "/clinic/patients", label: "Patients", icon: Users },
-  { to: "/clinic/messages", label: "Messages", icon: MessageSquare },
-  { to: "/clinic/profile", label: "Clinic Profile", icon: Building2 },
-] as const;
+const NAV: {
+  to:
+    | "/clinic"
+    | "/clinic/appointments"
+    | "/clinic/calendar"
+    | "/clinic/doctors"
+    | "/clinic/patients"
+    | "/clinic/messages"
+    | "/clinic/profile";
+  label: MessageKey;
+  icon: typeof Users;
+  exact?: boolean;
+}[] = [
+  { to: "/clinic", label: "clinicNav.dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/clinic/appointments", label: "clinicNav.appointments", icon: CalendarDays },
+  { to: "/clinic/calendar", label: "clinicNav.calendar", icon: CalendarRange },
+  { to: "/clinic/doctors", label: "clinicNav.doctors", icon: UserRound },
+  { to: "/clinic/patients", label: "clinicNav.patients", icon: Users },
+  { to: "/clinic/messages", label: "clinicNav.messages", icon: MessageSquare },
+  { to: "/clinic/profile", label: "clinicNav.profile", icon: Building2 },
+];
+
+function roleKey(role: MemberClinic["memberRole"]): MessageKey {
+  if (role === "clinic_admin" || role === "clinic_staff" || role === "doctor") {
+    return `clinicShell.role.${role}`;
+  }
+  return "clinicShell.role.other";
+}
 
 export function ClinicShell({
   title,
@@ -42,6 +64,7 @@ export function ClinicShell({
 }) {
   const { loading, user } = useProtectedRoute();
   const mainRef = useRef<HTMLElement>(null);
+  const { t } = useI18n();
   const {
     activeClinic,
     memberClinics,
@@ -60,7 +83,7 @@ export function ClinicShell({
     return (
       <div className="min-h-screen bg-surface p-6">
         <PageLoader
-          label={!loading && !user ? "Redirecting to sign in…" : "Loading clinic portal…"}
+          label={!loading && !user ? t("common.redirectingToSignIn") : t("clinicShell.loading")}
         />
       </div>
     );
@@ -72,8 +95,8 @@ export function ClinicShell({
       <div className="flex min-h-screen items-center justify-center bg-surface p-6">
         <div className="w-full max-w-md">
           <ErrorState
-            title="We couldn't check your clinic access"
-            message={describeDataError(clinicAccessError)}
+            title={t("clinicShell.accessError")}
+            message={t(describeDataError(clinicAccessError))}
             onRetry={refetchClinicAccess}
           />
         </div>
@@ -84,51 +107,49 @@ export function ClinicShell({
   if (!activeClinic) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-6 text-center">
-        <Stethoscope className="mb-4 h-12 w-12 text-muted-foreground" />
-        <h1 className="mb-2 font-display text-2xl font-bold">No clinic access</h1>
-        <p className="mb-6 max-w-md text-muted-foreground">
-          This account isn't a member of any clinic. The clinic portal is only available to clinic
-          staff. If you work at a clinic, ask your clinic administrator to add you.
-        </p>
+        <Stethoscope className="mb-4 h-12 w-12 text-muted-foreground" aria-hidden />
+        <h1 className="mb-2 font-display text-2xl font-bold">{t("clinicShell.noAccessTitle")}</h1>
+        <p className="mb-6 max-w-md text-muted-foreground">{t("clinicShell.noAccessBody")}</p>
         <Button asChild>
-          <Link to="/">Go to CareConnect</Link>
+          <Link to="/">{t("clinicShell.goToApp")}</Link>
         </Button>
       </div>
     );
   }
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
+  const role = t(roleKey(activeClinic.memberRole));
 
   return (
     <div className="min-h-screen bg-surface">
       <div className="mx-auto flex max-w-[1500px]">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-sidebar px-4 py-5 lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e bg-sidebar px-4 py-5 lg:flex">
           <Link to="/clinic" className="mb-6 flex items-center gap-2 px-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
               <Stethoscope className="h-4.5 w-4.5" aria-hidden />
             </span>
             <span className="min-w-0">
               <span className="block font-display text-sm font-bold">CareConnect</span>
-              <span className="block truncate text-xs text-muted-foreground">Clinic portal</span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {t("clinicShell.portal")}
+              </span>
             </span>
           </Link>
-          <nav className="flex flex-1 flex-col gap-1" aria-label="Clinic">
+          <nav className="flex flex-1 flex-col gap-1" aria-label={t("clinicNav.label")}>
             {NAV.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
-                aria-current={
-                  isActive(item.to, "exact" in item ? item.exact : false) ? "page" : undefined
-                }
+                aria-current={isActive(item.to, item.exact) ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive(item.to, "exact" in item ? item.exact : false)
+                  isActive(item.to, item.exact)
                     ? "bg-primary-soft text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="min-w-0 truncate">{item.label}</span>
+                <span className="min-w-0 truncate">{t(item.label)}</span>
               </Link>
             ))}
           </nav>
@@ -144,10 +165,13 @@ export function ClinicShell({
               <p className="truncate text-sm font-semibold">{activeClinic.name}</p>
             )}
             <p className="truncate text-xs text-muted-foreground">
-              {[activeClinic.area, "Chennai"].filter(Boolean).join(", ")}
+              {[activeClinic.area, t("common.chennai")].filter(Boolean).join(", ")}
+            </p>
+            <p className="mt-1 text-xs font-medium text-primary" data-testid="clinic-role">
+              {role}
             </p>
             <Button asChild variant="outline" size="sm" className="mt-3 w-full">
-              <Link to="/">Switch to patient app</Link>
+              <Link to="/">{t("clinicShell.switchToPatient")}</Link>
             </Button>
           </div>
         </aside>
@@ -166,42 +190,45 @@ export function ClinicShell({
                       onChange={setActiveClinicId}
                     />
                   </div>
-                ) : null}
+                ) : (
+                  <p className="truncate text-xs text-muted-foreground lg:hidden">
+                    {activeClinic.name} · {role}
+                  </p>
+                )}
                 {description ? (
                   <p className="truncate text-sm text-muted-foreground">{description}</p>
                 ) : null}
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+                <LanguageSelect />
                 <ThemeToggle />
                 {actions}
               </div>
             </div>
             <nav
-              className="mt-3 -mx-1 flex gap-1 overflow-x-auto pb-1 lg:hidden"
-              aria-label="Clinic mobile"
+              className="-mx-1 mt-3 flex gap-1 overflow-x-auto pb-1 lg:hidden"
+              aria-label={t("clinicNav.mobileLabel")}
             >
               {NAV.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
-                  aria-current={
-                    isActive(item.to, "exact" in item ? item.exact : false) ? "page" : undefined
-                  }
+                  aria-current={isActive(item.to, item.exact) ? "page" : undefined}
                   className={cn(
                     "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                    isActive(item.to, "exact" in item ? item.exact : false)
+                    isActive(item.to, item.exact)
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               ))}
               <Link
                 to="/"
                 className="shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground"
               >
-                Patient app
+                {t("clinicShell.patientApp")}
               </Link>
             </nav>
           </header>
@@ -230,10 +257,11 @@ function ClinicPicker({
   value: string;
   onChange: (clinicId: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div>
       <label htmlFor={id} className="text-xs text-muted-foreground">
-        Clinic
+        {t("clinicShell.clinic")}
       </label>
       <select
         id={id}

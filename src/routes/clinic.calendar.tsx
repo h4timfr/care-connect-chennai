@@ -6,7 +6,8 @@ import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
-import { addDays, isoDate, longDate, shortDate, to12h } from "@/lib/format";
+import { addDays, isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { describeStatusError } from "@/lib/supabase/appointments";
 
 export const Route = createFileRoute("/clinic/calendar")({
@@ -17,23 +18,22 @@ export const Route = createFileRoute("/clinic/calendar")({
 const DEFAULT_FIRST_HOUR = 8;
 const DEFAULT_LAST_HOUR = 20;
 
-const hourLabel = (h: number) => (h === 12 ? "12 PM" : h > 12 ? `${h - 12} PM` : `${h} AM`);
-
 function ClinicCalendar() {
   const { activeClinic, clinicAppointmentsStatus: status } = useApp();
   const [dayOffset, setDayOffset] = useState(0);
   const date = isoDate(addDays(new Date(), dayOffset));
+  const { t, fmt } = useI18n();
 
   let body;
   if (!activeClinic) {
     body = null;
   } else if (status.isLoading) {
-    body = <PageLoader label="Loading calendar…" />;
+    body = <PageLoader label={t("clinicCalendar.loading")} />;
   } else if (status.error) {
     body = (
       <ErrorState
-        title="We couldn't load the calendar"
-        message={describeStatusError(status.error)}
+        title={t("clinicCalendar.loadError")}
+        message={t(describeStatusError(status.error))}
         onRetry={status.refetch}
       />
     );
@@ -43,8 +43,8 @@ function ClinicCalendar() {
 
   return (
     <ClinicShell
-      title="Calendar"
-      description={longDate(date)}
+      title={t("clinicCalendar.title")}
+      description={fmt.longDate(date)}
       actions={
         <div className="flex gap-2">
           <Button
@@ -53,7 +53,7 @@ function ClinicCalendar() {
             onClick={() => setDayOffset(0)}
             disabled={dayOffset === 0}
           >
-            Today
+            {t("clinicCalendar.today")}
           </Button>
           <div className="flex items-center gap-1 rounded-md border">
             <Button
@@ -61,21 +61,21 @@ function ClinicCalendar() {
               size="icon"
               className="h-8 w-8 rounded-none"
               onClick={() => setDayOffset((d) => d - 1)}
-              aria-label="Previous day"
+              aria-label={t("clinicCalendar.previousDay")}
             >
-              <ChevronLeft className="h-4 w-4" aria-hidden />
+              <ChevronLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />
             </Button>
             <span className="px-2 text-sm font-medium" aria-live="polite">
-              {shortDate(date)}
+              {fmt.shortDate(date)}
             </span>
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 rounded-none"
               onClick={() => setDayOffset((d) => d + 1)}
-              aria-label="Next day"
+              aria-label={t("clinicCalendar.nextDay")}
             >
-              <ChevronRight className="h-4 w-4" aria-hidden />
+              <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden />
             </Button>
           </div>
         </div>
@@ -89,6 +89,7 @@ function ClinicCalendar() {
 function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
   const { clinicAppointments, doctorsOfClinic } = useApp();
   const [doctorId, setDoctorId] = useState("all");
+  const { t, fmt } = useI18n();
 
   const doctors = doctorsOfClinic(clinicId);
   const appointments = clinicAppointments.filter(
@@ -111,7 +112,7 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
         <div
           className="flex gap-2 overflow-x-auto rounded-xl border bg-card p-3"
           role="group"
-          aria-label="Filter by doctor"
+          aria-label={t("clinicCalendar.filterByDoctor")}
         >
           <Button
             variant={doctorId === "all" ? "default" : "outline"}
@@ -119,7 +120,7 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
             aria-pressed={doctorId === "all"}
             onClick={() => setDoctorId("all")}
           >
-            All doctors
+            {t("clinicCalendar.allDoctors")}
           </Button>
           {doctors.map((d) => (
             <Button
@@ -137,10 +138,8 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
 
       <div className="surface-card overflow-hidden">
         <div className="grid grid-cols-[64px_1fr] border-b bg-muted/50 text-xs font-medium text-muted-foreground">
-          <div className="border-r p-3 text-center">Time (IST)</div>
-          <div className="p-3">
-            {appointments.length} {appointments.length === 1 ? "appointment" : "appointments"}
-          </div>
+          <div className="border-e p-3 text-center">{t("clinicCalendar.timeIst")}</div>
+          <div className="p-3">{t.plural("clinicCalendar.count", appointments.length)}</div>
         </div>
         <ol className="divide-y">
           {hours.map((h) => {
@@ -149,8 +148,8 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
               .sort((a, b) => a.time.localeCompare(b.time));
             return (
               <li key={h} className="grid min-h-16 grid-cols-[64px_1fr]">
-                <div className="border-r bg-muted/10 p-3 text-right text-xs text-muted-foreground">
-                  {hourLabel(h)}
+                <div className="border-e bg-muted/10 p-3 text-end text-xs text-muted-foreground">
+                  {fmt.hour(h)}
                 </div>
                 <div className="flex flex-wrap items-start gap-2 p-2">
                   {inHour.map((a) => (
@@ -159,11 +158,13 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
                       className="flex w-full flex-col gap-1 rounded-lg border bg-background p-2 text-sm shadow-sm sm:w-[260px]"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="truncate font-medium">{a.patientName}</span>
+                        <span className="truncate font-medium">
+                          {a.patientName || t("common.unknownPatient")}
+                        </span>
                         <StatusBadge status={a.status} />
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {to12h(a.time)}
+                        {fmt.time(a.time)}
                         {doctors.find((d) => d.id === a.doctorId)
                           ? ` · ${doctors.find((d) => d.id === a.doctorId)?.name}`
                           : ""}

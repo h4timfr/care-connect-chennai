@@ -7,7 +7,8 @@ import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
-import { inr, isoDate, shortDate, to12h } from "@/lib/format";
+import { isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { describeStatusError } from "@/lib/supabase/appointments";
 import type { AppointmentStatus } from "@/lib/types";
 
@@ -20,17 +21,18 @@ const NEEDS_ACTION_LIMIT = 5;
 function ClinicDashboard() {
   const { activeClinic, clinicAppointmentsStatus: status } = useApp();
   const today = isoDate(new Date());
+  const { t, fmt } = useI18n();
 
   let body;
   if (!activeClinic) {
     body = null;
   } else if (status.isLoading) {
-    body = <PageLoader label="Loading dashboard…" />;
+    body = <PageLoader label={t("clinicDashboard.loading")} />;
   } else if (status.error) {
     body = (
       <ErrorState
-        title="We couldn't load today's appointments"
-        message={describeStatusError(status.error)}
+        title={t("clinicDashboard.loadError")}
+        message={t(describeStatusError(status.error))}
         onRetry={status.refetch}
       />
     );
@@ -39,7 +41,10 @@ function ClinicDashboard() {
   }
 
   return (
-    <ClinicShell title="Dashboard" description={`Overview for ${shortDate(today)}`}>
+    <ClinicShell
+      title={t("clinicDashboard.title")}
+      description={t("clinicDashboard.overview", { date: fmt.shortDate(today) })}
+    >
       {body}
     </ClinicShell>
   );
@@ -49,6 +54,7 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
   const { clinicAppointments, doctorsOfClinic, doctorById, setAppointmentStatus, catalog } =
     useApp();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { t, fmt } = useI18n();
 
   const appointments = clinicAppointments.filter((a) => a.clinicId === clinicId);
   const todays = appointments
@@ -66,9 +72,15 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
     setUpdatingId(id);
     try {
       await setAppointmentStatus(id, next);
-      toast.success(next === "confirmed" ? "Appointment confirmed" : "Appointment declined");
+      toast.success(
+        t(
+          next === "confirmed"
+            ? "clinicAppointments.done.confirmed"
+            : "clinicAppointments.done.declined",
+        ),
+      );
     } catch (err) {
-      toast.error(describeStatusError(err));
+      toast.error(t(describeStatusError(err)));
     } finally {
       setUpdatingId(null);
     }
@@ -78,12 +90,20 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
     <div className="space-y-6">
       <CatalogNotice />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Stat label="Today's visits" value={String(todays.length)} icon={CalendarDays} />
-        <Stat label="Awaiting confirmation" value={String(pending.length)} icon={Users} />
-        <Stat label="Fees for today's confirmed visits" value={inr(expectedFees)} icon={Banknote} />
         <Stat
-          label="Doctors at this clinic"
-          value={catalog.error ? "—" : String(doctorsOfClinic(clinicId).length)}
+          label={t("clinicDashboard.todaysVisits")}
+          value={fmt.number(todays.length)}
+          icon={CalendarDays}
+        />
+        <Stat
+          label={t("clinicDashboard.awaiting")}
+          value={fmt.number(pending.length)}
+          icon={Users}
+        />
+        <Stat label={t("clinicDashboard.fees")} value={fmt.inr(expectedFees)} icon={Banknote} />
+        <Stat
+          label={t("clinicDashboard.doctors")}
+          value={catalog.error ? "—" : fmt.number(doctorsOfClinic(clinicId).length)}
           icon={Stethoscope}
         />
       </div>
@@ -91,16 +111,18 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="space-y-4 lg:col-span-2" aria-labelledby="schedule-heading">
           <h2 id="schedule-heading" className="font-display text-lg font-semibold">
-            Today's schedule
+            {t("clinicDashboard.schedule")}
           </h2>
           <div className="surface-card divide-y">
             {todays.length ? (
               todays.map((a) => (
                 <div key={a.id} className="flex items-center justify-between gap-3 p-4">
                   <div className="flex min-w-0 items-center gap-4">
-                    <div className="w-16 shrink-0 font-medium">{to12h(a.time)}</div>
+                    <div className="w-20 shrink-0 font-medium">{fmt.time(a.time)}</div>
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{a.patientName}</p>
+                      <p className="truncate font-medium">
+                        {a.patientName || t("common.unknownPatient")}
+                      </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {[doctorById(a.doctorId)?.name, a.reason].filter(Boolean).join(" · ")}
                       </p>
@@ -111,7 +133,7 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
               ))
             ) : (
               <p className="p-8 text-center text-muted-foreground">
-                No appointments scheduled for today.
+                {t("clinicDashboard.noneToday")}
               </p>
             )}
           </div>
@@ -119,14 +141,14 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
 
         <section className="space-y-4" aria-labelledby="pending-heading">
           <h2 id="pending-heading" className="font-display text-lg font-semibold">
-            Awaiting confirmation
+            {t("clinicDashboard.awaiting")}
           </h2>
           <div className="surface-card space-y-4 p-4">
             {pending.slice(0, NEEDS_ACTION_LIMIT).map((a) => (
               <div key={a.id} className="border-b pb-3 last:border-0 last:pb-0">
-                <p className="text-sm font-medium">{a.patientName}</p>
+                <p className="text-sm font-medium">{a.patientName || t("common.unknownPatient")}</p>
                 <p className="mb-2 text-xs text-muted-foreground">
-                  {shortDate(a.date)} at {to12h(a.time)} IST
+                  {t("common.dateAtTime", { date: fmt.shortDate(a.date), time: fmt.time(a.time) })}
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -135,7 +157,7 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
                     disabled={updatingId !== null}
                     onClick={() => update(a.id, "confirmed")}
                   >
-                    Confirm
+                    {t("clinicAppointments.action.confirm")}
                   </Button>
                   <Button
                     size="sm"
@@ -144,18 +166,20 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
                     disabled={updatingId !== null}
                     onClick={() => update(a.id, "cancelled")}
                   >
-                    Decline
+                    {t("clinicAppointments.action.decline")}
                   </Button>
                 </div>
               </div>
             ))}
             {pending.length > NEEDS_ACTION_LIMIT ? (
               <Link to="/clinic/appointments" className="block text-sm font-medium text-primary">
-                View all {pending.length} requests
+                {t("clinicDashboard.viewAll", { count: fmt.number(pending.length) })}
               </Link>
             ) : null}
             {pending.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">No requests waiting.</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                {t("clinicDashboard.noRequests")}
+              </p>
             ) : null}
           </div>
         </section>

@@ -9,7 +9,8 @@ import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { describeDataError } from "@/lib/supabase/errors";
-import { clockTime, isoDate, shortDate } from "@/lib/format";
+import { isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import type { Conversation } from "@/lib/types";
@@ -36,6 +37,7 @@ function MessagesView() {
     patientError,
   } = useApp();
   const { loading, user } = useProtectedRoute();
+  const { t } = useI18n();
   const { c: requestedId } = Route.useSearch();
   // A conversation that was just started can be newer than the cached list: wait for the
   // refetch rather than briefly claiming the inbox is empty or the conversation unavailable.
@@ -44,17 +46,17 @@ function MessagesView() {
 
   let body;
   if (loading || !user || isLoadingPatient || status.isLoading || awaitingRequested) {
-    body = <PageLoader label="Loading messages…" />;
+    body = <PageLoader label={t("messages.loading")} />;
   } else if (patientError || status.error) {
     body = (
       <ErrorState
-        title="We couldn't load your messages"
-        message={describeDataError(patientError ?? status.error)}
+        title={t("messages.loadError")}
+        message={t(describeDataError(patientError ?? status.error))}
         onRetry={status.refetch}
       />
     );
   } else if (!patient) {
-    body = <MissingProfile action="message clinics" />;
+    body = <MissingProfile action="messages" />;
   } else {
     const mine = conversations
       .filter((c) => c.patientId === patient.id)
@@ -79,6 +81,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const { t, fmt } = useI18n();
 
   const active = search.c ? conversations.find((c) => c.id === search.c) : undefined;
   const activeId = active?.id;
@@ -91,7 +94,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
   const titleOf = (c: Conversation) => {
     const clinic = clinicById(c.clinicId);
     const doctor = c.doctorId ? doctorById(c.doctorId) : undefined;
-    const clinicName = clinic?.name ?? "Clinic";
+    const clinicName = clinic?.name ?? t("common.clinic");
     return doctor ? `${clinicName} · ${doctor.name}` : clinicName;
   };
 
@@ -104,7 +107,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
       await sendMessage(active.id, body);
       setText("");
     } catch (err) {
-      toast.error(`Message not sent. ${describeDataError(err)}`);
+      toast.error(t("messages.notSent", { reason: t(describeDataError(err)) }));
     } finally {
       setSending(false);
     }
@@ -113,14 +116,14 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
   if (!conversations.length) {
     return (
       <div className="space-y-6">
-        <h1 className="font-display text-2xl font-bold">Messages</h1>
+        <h1 className="font-display text-2xl font-bold">{t("messages.title")}</h1>
         <EmptyState
           icon={MessageSquare}
-          title="No conversations yet"
-          description="To ask a clinic about an appointment, open a doctor or clinic page, or one of your appointments, and choose “Message clinic”."
+          title={t("messages.emptyTitle")}
+          description={t("messages.emptyBody")}
           action={
             <Button asChild size="sm">
-              <Link to="/discover">Find doctors</Link>
+              <Link to="/discover">{t("common.findDoctors")}</Link>
             </Button>
           }
         />
@@ -132,14 +135,14 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
     <div className="grid h-[calc(100dvh-13rem)] min-h-[420px] overflow-hidden rounded-xl border bg-card shadow-sm md:grid-cols-[300px_minmax(0,1fr)] lg:h-[calc(100dvh-10rem)] lg:grid-cols-[340px_minmax(0,1fr)]">
       <div
         className={cn(
-          "flex min-h-0 flex-col border-r bg-muted/20",
+          "flex min-h-0 flex-col border-e bg-muted/20",
           active ? "hidden md:flex" : "flex",
         )}
       >
         <div className="border-b bg-card p-4">
-          <h1 className="font-display text-lg font-semibold">Messages</h1>
+          <h1 className="font-display text-lg font-semibold">{t("messages.title")}</h1>
         </div>
-        <ul className="flex-1 divide-y overflow-y-auto" aria-label="Conversations">
+        <ul className="flex-1 divide-y overflow-y-auto" aria-label={t("messages.conversations")}>
           {conversations.map((c) => {
             const last = c.messages[c.messages.length - 1];
             const title = titleOf(c);
@@ -151,7 +154,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                   onClick={() => navigate({ search: { c: c.id } })}
                   aria-current={isActive ? "true" : undefined}
                   className={cn(
-                    "flex w-full items-center gap-3 p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    "flex w-full items-center gap-3 p-4 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                     isActive ? "bg-primary-soft/50" : "hover:bg-muted/50",
                   )}
                 >
@@ -163,14 +166,16 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                       <span className="truncate text-sm font-medium">{title}</span>
                       {last ? (
                         <span className="shrink-0 text-[10px] text-muted-foreground">
-                          {shortDate(isoDate(new Date(last.sentAt)))}
+                          {fmt.shortDate(isoDate(new Date(last.sentAt)))}
                         </span>
                       ) : null}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {last
-                        ? `${last.sender === "patient" ? "You: " : ""}${last.body}`
-                        : "No messages yet"}
+                        ? last.sender === "patient"
+                          ? t("common.youPrefix", { text: last.body })
+                          : last.body
+                        : t("messages.noMessages")}
                     </span>
                   </span>
                 </button>
@@ -191,15 +196,17 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                 size="icon"
                 className="md:hidden"
                 onClick={() => navigate({ search: {} })}
-                aria-label="Back to conversations"
+                aria-label={t("messages.back")}
               >
-                <ArrowLeft className="h-5 w-5" aria-hidden />
+                <ArrowLeft className="h-5 w-5 rtl:rotate-180" aria-hidden />
               </Button>
               <Initials name={titleOf(active)} className="h-9 w-9 text-xs" />
               <div className="min-w-0">
                 <h2 className="truncate text-sm font-semibold">{titleOf(active)}</h2>
                 <p className="truncate text-xs text-muted-foreground">
-                  {active.kind === "appointment" ? "About an appointment" : "General enquiry"}
+                  {active.kind === "appointment"
+                    ? t("messages.aboutAppointment")
+                    : t("messages.general")}
                 </p>
               </div>
             </div>
@@ -207,7 +214,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
             <div className="flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite">
               <p className="text-center">
                 <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  For clinic communication only — not for medical emergencies
+                  {t("messages.notForEmergencies")}
                 </span>
               </p>
               {active.messages.length ? (
@@ -218,29 +225,31 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                       key={m.id}
                       className={cn(
                         "flex max-w-[80%] flex-col",
-                        isMe ? "ml-auto items-end" : "mr-auto items-start",
+                        isMe ? "ms-auto items-end" : "me-auto items-start",
                       )}
                     >
                       <div
                         className={cn(
                           "whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm",
                           isMe
-                            ? "rounded-tr-sm bg-primary text-primary-foreground"
-                            : "rounded-tl-sm bg-muted text-foreground",
+                            ? "rounded-se-sm bg-primary text-primary-foreground"
+                            : "rounded-ss-sm bg-muted text-foreground",
                         )}
                       >
-                        <span className="sr-only">{isMe ? "You: " : "Clinic: "}</span>
+                        <span className="sr-only">
+                          {isMe ? t("messages.senderYou") : t("messages.senderClinic")}{" "}
+                        </span>
                         {m.body}
                       </div>
                       <span className="mx-1 mt-1 text-[10px] text-muted-foreground">
-                        {shortDate(isoDate(new Date(m.sentAt)))}, {clockTime(m.sentAt)}
+                        {fmt.shortDate(isoDate(new Date(m.sentAt)))}, {fmt.clockTime(m.sentAt)}
                       </span>
                     </div>
                   );
                 })
               ) : (
                 <p className="pt-8 text-center text-sm text-muted-foreground">
-                  No messages yet. Write to the clinic below.
+                  {t("messages.writeBelow")}
                 </p>
               )}
               <div ref={endRef} />
@@ -249,13 +258,13 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
             <form onSubmit={handleSend} className="border-t bg-card p-3">
               <div className="flex items-end gap-2 rounded-xl border bg-muted/50 p-1 transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
                 <label htmlFor="message-input" className="sr-only">
-                  Message
+                  {t("messages.inputLabel")}
                 </label>
                 <textarea
                   id="message-input"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="Type a message…"
+                  placeholder={t("messages.placeholder")}
                   maxLength={MAX_MESSAGE_LENGTH}
                   className="max-h-32 min-h-10 flex-1 resize-none bg-transparent px-3 py-2 text-sm outline-none"
                   rows={1}
@@ -269,14 +278,14 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                 <Button
                   type="submit"
                   size="icon"
-                  className="mb-0.5 mr-0.5 h-9 w-9 shrink-0 rounded-lg"
+                  className="mb-0.5 me-0.5 h-9 w-9 shrink-0 rounded-lg"
                   disabled={!text.trim() || sending}
-                  aria-label="Send message"
+                  aria-label={t("messages.send")}
                 >
                   {sending ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                   ) : (
-                    <Send className="h-4 w-4" aria-hidden />
+                    <Send className="h-4 w-4 rtl:-scale-x-100" aria-hidden />
                   )}
                 </Button>
               </div>
@@ -285,7 +294,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
             <MessageSquare className="h-12 w-12 opacity-20" aria-hidden />
-            <p>{search.c ? "That conversation isn't available." : "Select a conversation"}</p>
+            <p>{search.c ? t("messages.unavailable") : t("messages.select")}</p>
           </div>
         )}
       </div>

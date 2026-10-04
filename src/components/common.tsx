@@ -18,6 +18,7 @@ import {
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { AppointmentStatus } from "@/lib/types";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -52,19 +53,20 @@ export function Rating({
   count: number;
   sample: boolean;
 }) {
+  const { t, info } = useI18n();
   if (sample || count <= 0) return null;
   return (
     <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
       <Star className="h-3.5 w-3.5 fill-warning text-warning" aria-hidden />
-      <span className="font-medium text-foreground">{value.toFixed(1)}</span>
-      <span>
-        · {count} {count === 1 ? "review" : "reviews"}
+      <span className="font-medium text-foreground">
+        {value.toLocaleString(info.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
       </span>
+      <span>· {t.plural("common.reviews", count)}</span>
     </span>
   );
 }
 
-export function Initials({ name, className }: { name: string; className?: string }) {
+export function Initials({ name, className }: { name: string; className?: string | undefined }) {
   const initials = name
     .replace(/^Dr\.?\s*/i, "")
     .split(/\s+/)
@@ -91,15 +93,16 @@ export function Initials({ name, className }: { name: string; className?: string
  * patients are never led to believe a sample listing is a real, verified provider.
  */
 export function SampleBadge({ className }: { className?: string }) {
+  const { t } = useI18n();
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning-foreground dark:text-warning",
         className,
       )}
-      title="This listing is marked as sample content in CareConnect's directory."
+      title={t("common.sampleListingNote")}
     >
-      Sample listing
+      {t("common.sampleListing")}
     </span>
   );
 }
@@ -165,6 +168,7 @@ export function ErrorState({
   message: string;
   onRetry?: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div
       role="alert"
@@ -179,21 +183,22 @@ export function ErrorState({
       </div>
       {onRetry ? (
         <Button variant="outline" size="sm" onClick={onRetry}>
-          Try again
+          {t("common.tryAgain")}
         </Button>
       ) : null}
     </div>
   );
 }
 
-export function PageLoader({ label = "Loading…" }: { label?: string }) {
+export function PageLoader({ label }: { label?: string | undefined }) {
+  const { t } = useI18n();
   return (
     <div
       role="status"
       className="flex min-h-[40vh] items-center justify-center gap-2 text-sm text-muted-foreground"
     >
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-      {label}
+      {label ?? t("common.loading")}
     </div>
   );
 }
@@ -218,19 +223,13 @@ export function CardGridSkeleton({ count = 4, label }: { count?: number; label: 
 }
 
 export function StatusBadge({ status }: { status: AppointmentStatus }) {
+  const { t } = useI18n();
   const map: Record<AppointmentStatus, string> = {
     pending: "bg-warning/15 text-warning-foreground dark:text-warning",
     confirmed: "bg-success/15 text-success",
     arrived: "bg-info/15 text-info",
     completed: "bg-muted text-muted-foreground",
     cancelled: "bg-destructive/12 text-destructive",
-  };
-  const label: Record<AppointmentStatus, string> = {
-    pending: "Awaiting confirmation",
-    confirmed: "Confirmed",
-    arrived: "Arrived",
-    completed: "Completed",
-    cancelled: "Cancelled",
   };
   return (
     <span
@@ -239,7 +238,7 @@ export function StatusBadge({ status }: { status: AppointmentStatus }) {
         map[status],
       )}
     >
-      {label[status]}
+      {t(`status.${status}`)}
     </span>
   );
 }

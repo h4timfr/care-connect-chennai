@@ -1,0 +1,658 @@
+import type { Messages } from "./en";
+
+export const ta: Messages = {
+  // ---- Common
+  "common.loading": "ஏற்றப்படுகிறது…",
+  "common.tryAgain": "மீண்டும் முயலவும்",
+  "common.cancel": "ரத்துசெய்",
+  "common.saving": "சேமிக்கப்படுகிறது…",
+  "common.edit": "திருத்து",
+  "common.view": "பார்",
+  "common.seeAll": "அனைத்தையும் பார்",
+  "common.notProvided": "வழங்கப்படவில்லை",
+  "common.notSet": "அமைக்கப்படவில்லை",
+  "common.today": "இன்று",
+  "common.tomorrow": "நாளை",
+  "common.any": "ஏதேனும்",
+  "common.female": "பெண்",
+  "common.male": "ஆண்",
+  "common.other": "மற்றவை",
+  "common.doctor": "மருத்துவர்",
+  "common.clinic": "கிளினிக்",
+  "common.chennai": "சென்னை",
+  "common.redirectingToSignIn": "உள்நுழைவு பக்கத்திற்கு அனுப்பப்படுகிறது…",
+  "common.signOut": "வெளியேறு",
+  "common.findDoctors": "மருத்துவர்களைத் தேடு",
+  "common.findADoctor": "மருத்துவரைத் தேடு",
+  "common.timeIst": "{time} IST",
+  "common.dateAtTime": "{date}, {time} IST",
+  "common.consultationFee": "ஆலோசனைக் கட்டணம் {fee}",
+  "common.feeRange": "{min} – {max}",
+  "common.reviews_one": "{count} மதிப்பாய்வு",
+  "common.reviews_other": "{count} மதிப்பாய்வுகள்",
+  "common.doctors_one": "{count} மருத்துவர்",
+  "common.doctors_other": "{count} மருத்துவர்கள்",
+  "common.years_one": "{count} ஆண்டு",
+  "common.years_other": "{count} ஆண்டுகள்",
+  "common.experience_one": "{count} ஆண்டு அனுபவம்",
+  "common.experience_other": "{count} ஆண்டுகள் அனுபவம்",
+  "common.sampleListing": "மாதிரிப் பட்டியல்",
+  "common.sampleListingNote":
+    "CareConnect அடைவில் இந்தப் பட்டியல் மாதிரி உள்ளடக்கமாகக் குறிக்கப்பட்டுள்ளது.",
+  "common.you": "நீங்கள்",
+  "common.youPrefix": "நீங்கள்: {text}",
+  "common.unknownPatient": "அறியப்படாத நோயாளி",
+  "common.specialties": "சிறப்புத் துறைகள்",
+  "common.languages": "மொழிகள்",
+  "common.phone": "தொலைபேசி",
+  "common.email": "மின்னஞ்சல்",
+  "common.address": "முகவரி",
+  "common.area": "பகுதி",
+  "common.status": "நிலை",
+
+  // ---- Specialties
+  "specialty.general": "பொது மருத்துவம்",
+  "specialty.pediatrics": "குழந்தை மருத்துவம்",
+  "specialty.orthopedics": "எலும்பியல்",
+  "specialty.cardiology": "இதயவியல்",
+  "specialty.dermatology": "தோல் மருத்துவம்",
+  "specialty.gynecology": "மகளிர் மருத்துவம்",
+  "specialty.neurology": "நரம்பியல்",
+  "specialty.ophthalmology": "கண் மருத்துவம்",
+  "specialty.dentistry": "பல் மருத்துவம்",
+  "specialty.ent": "காது, மூக்கு, தொண்டை (ENT)",
+
+  // ---- Appointment statuses
+  "status.pending": "உறுதிப்படுத்தலுக்காகக் காத்திருக்கிறது",
+  "status.confirmed": "உறுதிசெய்யப்பட்டது",
+  "status.arrived": "வந்துவிட்டார்",
+  "status.completed": "முடிந்தது",
+  "status.cancelled": "ரத்துசெய்யப்பட்டது",
+
+  // ---- Errors
+  "error.connection":
+    "CareConnect சேவையகங்களை அடைய முடியவில்லை. உங்கள் இணைய இணைப்பைச் சரிபார்த்து மீண்டும் முயலவும்.",
+  "error.sessionExpired": "உங்கள் அமர்வு காலாவதியாகிவிட்டது. மீண்டும் உள்நுழையவும்.",
+  "error.permission": "இதைச் செய்ய உங்களுக்கு அனுமதி இல்லை.",
+  "error.server": "சேவையகத்துடன் தொடர்புகொள்ளும்போது ஏதோ தவறு நடந்தது. மீண்டும் முயலவும்.",
+  "error.unavailable": "CareConnect தற்போது கிடைக்கவில்லை. சிறிது நேரம் கழித்து முயலவும்.",
+  "error.generic": "ஏதோ தவறு நடந்தது. மீண்டும் முயலவும்.",
+  "error.checkDetails": "நீங்கள் உள்ளிட்ட விவரங்களைச் சரிபார்க்கவும்.",
+
+  // ---- Auth errors
+  "authError.unreachable":
+    "உள்நுழைவு சேவையை அடைய முடியவில்லை. உங்கள் இணைய இணைப்பைச் சரிபார்த்து மீண்டும் முயலவும்.",
+  "authError.serviceTrouble":
+    "உள்நுழைவு சேவையில் தற்போது சிக்கல் உள்ளது. சிறிது நேரத்தில் மீண்டும் முயலவும்.",
+  "authError.confirmationEmailFailed":
+    "உறுதிப்படுத்தல் மின்னஞ்சலை அனுப்ப முடியாததால் உங்கள் கணக்கை உருவாக்க முடியவில்லை. பின்னர் மீண்டும் முயலவும்.",
+  "authError.weakPassword": "வலுவான கடவுச்சொல்லைத் தேர்ந்தெடுக்கவும்.",
+  "authError.passwordTooShort":
+    "உங்கள் கடவுச்சொல் குறைந்தது {count} எழுத்துகள் கொண்டதாக இருக்க வேண்டும்.",
+  "authError.passwordCharacters":
+    "உங்கள் கடவுச்சொல்லில் எழுத்துகள், எண்கள், குறியீடுகள் கலந்திருக்க வேண்டும்.",
+  "authError.passwordPwned":
+    "இந்தக் கடவுச்சொல் ஒரு தரவுக் கசிவில் வெளிவந்துள்ளது. வேறு கடவுச்சொல்லைத் தேர்ந்தெடுக்கவும்.",
+  "authError.invalidCredentials": "மின்னஞ்சல் அல்லது கடவுச்சொல் தவறானது.",
+  "authError.emailNotConfirmed":
+    "முதலில் உங்கள் மின்னஞ்சல் முகவரியை உறுதிப்படுத்தவும். உறுதிப்படுத்தல் இணைப்புக்கு உங்கள் இன்பாக்ஸைப் பார்க்கவும்.",
+  "authError.emailExists":
+    "இந்த மின்னஞ்சலுடன் ஏற்கனவே ஒரு கணக்கு உள்ளது. அதற்குப் பதிலாக உள்நுழைந்து பார்க்கவும்.",
+  "authError.invalidEmail": "சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
+  "authError.signupDisabled": "புதிய கணக்குகளை உருவாக்குவது தற்போது கிடைக்கவில்லை.",
+  "authError.emailRateLimit":
+    "இந்த முகவரிக்கு அதிகமான மின்னஞ்சல்கள் அனுப்பப்பட்டுள்ளன. சில நிமிடங்கள் காத்திருந்து மீண்டும் முயலவும்.",
+  "authError.rateLimit": "அதிகமான முயற்சிகள். சிறிது நேரம் காத்திருந்து மீண்டும் முயலவும்.",
+  "authError.samePassword":
+    "இந்தக் கணக்கிற்கு முன்பு பயன்படுத்தாத கடவுச்சொல்லைத் தேர்ந்தெடுக்கவும்.",
+  "authError.linkSessionExpired":
+    "உங்கள் அமர்வு காலாவதியாகிவிட்டது. புதிய இணைப்பைக் கோரி மீண்டும் முயலவும்.",
+
+  // ---- Language & theme controls
+  "language.label": "மொழி",
+  "language.choose": "மொழியை மாற்று",
+  "language.saveFailed":
+    "உங்கள் மொழியை உங்கள் சுயவிவரத்தில் சேமிக்க முடியவில்லை. இந்தச் சாதனத்தில் அது தொடர்ந்து பயன்படுத்தப்படும்.",
+  "theme.toggle": "இருண்ட பயன்முறையை மாற்று",
+
+  // ---- Patient navigation
+  "nav.skipToContent": "முதன்மை உள்ளடக்கத்திற்குச் செல்",
+  "nav.home": "முகப்பு",
+  "nav.homeLink": "CareConnect முகப்பு",
+  "nav.findDoctors": "மருத்துவர்களைத் தேடு",
+  "nav.discover": "தேடல்",
+  "nav.appointments": "சந்திப்புகள்",
+  "nav.visits": "சந்திப்புகள்",
+  "nav.messages": "செய்திகள்",
+  "nav.profile": "சுயவிவரம்",
+  "nav.primary": "முதன்மை",
+  "nav.primaryMobile": "முதன்மை (கைபேசி)",
+  "nav.clinicPortal": "கிளினிக் போர்டல்",
+  "nav.signIn": "உள்நுழை",
+  "nav.signUp": "பதிவுசெய்",
+  "nav.yourProfile": "உங்கள் சுயவிவரம்",
+  "footer.copyright": "© {year} CareConnect",
+  "footer.emergency":
+    "CareConnect சந்திப்பு முன்பதிவுக்கும் கிளினிக் செய்திகளுக்கும் மட்டுமே. மருத்துவ அவசரநிலையில் 108-ஐ அழைக்கவும்.",
+
+  // ---- Root error pages
+  "notFound.title": "பக்கம் கிடைக்கவில்லை",
+  "notFound.body": "நீங்கள் தேடும் பக்கம் இல்லை அல்லது நகர்த்தப்பட்டுள்ளது.",
+  "notFound.home": "முகப்புக்குச் செல்",
+  "routeError.title": "இந்தப் பக்கம் ஏற்றப்படவில்லை",
+  "routeError.body":
+    "எங்கள் பக்கத்தில் ஏதோ தவறு நடந்தது. பக்கத்தைப் புதுப்பிக்கவும் அல்லது முகப்புக்குத் திரும்பவும்.",
+
+  // ---- Home
+  "home.greeting.morning": "காலை வணக்கம், {name}",
+  "home.greeting.afternoon": "மதிய வணக்கம், {name}",
+  "home.greeting.evening": "மாலை வணக்கம், {name}",
+  "home.greeting.night": "இனிய இரவு, {name}",
+  "home.title": "சென்னையில் மருத்துவரைத் தேடுங்கள்",
+  "home.subtitle":
+    "கிளினிக்குகளையும் மருத்துவர்களையும் தேடுங்கள், சந்திப்புகளை முன்பதிவு செய்யுங்கள், உங்கள் கிளினிக்கிற்குச் செய்தி அனுப்புங்கள்.",
+  "home.searchLabel": "மருத்துவர்களையும் கிளினிக்குகளையும் தேடு",
+  "home.searchPlaceholder": "சிறப்புத் துறை, மருத்துவர், கிளினிக் அல்லது பகுதி",
+  "home.search": "தேடு",
+  "home.searchHint":
+    "“pediatrician Adyar”, ஒரு மருத்துவரின் பெயர் அல்லது கிளினிக்கின் பெயரை முயலவும்.",
+  "home.nextAppointment": "அடுத்த சந்திப்பு",
+  "home.yourDoctor": "உங்கள் மருத்துவர்",
+  "home.catalogError": "மருத்துவர்களையும் கிளினிக்குகளையும் ஏற்ற முடியவில்லை",
+  "home.browseBySpecialty": "சிறப்புத் துறை வாரியாகப் பாருங்கள்",
+  "home.noSpecialties": "இன்னும் எந்தச் சிறப்புத் துறையும் பட்டியலிடப்படவில்லை.",
+  "home.doctorsHeading": "CareConnect-இல் உள்ள மருத்துவர்கள்",
+  "home.doctorsSubtitle": "அகர வரிசையில்",
+  "home.noDoctorsTitle": "இன்னும் மருத்துவர்கள் பட்டியலிடப்படவில்லை",
+  "home.noDoctorsBody":
+    "கிளினிக்குகள் CareConnect-இல் மருத்துவர்களைச் சேர்த்ததும் அவர்கள் இங்கே தோன்றுவார்கள்.",
+  "home.clinicsHeading": "கிளினிக்குகள்",
+  "home.clinicsSubtitle": "சென்னை முழுவதும் உள்ள தனியார் கிளினிக்குகள்",
+  "home.noClinicsTitle": "இன்னும் கிளினிக்குகள் பட்டியலிடப்படவில்லை",
+  "home.noClinicsBody": "கிளினிக்குகள் CareConnect-இல் இணைந்ததும் இங்கே தோன்றும்.",
+  "home.loadingDoctors": "மருத்துவர்கள் ஏற்றப்படுகிறார்கள்",
+  "home.loadingClinics": "கிளினிக்குகள் ஏற்றப்படுகின்றன",
+
+  // ---- Catalog notice
+  "catalog.notice":
+    "மருத்துவர் மற்றும் கிளினிக் விவரங்களை ஏற்ற முடியவில்லை, அதனால் சில பெயர்கள் விடுபடலாம். {reason}",
+
+  // ---- Doctor card & profile
+  "doctor.save": "{name}-ஐச் சேமி",
+  "doctor.unsave": "சேமித்த மருத்துவர்களிலிருந்து {name}-ஐ நீக்கு",
+  "doctor.saveFailed": "சேமித்த மருத்துவர்களைப் புதுப்பிக்க முடியவில்லை. {reason}",
+  "doctor.viewProfile": "சுயவிவரத்தைப் பார்",
+  "doctor.book": "முன்பதிவு",
+  "doctor.bookingUnavailable": "ஆன்லைன் முன்பதிவு கிடைக்கவில்லை",
+  "doctor.bookingUnavailableBody":
+    "இந்த மருத்துவர் தற்போது CareConnect மூலம் ஆன்லைன் சந்திப்புகளை ஏற்கவில்லை. அதற்குப் பதிலாக நீங்கள் கிளினிக்கிற்குச் செய்தி அனுப்பலாம் அல்லது அழைக்கலாம்.",
+  "doctor.loading": "மருத்துவர் விவரம் ஏற்றப்படுகிறது…",
+  "doctor.loadError": "இந்த மருத்துவரின் விவரங்களை ஏற்ற முடியவில்லை",
+  "doctor.notFoundTitle": "மருத்துவர் கிடைக்கவில்லை",
+  "doctor.notFoundBody":
+    "இந்த மருத்துவர் CareConnect-இல் பட்டியலிடப்படவில்லை, அல்லது இணைப்பு பழையது.",
+  "doctor.backToSearch": "தேடலுக்குத் திரும்பு",
+  "doctor.bookAppointment": "சந்திப்பை முன்பதிவு செய்",
+  "doctor.about": "அறிமுகம்",
+  "doctor.noDescription": "விளக்கம் எதுவும் வழங்கப்படவில்லை.",
+  "doctor.qualifications": "தகுதிகள்",
+  "doctor.services": "சேவைகள்",
+  "doctor.locations": "இடங்களும் கிடைக்கும் நேரமும்",
+  "doctor.notBookableAt":
+    "{clinic}-இல் இந்த மருத்துவருக்கு ஆன்லைன் முன்பதிவு இன்னும் கிடைக்கவில்லை.",
+  "doctor.callToBook": "முன்பதிவு செய்ய, கிளினிக்கை {phone} என்ற எண்ணில் அழைக்கவும்.",
+  "doctor.noLocations":
+    "இந்த மருத்துவர் தற்போது பட்டியலிடப்பட்ட எந்தக் கிளினிக்கிலும் பணியாற்றவில்லை.",
+
+  // ---- Clinic card & profile
+  "clinic.doctorsAndFees": "மருத்துவர்களும் கட்டணங்களும்",
+  "clinic.viewClinic": "கிளினிக்கைப் பார்",
+  "clinic.loading": "கிளினிக் விவரம் ஏற்றப்படுகிறது…",
+  "clinic.loadError": "இந்தக் கிளினிக்கின் விவரங்களை ஏற்ற முடியவில்லை",
+  "clinic.notFoundTitle": "கிளினிக் கிடைக்கவில்லை",
+  "clinic.notFoundBody":
+    "இந்தக் கிளினிக் CareConnect-இல் பட்டியலிடப்படவில்லை, அல்லது இணைப்பு பழையது.",
+  "clinic.browse": "கிளினிக்குகளைப் பார்",
+  "clinic.backToClinics": "கிளினிக்குகளுக்குத் திரும்பு",
+  "clinic.consultations": "ஆலோசனைக் கட்டணம் {min} – {max}",
+  "clinic.about": "அறிமுகம்",
+  "clinic.doctors": "மருத்துவர்கள்",
+  "clinic.noDoctors": "இந்தக் கிளினிக்கில் தற்போது எந்த மருத்துவரும் பட்டியலிடப்படவில்லை.",
+  "clinic.services": "சேவைகள்",
+  "clinic.facilities": "வசதிகள்",
+  "clinic.contact": "தொடர்பு",
+  "clinic.openingHours": "திறந்திருக்கும் நேரம்",
+  "clinic.noOpeningHours":
+    "திறந்திருக்கும் நேரம் பட்டியலிடப்படவில்லை. கிளினிக்கை அழைத்துத் தெரிந்துகொள்ளவும்.",
+
+  // ---- Messaging a clinic
+  "messageClinic.button": "கிளினிக்கிற்குச் செய்தி அனுப்பு",
+  "messageClinic.noProfile":
+    "உங்கள் கணக்கில் நோயாளர் சுயவிவரம் இல்லை, அதனால் கிளினிக்குகளுக்குச் செய்தி அனுப்ப முடியாது.",
+
+  // ---- Missing patient profile
+  "missingProfile.title": "நோயாளர் சுயவிவரம் கிடைக்கவில்லை",
+  "missingProfile.profile":
+    "இந்தக் கணக்கில் ({email}) நோயாளர் சுயவிவரம் இல்லை, அதனால் நோயாளர் வசதிகளைப் பயன்படுத்த முடியாது. கணக்கு பதிவுசெய்யப்படும்போது சுயவிவரம் தானாக உருவாகும், எனவே CareConnect நிர்வாகி இதைச் சரிசெய்ய வேண்டும்.",
+  "missingProfile.book":
+    "இந்தக் கணக்கில் ({email}) நோயாளர் சுயவிவரம் இல்லை, அதனால் சந்திப்புகளை முன்பதிவு செய்ய முடியாது. கணக்கு பதிவுசெய்யப்படும்போது சுயவிவரம் தானாக உருவாகும், எனவே CareConnect நிர்வாகி இதைச் சரிசெய்ய வேண்டும்.",
+  "missingProfile.appointments":
+    "இந்தக் கணக்கில் ({email}) நோயாளர் சுயவிவரம் இல்லை, அதனால் இதற்குச் சந்திப்புகள் இருக்க முடியாது. கணக்கு பதிவுசெய்யப்படும்போது சுயவிவரம் தானாக உருவாகும், எனவே CareConnect நிர்வாகி இதைச் சரிசெய்ய வேண்டும்.",
+  "missingProfile.messages":
+    "இந்தக் கணக்கில் ({email}) நோயாளர் சுயவிவரம் இல்லை, அதனால் கிளினிக்குகளுக்குச் செய்தி அனுப்ப முடியாது. கணக்கு பதிவுசெய்யப்படும்போது சுயவிவரம் தானாக உருவாகும், எனவே CareConnect நிர்வாகி இதைச் சரிசெய்ய வேண்டும்.",
+
+  // ---- Slot picker
+  "slots.chooseDate": "தேதியைத் தேர்ந்தெடு",
+  "slots.checking": "கிடைக்கும் நேரங்கள் சரிபார்க்கப்படுகின்றன…",
+  "slots.loadError": "கிடைக்கும் நேரங்களை ஏற்ற முடியவில்லை. {reason}",
+  "slots.noneOnDay": "{date} அன்று சந்திப்புகள் இல்லை. வேறு நாளைத் தேர்ந்தெடுக்கவும்.",
+  "slots.allTaken":
+    "இந்தத் தேதியின் எல்லா நேரங்களும் முன்பதிவாகிவிட்டன அல்லது கடந்துவிட்டன. வேறு நாளைத் தேர்ந்தெடுக்கவும்.",
+  "slots.morning": "காலை",
+  "slots.afternoon": "மதியம்",
+  "slots.evening": "மாலை",
+  "slots.unavailableSlot": "{time}, கிடைக்கவில்லை",
+  "slots.istNote": "நேரங்கள் இந்திய நிலையான நேரத்தில் (IST) காட்டப்படுகின்றன.",
+
+  // ---- Appointment card
+  "appointment.date": "தேதி",
+  "appointment.time": "நேரம்",
+  "appointment.location": "இடம்",
+  "appointment.fee": "கட்டணம்",
+  "appointment.viewDetails": "விவரங்களைப் பார்",
+  "appointment.cancel": "சந்திப்பை ரத்துசெய்",
+  "appointment.cancelTitle": "இந்தச் சந்திப்பை ரத்துசெய்யவா?",
+  "appointment.cancelBody": "{doctor} · {date}, {time} IST. இதைத் திரும்பப் பெற முடியாது.",
+  "appointment.yourAppointment": "உங்கள் சந்திப்பு",
+  "appointment.keep": "சந்திப்பை வைத்திரு",
+  "appointment.cancelled": "சந்திப்பு ரத்துசெய்யப்பட்டது",
+  "appointment.cannotCancel": "இந்தச் சந்திப்பை இனி ரத்துசெய்ய முடியாது.",
+
+  // ---- Appointments list
+  "appointments.title": "என் சந்திப்புகள்",
+  "appointments.subtitle": "உங்கள் வரவிருக்கும் சந்திப்புகளும் சந்திப்பு வரலாறும்.",
+  "appointments.loading": "சந்திப்புகள் ஏற்றப்படுகின்றன…",
+  "appointments.loadError": "உங்கள் சந்திப்புகளை ஏற்ற முடியவில்லை",
+  "appointments.upcoming": "வரவிருப்பவை ({count})",
+  "appointments.past": "முந்தையவை ({count})",
+  "appointments.cancelledTab": "ரத்துசெய்யப்பட்டவை ({count})",
+  "appointments.noUpcomingTitle": "வரவிருக்கும் சந்திப்புகள் இல்லை",
+  "appointments.noUpcomingBody": "நீங்கள் சந்திப்பை முன்பதிவு செய்ததும் அது இங்கே தோன்றும்.",
+  "appointments.noPast": "முந்தைய சந்திப்புகள் இல்லை",
+  "appointments.noCancelled": "ரத்துசெய்யப்பட்ட சந்திப்புகள் இல்லை",
+
+  // ---- Appointment details
+  "appointmentDetails.title": "சந்திப்பு விவரங்கள்",
+  "appointmentDetails.loading": "சந்திப்பு ஏற்றப்படுகிறது…",
+  "appointmentDetails.loadError": "இந்தச் சந்திப்பை ஏற்ற முடியவில்லை",
+  "appointmentDetails.notFoundTitle": "சந்திப்பு கிடைக்கவில்லை",
+  "appointmentDetails.notFoundBody":
+    "இந்தச் சந்திப்பு இல்லை அல்லது உங்கள் கணக்குடன் இணைக்கப்படவில்லை.",
+  "appointmentDetails.backToList": "சந்திப்புகளுக்குத் திரும்பு",
+  "appointmentDetails.all": "அனைத்துச் சந்திப்புகள்",
+  "appointmentDetails.dateTime": "தேதியும் நேரமும்",
+  "appointmentDetails.reason": "வருகைக்கான காரணம்",
+  "appointmentDetails.fee": "ஆலோசனைக் கட்டணம்",
+  "appointmentDetails.notChargedOnline": "ஆன்லைனில் வசூலிக்கப்படாது",
+  "appointmentDetails.help.pending":
+    "உங்கள் கோரிக்கை அனுப்பப்பட்டது. கிளினிக் அதைப் பரிசீலிக்கும்.",
+  "appointmentDetails.help.confirmed": "கிளினிக் இந்தச் சந்திப்பை உறுதிசெய்துள்ளது.",
+  "appointmentDetails.help.arrived": "கிளினிக் உங்கள் வருகையைப் பதிவுசெய்துள்ளது.",
+  "appointmentDetails.help.completed": "இந்தச் சந்திப்பு முடிந்தது.",
+  "appointmentDetails.help.cancelled": "இந்தச் சந்திப்பு ரத்துசெய்யப்பட்டது.",
+  "appointmentDetails.help.expiredRequest":
+    "சந்திப்புத் தேதிக்கு முன் கிளினிக் இந்தக் கோரிக்கையை உறுதிசெய்யவில்லை.",
+  "appointmentDetails.help.datePassed": "இந்தச் சந்திப்பின் தேதி கடந்துவிட்டது.",
+
+  // ---- Booking
+  "book.title": "சந்திப்பை முன்பதிவு செய்",
+  "book.loadError": "முன்பதிவுப் பக்கத்தை ஏற்ற முடியவில்லை",
+  "book.backTo": "{name}-க்குத் திரும்பு",
+  "book.notAccepting":
+    "{name} தற்போது ஆன்லைன் முன்பதிவுகளை ஏற்கவில்லை. {link} வழியாக நீங்கள் கிளினிக்கைத் தொடர்புகொள்ளலாம்.",
+  "book.doctorsProfile": "மருத்துவரின் சுயவிவரம்",
+  "book.requested":
+    "சந்திப்புக் கோரிக்கை அனுப்பப்பட்டது. கிளினிக் உங்கள் கோரிக்கையைப் பரிசீலிக்கும்.",
+  "book.clinic": "கிளினிக்",
+  "book.dateTime": "தேதியும் நேரமும்",
+  "book.reasonLabel": "வருகைக்கான காரணம் (விருப்பத்தேர்வு)",
+  "book.reasonPlaceholder": "எ.கா. வழக்கமான பரிசோதனை, தொடர் வருகை",
+  "book.reasonHint": "கிளினிக்குடன் மட்டுமே பகிரப்படும். {count}/{max}",
+  "book.summary": "சுருக்கம்",
+  "book.when": "எப்போது",
+  "book.chooseTime": "மேலே நேரத்தைத் தேர்ந்தெடுக்கவும்",
+  "book.fee": "ஆலோசனைக் கட்டணம்",
+  "book.requesting": "சந்திப்பு கோரப்படுகிறது…",
+  "book.request": "சந்திப்பைக் கோரு",
+  "book.noPayment":
+    "ஆன்லைனில் கட்டணம் எதுவும் வசூலிக்கப்படாது. கிளினிக் உறுதிசெய்யும் வரை உங்கள் கோரிக்கை நிலுவையில் இருக்கும்.",
+  "bookingError.slotTaken": "அந்த நேரம் இனி கிடைக்கவில்லை. வேறு நேரத்தைத் தேர்ந்தெடுக்கவும்.",
+  "bookingError.notBookable":
+    "இந்த மருத்துவர் தற்போது இந்தக் கிளினிக்கில் ஆன்லைன் முன்பதிவுகளை ஏற்கவில்லை.",
+  "bookingError.past": "அந்த நேரம் ஏற்கனவே கடந்துவிட்டது. பிந்தைய நேரத்தைத் தேர்ந்தெடுக்கவும்.",
+  "bookingError.horizon": "90 நாட்கள் முன்கூட்டியே வரை சந்திப்புகளை முன்பதிவு செய்யலாம்.",
+  "bookingError.reasonTooLong": "வருகைக்கான காரணத்தை 500 எழுத்துகளுக்குள் வைக்கவும்.",
+  "bookingError.rateLimit":
+    "உங்களுக்கு ஏற்கனவே 5 வரவிருக்கும் சந்திப்புகள் உள்ளன. புதியதை முன்பதிவு செய்யும் முன் ஒன்றை ரத்துசெய்யவும்.",
+  "bookingError.notPatient":
+    "நோயாளர் கணக்குகள் மட்டுமே சந்திப்புகளை முன்பதிவு செய்ய முடியும், இந்தக் கணக்கில் நோயாளர் சுயவிவரம் இல்லை.",
+  "bookingError.generic": "இந்தச் சந்திப்பை முன்பதிவு செய்ய முடியவில்லை. மீண்டும் முயலவும்.",
+
+  // ---- Messages (patient)
+  "messages.title": "செய்திகள்",
+  "messages.loading": "செய்திகள் ஏற்றப்படுகின்றன…",
+  "messages.loadError": "உங்கள் செய்திகளை ஏற்ற முடியவில்லை",
+  "messages.notSent": "செய்தி அனுப்பப்படவில்லை. {reason}",
+  "messages.emptyTitle": "இன்னும் உரையாடல்கள் இல்லை",
+  "messages.emptyBody":
+    "ஒரு சந்திப்பு பற்றி கிளினிக்கிடம் கேட்க, மருத்துவர் அல்லது கிளினிக் பக்கத்தை அல்லது உங்கள் சந்திப்புகளில் ஒன்றைத் திறந்து “கிளினிக்கிற்குச் செய்தி அனுப்பு” என்பதைத் தேர்ந்தெடுக்கவும்.",
+  "messages.conversations": "உரையாடல்கள்",
+  "messages.noMessages": "இன்னும் செய்திகள் இல்லை",
+  "messages.back": "உரையாடல்களுக்குத் திரும்பு",
+  "messages.aboutAppointment": "ஒரு சந்திப்பு பற்றி",
+  "messages.aboutAppointmentWith": "{doctor} உடனான சந்திப்பு பற்றி",
+  "messages.general": "பொது விசாரணை",
+  "messages.notForEmergencies": "கிளினிக் தொடர்புக்கு மட்டும் — மருத்துவ அவசரநிலைகளுக்கு அல்ல",
+  "messages.senderYou": "நீங்கள்:",
+  "messages.senderClinic": "கிளினிக்:",
+  "messages.senderPatient": "நோயாளி:",
+  "messages.writeBelow": "இன்னும் செய்திகள் இல்லை. கீழே கிளினிக்கிற்கு எழுதுங்கள்.",
+  "messages.inputLabel": "செய்தி",
+  "messages.placeholder": "செய்தியைத் தட்டச்சு செய்யவும்…",
+  "messages.send": "செய்தியை அனுப்பு",
+  "messages.unavailable": "அந்த உரையாடல் கிடைக்கவில்லை.",
+  "messages.select": "ஒரு உரையாடலைத் தேர்ந்தெடுக்கவும்",
+
+  // ---- Profile
+  "profile.title": "சுயவிவரம்",
+  "profile.subtitle": "உங்கள் CareConnect கணக்கு விவரங்கள்.",
+  "profile.loading": "சுயவிவரம் ஏற்றப்படுகிறது…",
+  "profile.loadError": "உங்கள் சுயவிவரத்தை ஏற்ற முடியவில்லை",
+  "profile.savedDoctors": "சேமித்த மருத்துவர்கள்",
+  "profile.savedLoadError": "உங்கள் சேமித்த மருத்துவர்களை ஏற்ற முடியவில்லை",
+  "profile.savedLoading": "சேமித்த மருத்துவர்கள் ஏற்றப்படுகிறார்கள்…",
+  "profile.noSaved":
+    "நீங்கள் இன்னும் எந்த மருத்துவரையும் சேமிக்கவில்லை. மருத்துவரைச் சேமிக்க புக்மார்க் ஐகானைப் பயன்படுத்தவும்.",
+  "profile.clinicAccess": "கிளினிக் அணுகல்",
+  "profile.clinicAccessBody_one": "நீங்கள் CareConnect-இல் {count} கிளினிக்கின் உறுப்பினர்.",
+  "profile.clinicAccessBody_other": "நீங்கள் CareConnect-இல் {count} கிளினிக்குகளின் உறுப்பினர்.",
+  "profile.openClinicPortal": "கிளினிக் போர்டலைத் திற",
+
+  // ---- Profile photo
+  "avatar.heading": "சுயவிவரப் படம்",
+  "avatar.alt": "உங்கள் சுயவிவரப் படம்",
+  "avatar.upload": "படத்தைப் பதிவேற்று",
+  "avatar.replace": "படத்தை மாற்று",
+  "avatar.remove": "படத்தை நீக்கு",
+  "avatar.uploading": "பதிவேற்றப்படுகிறது…",
+  "avatar.removing": "நீக்கப்படுகிறது…",
+  "avatar.hint":
+    "JPEG, PNG அல்லது WebP, அதிகபட்சம் {size} MB. உங்கள் படத்தை நீங்கள் மட்டுமே பார்க்க முடியும்.",
+  "avatar.uploaded": "உங்கள் சுயவிவரப் படம் புதுப்பிக்கப்பட்டது.",
+  "avatar.removed": "உங்கள் சுயவிவரப் படம் நீக்கப்பட்டது.",
+  "avatar.invalidType": "JPEG, PNG அல்லது WebP படத்தைத் தேர்ந்தெடுக்கவும்.",
+  "avatar.tooLarge": "அந்தப் படம் {size} MB-ஐ விடப் பெரியது. சிறிய படத்தைத் தேர்ந்தெடுக்கவும்.",
+  "avatar.tooSmall":
+    "அந்தப் படம் மிகச் சிறியது. குறைந்தது {size} பிக்சல் அகலமும் உயரமும் கொண்ட படத்தைத் தேர்ந்தெடுக்கவும்.",
+  "avatar.unreadable":
+    "அந்தக் கோப்பைப் படமாகப் படிக்க முடியவில்லை. வேறு கோப்பைத் தேர்ந்தெடுக்கவும்.",
+  "avatar.uploadFailed": "உங்கள் படத்தைப் பதிவேற்ற முடியவில்லை. {reason}",
+  "avatar.removeFailed": "உங்கள் படத்தை நீக்க முடியவில்லை. {reason}",
+  "avatar.notAvailable":
+    "சுயவிவரப் படங்கள் இன்னும் கிடைக்கவில்லை. அதற்குப் பதிலாக உங்கள் பெயரின் முதலெழுத்துகள் காட்டப்படுகின்றன.",
+  "avatar.loadFailed": "உங்கள் சுயவிவரப் படத்தை ஏற்ற முடியவில்லை.",
+  "avatar.confirmRemoveTitle": "உங்கள் சுயவிவரப் படத்தை நீக்கவா?",
+  "avatar.confirmRemoveBody":
+    "அதற்குப் பதிலாக உங்கள் முதலெழுத்துகள் காட்டப்படும். எப்போது வேண்டுமானாலும் புதிய படத்தைப் பதிவேற்றலாம்.",
+  "avatar.keep": "படத்தை வைத்திரு",
+
+  // ---- Personal details
+  "details.heading": "தனிப்பட்ட விவரங்கள்",
+  "details.email": "மின்னஞ்சல்",
+  "details.emailNote": "உள்நுழையப் பயன்படுகிறது",
+  "details.phone": "தொலைபேசி",
+  "details.dateOfBirth": "பிறந்த தேதி",
+  "details.gender": "பாலினம்",
+  "details.area": "பகுதி",
+  "details.preferredLanguage": "விருப்பமான மொழி",
+  "details.preferNotToSay": "சொல்ல விரும்பவில்லை",
+  "details.notChosen": "தேர்ந்தெடுக்கப்படவில்லை",
+  "details.fullName": "முழுப் பெயர்",
+  "details.areaPlaceholder": "எ.கா. Adyar",
+  "details.languageNote": "நீங்கள் உள்நுழையும்போது CareConnect இந்த மொழியில் காட்டப்படும்.",
+  "details.managedNote":
+    "உங்கள் மின்னஞ்சலும் தொலைபேசி எண்ணும் உங்கள் உள்நுழைவு விவரங்களுடன் நிர்வகிக்கப்படுகின்றன, இங்கே மாற்ற முடியாது.",
+  "details.nameRequired": "உங்கள் பெயரை உள்ளிடவும்.",
+  "details.invalidDob": "சரியான பிறந்த தேதியை உள்ளிடவும்.",
+  "details.saved": "உங்கள் விவரங்கள் சேமிக்கப்பட்டன.",
+  "details.save": "விவரங்களைச் சேமி",
+
+  // ---- Discover
+  "discover.title": "மருத்துவர்களைத் தேடுங்கள்",
+  "discover.subtitle": "சிறப்புத் துறை, கிளினிக், பகுதி அல்லது மருத்துவரின் பெயர் மூலம் தேடுங்கள்.",
+  "discover.searchLabel": "மருத்துவர்களையும் கிளினிக்குகளையும் தேடு",
+  "discover.searchPlaceholder": "Pediatrician Adyar, Dr. Rao, Little Steps Clinic…",
+  "discover.clearSearch": "தேடலை அழி",
+  "discover.filters": "வடிகட்டிகள்",
+  "discover.filtersCount": "வடிகட்டிகள் ({count})",
+  "discover.specialty": "சிறப்புத் துறை",
+  "discover.allSpecialties": "அனைத்துச் சிறப்புத் துறைகள்",
+  "discover.doctorFilters": "மருத்துவர் வடிகட்டிகள்",
+  "discover.reset": "மீட்டமை",
+  "discover.filtersApply": "இந்த வடிகட்டிகள் மருத்துவர்களுக்குப் பொருந்தும்.",
+  "discover.feeAny": "ஆலோசனைக் கட்டணம்: ஏதேனும்",
+  "discover.feeUpTo": "ஆலோசனைக் கட்டணம் {fee} வரை",
+  "discover.feeThumb": "அதிகபட்ச ஆலோசனைக் கட்டணம்",
+  "discover.feeAnyValue": "ஏதேனும் கட்டணம்",
+  "discover.feeUpToValue": "{fee} வரை",
+  "discover.experienceAny": "குறைந்தபட்ச அனுபவம்: ஏதேனும்",
+  "discover.experienceMin": "குறைந்தபட்ச அனுபவம்: {years}",
+  "discover.experienceThumb": "குறைந்தபட்ச அனுபவ ஆண்டுகள்",
+  "discover.experienceOrMore": "{years} அல்லது அதற்கு மேல்",
+  "discover.gender": "மருத்துவரின் பாலினம்",
+  "discover.language": "பேசும் மொழி",
+  "discover.doctorsTab": "மருத்துவர்கள்",
+  "discover.doctorsTabCount": "மருத்துவர்கள் ({count})",
+  "discover.clinicsTab": "கிளினிக்குகள்",
+  "discover.clinicsTabCount": "கிளினிக்குகள் ({count})",
+  "discover.sortBy": "வரிசைப்படுத்து",
+  "discover.sort.name": "பெயர் (A–Z)",
+  "discover.sort.feeAsc": "கட்டணம்: குறைவிலிருந்து அதிகம்",
+  "discover.sort.feeDesc": "கட்டணம்: அதிகத்திலிருந்து குறைவு",
+  "discover.sort.experience": "அதிக அனுபவம்",
+  "discover.updating": "முடிவுகள் புதுப்பிக்கப்படுகின்றன…",
+  "discover.loadingDoctors": "மருத்துவர்கள் ஏற்றப்படுகிறார்கள்",
+  "discover.loadingClinics": "கிளினிக்குகள் ஏற்றப்படுகின்றன",
+  "discover.loadErrorDoctors": "மருத்துவர்களை ஏற்ற முடியவில்லை",
+  "discover.loadErrorClinics": "கிளினிக்குகளை ஏற்ற முடியவில்லை",
+  "discover.noDoctorsTitle": "பொருந்தும் மருத்துவர்கள் இல்லை",
+  "discover.noDoctorsFiltered":
+    "உங்கள் தேடலுக்கும் வடிகட்டிகளுக்கும் எந்த மருத்துவரும் பொருந்தவில்லை. வேறு தேடலை முயலவும் அல்லது வடிகட்டிகளை அழிக்கவும்.",
+  "discover.noDoctorsListed": "CareConnect-இல் இன்னும் மருத்துவர்கள் பட்டியலிடப்படவில்லை.",
+  "discover.noClinicsTitle": "பொருந்தும் கிளினிக்குகள் இல்லை",
+  "discover.noClinicsFiltered":
+    "உங்கள் தேடலுக்கு எந்தக் கிளினிக்கும் பொருந்தவில்லை. வேறு பகுதி, சிறப்புத் துறை அல்லது கிளினிக் பெயரை முயலவும்.",
+  "discover.noClinicsListed": "CareConnect-இல் இன்னும் கிளினிக்குகள் பட்டியலிடப்படவில்லை.",
+  "discover.matches_one": "{count} மருத்துவர் உங்கள் தேடலுக்குப் பொருந்துகிறார்.",
+  "discover.matches_other": "{count} மருத்துவர்கள் உங்கள் தேடலுக்குப் பொருந்துகிறார்கள்.",
+  "discover.listed_one": "{count} மருத்துவர் பட்டியலிடப்பட்டுள்ளார்.",
+  "discover.listed_other": "{count} மருத்துவர்கள் பட்டியலிடப்பட்டுள்ளனர்.",
+  "discover.limitNote":
+    "முதல் {limit} முடிவுகள் காட்டப்படுகின்றன — குறைக்க உங்கள் தேடலைத் துல்லியமாக்கவும்.",
+  "discover.clearAll": "தேடலையும் வடிகட்டிகளையும் அழி",
+
+  // ---- Sign in / sign up / reset
+  "auth.signin.title": "CareConnect-இல் உள்நுழையவும்",
+  "auth.signin.subtitle": "மீண்டும் வருக. உங்கள் சந்திப்புகளை நிர்வகிக்க உள்நுழையவும்.",
+  "auth.signin.submit": "உள்நுழை",
+  "auth.signin.busy": "உள்நுழைகிறது…",
+  "auth.signup.title": "உங்கள் கணக்கை உருவாக்குங்கள்",
+  "auth.signup.subtitle":
+    "சந்திப்புகளை முன்பதிவு செய்து, கிளினிக்குகளுக்கு ஒரே இடத்தில் செய்தி அனுப்புங்கள்.",
+  "auth.signup.submit": "கணக்கை உருவாக்கு",
+  "auth.signup.busy": "கணக்கு உருவாக்கப்படுகிறது…",
+  "auth.reset.title": "உங்கள் கடவுச்சொல்லை மீட்டமைக்கவும்",
+  "auth.reset.subtitle":
+    "உங்கள் கணக்கு மின்னஞ்சலை உள்ளிடவும், புதிய கடவுச்சொல்லைத் தேர்ந்தெடுக்க ஒரு இணைப்பை அனுப்புவோம்.",
+  "auth.reset.submit": "மீட்டமைப்பு இணைப்பை அனுப்பு",
+  "auth.reset.busy": "அனுப்பப்படுகிறது…",
+  "auth.checkEmail": "உங்கள் மின்னஞ்சலைப் பாருங்கள்",
+  "auth.confirmSent":
+    "{email} முகவரிக்கு உறுதிப்படுத்தல் இணைப்பை அனுப்பியுள்ளோம். உங்கள் கணக்கைச் செயல்படுத்த அதைத் திறந்து, பிறகு உள்நுழையவும்.",
+  "auth.resetSent":
+    "{email} முகவரிக்குக் கணக்கு இருந்தால், அதன் கடவுச்சொல்லை மீட்டமைக்க ஒரு இணைப்பை அனுப்பியுள்ளோம். இணைப்பை ஒருமுறை மட்டுமே பயன்படுத்த முடியும்.",
+  "auth.backToSignIn": "உள்நுழைவுக்குத் திரும்பு",
+  "auth.fullName": "முழுப் பெயர்",
+  "auth.email": "மின்னஞ்சல்",
+  "auth.emailPlaceholder": "you@example.com",
+  "auth.password": "கடவுச்சொல்",
+  "auth.forgotPassword": "கடவுச்சொல் மறந்துவிட்டதா?",
+  "auth.passwordHint": "குறைந்தது {count} எழுத்துகள்.",
+  "auth.toSignUp": "CareConnect-க்குப் புதியவரா? கணக்கை உருவாக்குங்கள்",
+  "auth.toSignIn": "ஏற்கனவே கணக்கு உள்ளதா? உள்நுழையவும்",
+  "reset.expiredTitle": "இந்த இணைப்பு காலாவதியாகிவிட்டது",
+  "reset.neededTitle": "மீட்டமைப்பு இணைப்பு தேவை",
+  "reset.expiredSubtitle":
+    "கடவுச்சொல் மீட்டமைப்பு இணைப்புகளை ஒருமுறை மட்டுமே பயன்படுத்த முடியும், சிறிது நேரத்தில் காலாவதியாகும்.",
+  "reset.neededSubtitle":
+    "புதிய கடவுச்சொல்லைத் தேர்ந்தெடுக்க, உங்கள் மின்னஞ்சலில் உள்ள கடவுச்சொல் மீட்டமைப்பு இணைப்பைத் திறக்கவும்.",
+  "reset.getNewLink":
+    "புதிய இணைப்பைப் பெற, உள்நுழைவுக்குச் சென்று “கடவுச்சொல் மறந்துவிட்டதா?” என்பதைத் தேர்ந்தெடுக்கவும்.",
+  "reset.goToSignIn": "உள்நுழைவுக்குச் செல்",
+  "reset.mismatch": "இரண்டு கடவுச்சொற்களும் பொருந்தவில்லை.",
+  "reset.updated": "உங்கள் கடவுச்சொல் புதுப்பிக்கப்பட்டது.",
+  "reset.title": "புதிய கடவுச்சொல்லைத் தேர்ந்தெடுக்கவும்",
+  "reset.forEmail": "{email} க்கு",
+  "reset.forAccount": "உங்கள் கணக்கிற்குப் புதிய கடவுச்சொல்லை உள்ளிடவும்.",
+  "reset.newPassword": "புதிய கடவுச்சொல்",
+  "reset.confirmPassword": "புதிய கடவுச்சொல்லை உறுதிப்படுத்தவும்",
+  "reset.save": "புதிய கடவுச்சொல்லைச் சேமி",
+
+  // ---- Clinic portal shell
+  "clinicNav.dashboard": "டாஷ்போர்டு",
+  "clinicNav.appointments": "சந்திப்புகள்",
+  "clinicNav.calendar": "நாட்காட்டி",
+  "clinicNav.doctors": "மருத்துவர்கள்",
+  "clinicNav.patients": "நோயாளிகள்",
+  "clinicNav.messages": "செய்திகள்",
+  "clinicNav.profile": "கிளினிக் சுயவிவரம்",
+  "clinicNav.label": "கிளினிக்",
+  "clinicNav.mobileLabel": "கிளினிக் (கைபேசி)",
+  "clinicShell.loading": "கிளினிக் போர்டல் ஏற்றப்படுகிறது…",
+  "clinicShell.accessError": "உங்கள் கிளினிக் அணுகலைச் சரிபார்க்க முடியவில்லை",
+  "clinicShell.noAccessTitle": "கிளினிக் அணுகல் இல்லை",
+  "clinicShell.noAccessBody":
+    "இந்தக் கணக்கு எந்தக் கிளினிக்கிலும் உறுப்பினராக இல்லை. கிளினிக் போர்டல் கிளினிக் ஊழியர்களுக்கு மட்டுமே. நீங்கள் ஒரு கிளினிக்கில் பணிபுரிந்தால், உங்களைச் சேர்க்குமாறு உங்கள் கிளினிக் நிர்வாகியிடம் கேளுங்கள்.",
+  "clinicShell.goToApp": "CareConnect-க்குச் செல்",
+  "clinicShell.portal": "கிளினிக் போர்டல்",
+  "clinicShell.clinic": "கிளினிக்",
+  "clinicShell.switchToPatient": "நோயாளர் செயலிக்கு மாறு",
+  "clinicShell.patientApp": "நோயாளர் செயலி",
+  "clinicShell.role.clinic_admin": "கிளினிக் நிர்வாகி",
+  "clinicShell.role.clinic_staff": "கிளினிக் ஊழியர்",
+  "clinicShell.role.doctor": "மருத்துவர்",
+  "clinicShell.role.other": "கிளினிக் உறுப்பினர்",
+
+  // ---- Clinic dashboard
+  "clinicDashboard.title": "டாஷ்போர்டு",
+  "clinicDashboard.overview": "{date} க்கான கண்ணோட்டம்",
+  "clinicDashboard.loading": "டாஷ்போர்டு ஏற்றப்படுகிறது…",
+  "clinicDashboard.loadError": "இன்றைய சந்திப்புகளை ஏற்ற முடியவில்லை",
+  "clinicDashboard.todaysVisits": "இன்றைய வருகைகள்",
+  "clinicDashboard.awaiting": "உறுதிப்படுத்தலுக்காகக் காத்திருப்பவை",
+  "clinicDashboard.fees": "இன்றைய உறுதிசெய்த வருகைகளின் கட்டணம்",
+  "clinicDashboard.doctors": "இந்தக் கிளினிக்கின் மருத்துவர்கள்",
+  "clinicDashboard.schedule": "இன்றைய அட்டவணை",
+  "clinicDashboard.noneToday": "இன்றைக்கு எந்தச் சந்திப்பும் திட்டமிடப்படவில்லை.",
+  "clinicDashboard.viewAll": "அனைத்து {count} கோரிக்கைகளையும் பார்",
+  "clinicDashboard.noRequests": "காத்திருக்கும் கோரிக்கைகள் இல்லை.",
+
+  // ---- Clinic appointments
+  "clinicAppointments.title": "சந்திப்புகள்",
+  "clinicAppointments.subtitle": "சந்திப்புக் கோரிக்கைகளும் வருகைகளும்",
+  "clinicAppointments.loading": "சந்திப்புகள் ஏற்றப்படுகின்றன…",
+  "clinicAppointments.loadError": "சந்திப்புகளை ஏற்ற முடியவில்லை",
+  "clinicAppointments.filterLabel": "சந்திப்புகளை வடிகட்டு",
+  "clinicAppointments.filter.all": "அனைத்தும்",
+  "clinicAppointments.filter.upcoming": "வரவிருப்பவை",
+  "clinicAppointments.filter.pending": "உறுதிப்படுத்தலுக்காகக் காத்திருப்பவை",
+  "clinicAppointments.none": "இந்த வடிகட்டிக்கு எந்தச் சந்திப்பும் பொருந்தவில்லை.",
+  "clinicAppointments.action.confirm": "உறுதிசெய்",
+  "clinicAppointments.action.decline": "நிராகரி",
+  "clinicAppointments.action.arrived": "வந்ததாகக் குறி",
+  "clinicAppointments.action.cancel": "ரத்துசெய்",
+  "clinicAppointments.action.completed": "முடிந்ததாகக் குறி",
+  "clinicAppointments.done.pending": "சந்திப்பு புதுப்பிக்கப்பட்டது",
+  "clinicAppointments.done.confirmed": "சந்திப்பு உறுதிசெய்யப்பட்டது",
+  "clinicAppointments.done.declined": "சந்திப்பு நிராகரிக்கப்பட்டது",
+  "clinicAppointments.done.arrived": "வந்ததாகக் குறிக்கப்பட்டது",
+  "clinicAppointments.done.completed": "முடிந்ததாகக் குறிக்கப்பட்டது",
+  "clinicAppointments.done.cancelled": "சந்திப்பு ரத்துசெய்யப்பட்டது",
+  "clinicAppointments.statusChanged":
+    "இந்தச் சந்திப்பின் நிலை ஏற்கனவே மாறிவிட்டது. சமீபத்தியதைப் பார்க்கப் புதுப்பிக்கவும்.",
+  "clinicAppointments.col.patient": "நோயாளி",
+  "clinicAppointments.col.dateTime": "தேதியும் நேரமும் (IST)",
+  "clinicAppointments.col.doctor": "மருத்துவர்",
+  "clinicAppointments.col.reason": "காரணம்",
+  "clinicAppointments.col.status": "நிலை",
+  "clinicAppointments.col.actions": "செயல்கள்",
+
+  // ---- Clinic calendar
+  "clinicCalendar.title": "நாட்காட்டி",
+  "clinicCalendar.loading": "நாட்காட்டி ஏற்றப்படுகிறது…",
+  "clinicCalendar.loadError": "நாட்காட்டியை ஏற்ற முடியவில்லை",
+  "clinicCalendar.today": "இன்று",
+  "clinicCalendar.previousDay": "முந்தைய நாள்",
+  "clinicCalendar.nextDay": "அடுத்த நாள்",
+  "clinicCalendar.filterByDoctor": "மருத்துவர் வாரியாக வடிகட்டு",
+  "clinicCalendar.allDoctors": "அனைத்து மருத்துவர்கள்",
+  "clinicCalendar.timeIst": "நேரம் (IST)",
+  "clinicCalendar.count_one": "{count} சந்திப்பு",
+  "clinicCalendar.count_other": "{count} சந்திப்புகள்",
+
+  // ---- Clinic doctors
+  "clinicDoctors.title": "மருத்துவர்கள்",
+  "clinicDoctors.subtitle": "உங்கள் கிளினிக்கில் பணியாற்றும் மருத்துவர்கள்",
+  "clinicDoctors.loading": "மருத்துவர்கள் ஏற்றப்படுகிறார்கள்…",
+  "clinicDoctors.loadError": "மருத்துவர்களை ஏற்ற முடியவில்லை",
+  "clinicDoctors.fee": "கட்டணம்",
+  "clinicDoctors.experience": "அனுபவம்",
+  "clinicDoctors.languages": "மொழிகள்",
+  "clinicDoctors.onlineBooking": "ஆன்லைன் முன்பதிவு",
+  "clinicDoctors.enabled": "இயக்கத்தில்",
+  "clinicDoctors.pending": "CareConnect சரிபார்ப்பு நிலுவையில்",
+  "clinicDoctors.none": "இந்தக் கிளினிக்குடன் இன்னும் எந்த மருத்துவரும் இணைக்கப்படவில்லை.",
+
+  // ---- Clinic patients
+  "clinicPatients.title": "நோயாளிகள்",
+  "clinicPatients.subtitle": "உங்கள் கிளினிக்கில் முன்பதிவு செய்த நோயாளிகள்",
+  "clinicPatients.loading": "நோயாளிகள் ஏற்றப்படுகிறார்கள்…",
+  "clinicPatients.loadError": "நோயாளிகளை ஏற்ற முடியவில்லை",
+  "clinicPatients.searchLabel": "பெயர் மூலம் நோயாளிகளைத் தேடு",
+  "clinicPatients.searchPlaceholder": "பெயர் மூலம் நோயாளிகளைத் தேடு…",
+  "clinicPatients.col.patient": "நோயாளி",
+  "clinicPatients.col.appointments": "சந்திப்புகள்",
+  "clinicPatients.col.lastVisit": "கடைசியாக முடிந்த வருகை",
+  "clinicPatients.col.next": "அடுத்த சந்திப்பு",
+  "clinicPatients.noneYet": "இன்னும் எந்த நோயாளியும் சந்திப்பை முன்பதிவு செய்யவில்லை.",
+  "clinicPatients.noMatch": "அந்தப் பெயருக்கு எந்த நோயாளியும் பொருந்தவில்லை.",
+
+  // ---- Clinic messages
+  "clinicMessages.title": "செய்திகள்",
+  "clinicMessages.subtitle": "நோயாளிகள் தொடங்கிய உரையாடல்கள்",
+  "clinicMessages.loadError": "செய்திகளை ஏற்ற முடியவில்லை",
+  "clinicMessages.emptyBody":
+    "நோயாளிகள் உங்கள் கிளினிக் பக்கத்திலிருந்தோ தங்கள் சந்திப்புகளிலிருந்தோ உங்கள் கிளினிக்கிற்குச் செய்தி அனுப்பலாம். அவர்களின் செய்திகள் இங்கே தோன்றும்.",
+  "clinicMessages.noMessages": "இன்னும் செய்திகள் இல்லை.",
+  "clinicMessages.replyLabel": "நோயாளிக்குப் பதிலளி",
+  "clinicMessages.replyPlaceholder": "நோயாளிக்குப் பதிலளி…",
+  "clinicMessages.send": "பதிலை அனுப்பு",
+
+  // ---- Clinic profile
+  "clinicProfile.title": "கிளினிக் சுயவிவரம்",
+  "clinicProfile.subtitle": "நோயாளிகளுக்கு உங்கள் கிளினிக் எப்படித் தோன்றுகிறது",
+  "clinicProfile.readOnly":
+    "போர்டலில் கிளினிக் விவரங்களைத் திருத்தும் வசதி இன்னும் கிடைக்கவில்லை. நோயாளிகள் தற்போது பார்க்கும் தகவல் இதுதான்.",
+  "clinicProfile.name": "கிளினிக் பெயர்",
+  "clinicProfile.description": "விளக்கம்",
+};
