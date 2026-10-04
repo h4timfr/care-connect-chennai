@@ -179,6 +179,72 @@ test.describe("Discover request efficiency", () => {
   });
 });
 
+test.describe("Discover URL state", () => {
+  test("filters and sort survive a reload and are shareable", async ({ page, backend }) => {
+    const mock = await backend({}, { signedIn: false });
+    await page.goto("/discover");
+    await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
+    await page.getByRole("button", { name: "Female" }).click();
+    await page.getByRole("button", { name: "English" }).click();
+    await page.getByLabel("Sort by").selectOption("experience");
+    await expect(page).toHaveURL(/gender=female/);
+    await expect(page).toHaveURL(/lang=English/);
+    await expect(page).toHaveURL(/sort=experience/);
+
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Female" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(page.getByRole("button", { name: "English" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(page.getByLabel("Sort by")).toHaveValue("experience");
+    const search = decodeURIComponent(mock.callsTo("GET", "/rest/v1/doctors").at(-1)?.search ?? "");
+    expect(search).toContain("gender=eq.female");
+    expect(search).toContain("languages=cs.{English}");
+    expect(search).toContain("order=experience_years.desc,name.asc");
+
+    await page.getByRole("button", { name: "Reset" }).click();
+    await expect(page).not.toHaveURL(/gender=|lang=/);
+    await expect(page).toHaveURL(/sort=experience/);
+  });
+
+  test("invalid filter values in the URL are ignored", async ({ page, backend }) => {
+    const mock = await backend({}, { signedIn: false });
+    await page.goto(
+      "/discover?gender=robot&lang=English%29%2Cid.neq.0&fee=-5&exp=9999&sort=price.desc&specialty=nope",
+    );
+    await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    // Nothing valid remained, so no filtered request was made at all.
+    expect(mock.callsTo("GET", "/rest/v1/doctors")).toHaveLength(1);
+    await expect(page.getByLabel("Sort by")).toHaveValue("name");
+    await expect(page.getByRole("button", { name: "All specialties" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  test("invalid booking parameters in the URL never reach the slots RPC", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    for (const query of ["date=garbage&time=25:99&clinicId=x", "date=2099-02-30&time=12:60"]) {
+      await page.goto(`/book/${ids.doctorVerified}?${query}`);
+      await expect(page.getByRole("button", { name: "9:30 AM" })).toBeVisible();
+      const body = mock.callsTo("POST", "/rest/v1/rpc/get_doctor_slots").at(-1)?.body as
+        Record<string, string> | undefined;
+      expect(body?.["p_date"]).toMatch(/^20\d{2}-\d{2}-\d{2}$/);
+      expect(body?.["p_date"]).not.toBe("2099-02-30");
+      expect(body?.["p_clinic_id"]).toBe(ids.clinicA);
+      await expect(page.getByText("Choose a time above")).toBeVisible();
+    }
+  });
+});
+
 test.describe("Discover search input", () => {
   test("user text never becomes PostgREST filter syntax", async ({ page, backend }) => {
     const mock = await backend({}, { signedIn: false });

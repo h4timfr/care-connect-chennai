@@ -25,24 +25,29 @@ import { bookableClinicIds } from "@/lib/supabase/queries";
 import { cn } from "@/lib/utils";
 
 interface BookSearch {
-  date?: string;
-  time?: string;
-  clinicId?: string;
+  date?: string | undefined;
+  time?: string | undefined;
+  clinicId?: string | undefined;
 }
 
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_PATTERN = /^\d{2}:\d{2}(:\d{2})?$/;
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+
+/** A real calendar date in yyyy-mm-dd form (rejects 2099-13-45, 2026-02-30, ...). */
+function isCalendarDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}
 const MAX_REASON_LENGTH = 500;
 
 export const Route = createFileRoute("/book/$doctorId")({
-  validateSearch: (search: Record<string, unknown>): BookSearch => {
-    const params: BookSearch = {};
-    const { date, time, clinicId } = search;
-    if (typeof date === "string" && DATE_PATTERN.test(date)) params.date = date;
-    if (typeof time === "string" && TIME_PATTERN.test(time)) params.time = time;
-    if (typeof clinicId === "string" && clinicId) params.clinicId = clinicId;
-    return params;
-  },
+  // TanStack Router merges validated values over the raw URL search, so a key left out here would
+  // keep its raw, unvalidated value. Every key is therefore returned, as undefined when invalid.
+  validateSearch: ({ date, time, clinicId }: Record<string, unknown>): BookSearch => ({
+    date: typeof date === "string" && isCalendarDate(date) ? date : undefined,
+    time: typeof time === "string" && TIME_PATTERN.test(time) ? time : undefined,
+    clinicId: typeof clinicId === "string" && clinicId ? clinicId : undefined,
+  }),
   head: () => ({ meta: [{ title: "Book an appointment — CareConnect" }] }),
   component: BookAppointment,
 });

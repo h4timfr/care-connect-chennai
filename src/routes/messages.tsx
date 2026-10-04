@@ -14,8 +14,10 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import type { Conversation } from "@/lib/types";
 
 export const Route = createFileRoute("/messages")({
-  validateSearch: ({ c }: Record<string, unknown>): { c?: string } =>
-    typeof c === "string" && c ? { c } : {},
+  // Returned explicitly so an invalid raw ?c= can't survive TanStack's merge with the URL.
+  validateSearch: ({ c }: Record<string, unknown>): { c?: string | undefined } => ({
+    c: typeof c === "string" && c ? c : undefined,
+  }),
   head: () => ({ meta: [{ title: "Messages — CareConnect" }] }),
   component: MessagesView,
 });

@@ -12,18 +12,18 @@ import { safeRedirect } from "@/lib/redirect";
 import { MIN_PASSWORD_LENGTH } from "@/lib/passwords";
 
 interface LoginSearch {
-  redirect?: string;
-  signup?: boolean;
+  redirect?: string | undefined;
+  signup?: boolean | undefined;
 }
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (search: Record<string, unknown>): LoginSearch => {
-    const params: LoginSearch = {};
-    const { redirect, signup } = search;
-    if (typeof redirect === "string") params.redirect = redirect;
-    if (signup === true || signup === "true") params.signup = true;
-    return params;
-  },
+  // TanStack Router merges validated values over the raw URL search, so a key left out here would
+  // keep its raw, unvalidated value. Every key is therefore returned, as undefined when invalid.
+  validateSearch: ({ redirect, signup }: Record<string, unknown>): LoginSearch => ({
+    // Still checked by safeRedirect() before use.
+    redirect: typeof redirect === "string" ? redirect : undefined,
+    signup: signup === true || signup === "true" ? true : undefined,
+  }),
   head: () => ({
     meta: [{ title: "Sign in — CareConnect" }],
   }),

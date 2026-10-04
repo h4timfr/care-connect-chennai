@@ -30,19 +30,49 @@ import { cn } from "@/lib/utils";
 type DiscoverTab = "doctors" | "clinics";
 
 interface DiscoverSearch {
-  q?: string;
-  specialty?: string;
-  tab?: DiscoverTab;
+  q?: string | undefined;
+  specialty?: string | undefined;
+  tab?: DiscoverTab | undefined;
+  gender?: "female" | "male" | undefined;
+  lang?: string | undefined;
+  /** Maximum consultation fee (₹). */
+  fee?: number | undefined;
+  /** Minimum years of experience. */
+  exp?: number | undefined;
+  sort?: Exclude<DoctorSort, "name"> | undefined;
+}
+
+const SORT_VALUES: DoctorSort[] = ["name", "fee_asc", "fee_desc", "experience"];
+
+/** A whole number within [min, max] from a URL value, or undefined. */
+function boundedInt(value: unknown, min: number, max: number) {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isInteger(n) && n >= min && n <= max ? n : undefined;
 }
 
 export const Route = createFileRoute("/discover")({
-  validateSearch: ({ q, specialty, tab }: Record<string, unknown>): DiscoverSearch => {
-    const params: DiscoverSearch = {};
-    if (typeof q === "string" && q.trim()) params.q = q.trim().slice(0, 100);
-    if (typeof specialty === "string" && specialtyInfo(specialty)) params.specialty = specialty;
-    if (tab === "clinics") params.tab = "clinics";
-    return params;
-  },
+  // Every filter lives in the URL so refreshes, shared links and history keep it.
+  // TanStack Router merges validated values over the raw URL search, so a key left out here would
+  // keep its raw, unvalidated value. Every key is therefore returned, as undefined when invalid.
+  validateSearch: ({
+    q,
+    specialty,
+    tab,
+    gender,
+    lang,
+    fee,
+    exp,
+    sort,
+  }: Record<string, unknown>): DiscoverSearch => ({
+    q: typeof q === "string" && q.trim() ? q.trim().slice(0, 100) : undefined,
+    specialty: typeof specialty === "string" && specialtyInfo(specialty) ? specialty : undefined,
+    tab: tab === "clinics" ? "clinics" : undefined,
+    gender: gender === "female" || gender === "male" ? gender : undefined,
+    lang: typeof lang === "string" && /^[\p{L}\p{M} ]{1,40}$/u.test(lang) ? lang : undefined,
+    fee: boundedInt(fee, 1, 1_000_000),
+    exp: boundedInt(exp, 1, 100),
+    sort: sort === "fee_asc" || sort === "fee_desc" || sort === "experience" ? sort : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Find doctors and clinics in Chennai — CareConnect" },
@@ -88,11 +118,19 @@ function Discover() {
   const specialtyId = search.specialty ?? "";
   const tab: DiscoverTab = search.tab ?? "doctors";
 
-  const [gender, setGender] = useState<DoctorFilters["gender"]>("any");
-  const [language, setLanguage] = useState("");
-  const [maxFee, setMaxFee] = useState<number | null>(null);
-  const [minExperience, setMinExperience] = useState(0);
-  const [sort, setSort] = useState<DoctorSort>("name");
+  const gender: DoctorFilters["gender"] = search.gender ?? "any";
+  const language = search.lang ?? "";
+  const maxFee = search.fee ?? null;
+  const minExperience = search.exp ?? 0;
+  const sort: DoctorSort = search.sort ?? "name";
+  const setFilter = <K extends keyof DiscoverSearch>(key: K, value: DiscoverSearch[K]) =>
+    navigate({ search: (prev) => withParam(prev, key, value), replace: true });
+  const setGender = (g: DoctorFilters["gender"]) =>
+    setFilter("gender", g === "any" ? undefined : g);
+  const setLanguage = (l: string) => setFilter("lang", l || undefined);
+  const setMaxFee = (fee: number | null) => setFilter("fee", fee ?? undefined);
+  const setMinExperience = (years: number) => setFilter("exp", years > 0 ? years : undefined);
+  const setSort = (value: DoctorSort) => setFilter("sort", value === "name" ? undefined : value);
   const [showFilters, setShowFilters] = useState(false);
 
   // Keep ?q= shareable without fighting the input while the user is typing.
@@ -205,10 +243,10 @@ function Discover() {
   const hasAnyCriteria = activeFilterCount > 0 || !!specialtyId || !!debouncedText;
 
   const resetFilters = () => {
-    setGender("any");
-    setLanguage("");
-    setMaxFee(null);
-    setMinExperience(0);
+    navigate({
+      search: ({ gender: _g, lang: _l, fee: _f, exp: _e, ...rest }) => rest,
+      replace: true,
+    });
   };
   const clearEverything = () => {
     resetFilters();
@@ -461,8 +499,8 @@ function Discover() {
                       id="sort"
                       value={sort}
                       onChange={(e) => {
-                        const next = SORT_OPTIONS.find((o) => o.value === e.target.value);
-                        if (next) setSort(next.value);
+                        const next = SORT_VALUES.find((v) => v === e.target.value);
+                        if (next) setSort(next);
                       }}
                       className="rounded-lg border bg-card px-2.5 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
