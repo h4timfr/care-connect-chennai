@@ -9,7 +9,8 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useFocusMainOnNavigate } from "@/hooks/useFocusMainOnNavigate";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ErrorState, PageLoader } from "@/components/common";
@@ -40,6 +41,7 @@ export function ClinicShell({
   children: ReactNode;
 }) {
   const { loading, user } = useProtectedRoute();
+  const mainRef = useRef<HTMLElement>(null);
   const {
     activeClinic,
     memberClinics,
@@ -49,6 +51,10 @@ export function ClinicShell({
     refetchClinicAccess,
   } = useApp();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useFocusMainOnNavigate(
+    mainRef,
+    !loading && !!user && !isLoadingClinicAccess && !clinicAccessError && !!activeClinic,
+  );
 
   if (loading || !user || isLoadingClinicAccess) {
     return (
@@ -199,7 +205,14 @@ export function ClinicShell({
               </Link>
             </nav>
           </header>
-          <main className="px-4 py-6 sm:px-6">{children}</main>
+          <main
+            ref={mainRef}
+            id="main-content"
+            tabIndex={-1}
+            className="px-4 py-6 outline-none sm:px-6"
+          >
+            {children}
+          </main>
         </div>
       </div>
     </div>

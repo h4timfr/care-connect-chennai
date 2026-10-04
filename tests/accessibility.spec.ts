@@ -125,6 +125,22 @@ test("the cancel dialog works by keyboard and returns focus", async ({ page }) =
   await expect(trigger).toBeFocused();
 });
 
+test("navigating to another page moves focus to its main content", async ({ page }) => {
+  await mockBackend(page, { signedIn: false });
+  await page.goto("/");
+  // Wait for hydration so the click is a client-side navigation, not a full page load.
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("link", { name: "Find doctors", exact: true }).click();
+  await expect(page).toHaveURL(/\/discover$/);
+  await expect(page.locator("#main-content")).toBeFocused();
+
+  // Changing a filter stays on the same page, so focus stays on the control.
+  const female = page.getByRole("button", { name: "Female" });
+  await female.click();
+  await expect(page).toHaveURL(/gender=female/);
+  await expect(female).toBeFocused();
+});
+
 test("pages reachable while signed out also pass", async ({ page }) => {
   await mockBackend(page, { signedIn: false });
   for (const path of ["/login", "/login?signup=true", "/reset-password", "/does-not-exist"]) {

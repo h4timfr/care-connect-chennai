@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, Compass, Home, MessageCircle, Stethoscope, User } from "lucide-react";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useFocusMainOnNavigate } from "@/hooks/useFocusMainOnNavigate";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";
@@ -29,6 +30,8 @@ const NAV = [
 ] as const;
 
 export function PatientShell({ children }: { children: ReactNode }) {
+  const mainRef = useRef<HTMLElement>(null);
+  useFocusMainOnNavigate(mainRef);
   const { patient, activeClinic } = useApp();
   const { user, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -107,7 +110,12 @@ export function PatientShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+      <main
+        ref={mainRef}
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 outline-none sm:px-6 sm:py-8"
+      >
         {children}
       </main>
 
