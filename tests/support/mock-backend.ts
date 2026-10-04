@@ -41,6 +41,9 @@ export interface MockState {
   /** Overrides /auth/v1/token (sign-in and refresh) and /auth/v1/signup responses. */
   tokenResponse: { status: number; body: unknown } | null;
   signupResponse: { status: number; body: unknown } | null;
+  /** Rows returned for doctor requests that carry filters (searches), and an optional delay. */
+  doctorSearch: Row[] | null;
+  doctorSearchDelayMs: number;
 }
 
 export interface MockBackend {
@@ -134,6 +137,8 @@ export function defaultState(): MockState {
     failStatusUpdate: false,
     tokenResponse: null,
     signupResponse: null,
+    doctorSearch: null,
+    doctorSearchDelayMs: 0,
   };
 }
 
@@ -288,8 +293,18 @@ export async function mockBackend(
     switch (table) {
       case "clinics":
         return respond(state.clinics);
-      case "doctors":
+      case "doctors": {
+        const filtered = [...url.searchParams.keys()].some(
+          (k) => !["select", "order", "limit"].includes(k),
+        );
+        if (filtered && state.doctorSearch) {
+          if (state.doctorSearchDelayMs) {
+            await new Promise((resolve) => setTimeout(resolve, state.doctorSearchDelayMs));
+          }
+          return respond(state.doctorSearch);
+        }
         return respond(state.doctors);
+      }
       case "clinic_doctors":
         return respond([]);
       case "patients": {

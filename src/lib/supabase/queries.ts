@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Database } from "@/lib/database.types";
 import { specialtiesMatching } from "@/lib/format";
@@ -173,51 +173,104 @@ function startsAnyWord(haystack: string, word: string) {
     .some((part) => part.startsWith(word));
 }
 
-/** For each search word, the ids of doctors practising at a clinic whose name or area matches it. */
-async function doctorIdsByClinicMatch(words: string[]): Promise<Map<string, string[]>> {
-  const byWord = new Map<string, string[]>(words.map((w) => [w, []]));
-  if (!words.length) return byWord;
+/** The already-loaded doctor and clinic listings (the app-wide catalog). */
+export interface SearchCatalog {
+  clinics: Clinic[];
+  doctors: Doctor[];
+}
 
-  const { data: clinics, error } = await supabase
-    .from("clinics")
-    .select("id, name, area")
-    .or(
-      words
-        .flatMap((w) => [...wordPrefixConditions("name", w), ...wordPrefixConditions("area", w)])
-        .join(","),
-    );
-  if (error) throw error;
-  if (!clinics.length) return byWord;
+/** True when the filters narrow the doctor list; sorting alone does not. */
+export function hasDoctorCriteria(filters: DoctorFilters) {
+  return (
+    searchWords(filters.text).length > 0 ||
+    !!filters.specialtyId ||
+    filters.gender !== "any" ||
+    !!filters.language ||
+    filters.maxFee !== null ||
+    filters.minExperience > 0
+  );
+}
 
-  const { data: links, error: linkError } = await supabase
-    .from("clinic_doctors")
-    .select("clinic_id, doctor_id")
-    .eq("active", true)
-    .in(
-      "clinic_id",
-      clinics.map((c) => c.id),
-    );
-  if (linkError) throw linkError;
+/** True when the filters narrow the clinic list. */
+export function hasClinicCriteria(filters: ClinicFilters) {
+  return searchWords(filters.text).length > 0 || !!filters.specialtyId;
+}
 
+const SORT_KEYS: Record<Exclude<DoctorSort, "name">, (d: Doctor) => number> = {
+  fee_asc: (d) => d.consultationFee,
+  fee_desc: (d) => -d.consultationFee,
+  experience: (d) => -d.experienceYears,
+};
+
+/**
+ * The unfiltered doctor list in the same order the search query would return it. The catalog is
+ * already ordered by name in Postgres, so a stable sort on the sort key reproduces
+ * `ORDER BY <key>, name` exactly, with the same row limit.
+ */
+export function unfilteredDoctors(doctors: Doctor[], sort: DoctorSort): Doctor[] {
+  const ordered =
+    sort === "name"
+      ? doctors
+      : [...doctors].sort((a, b) => SORT_KEYS[sort](a) - SORT_KEYS[sort](b));
+  return ordered.slice(0, SEARCH_RESULT_LIMIT);
+}
+
+/** The unfiltered clinic list, as the clinic search would return it (catalog is name-ordered). */
+export function unfilteredClinics(clinics: Clinic[]): Clinic[] {
+  return clinics.slice(0, SEARCH_RESULT_LIMIT);
+}
+
+/** Same test as the `ilike "w%" OR ilike "% w%"` word-prefix conditions, applied in memory. */
+function wordPrefixMatch(value: string | null | undefined, word: string) {
+  const v = (value ?? "").toLowerCase();
+  return v.startsWith(word) || v.includes(` ${word}`);
+}
+
+/**
+ * For each search word, the ids of doctors actively practising at a clinic whose name or area
+ * matches it. Computed from the loaded catalog (every clinic, plus each doctor's active clinic
+ * links), which replaces two sequential requests (clinics, then clinic_doctors) per search.
+ */
+function doctorIdsByClinicMatch(words: string[], catalog: SearchCatalog): Map<string, string[]> {
+  const byWord = new Map<string, string[]>();
   for (const w of words) {
     const clinicIds = new Set(
-      clinics.filter((c) => startsAnyWord(`${c.name} ${c.area ?? ""}`, w)).map((c) => c.id),
+      catalog.clinics
+        .filter(
+          (c) =>
+            (wordPrefixMatch(c.name, w) || wordPrefixMatch(c.area, w)) &&
+            startsAnyWord(`${c.name} ${c.area}`, w),
+        )
+        .map((c) => c.id),
     );
-    byWord.set(w, [
-      ...new Set(links.filter((l) => clinicIds.has(l.clinic_id)).map((l) => l.doctor_id)),
-    ]);
+    byWord.set(
+      w,
+      catalog.doctors.filter((d) => d.clinicIds.some((id) => clinicIds.has(id))).map((d) => d.id),
+    );
   }
   return byWord;
 }
 
-export function useDoctorSearch(filters: DoctorFilters) {
+/**
+ * Filtered doctor search: one request, filtered and ordered in Postgres. Runs only when the
+ * filters narrow the list (unfiltered results come from the catalog) and once the catalog is
+ * loaded, since clinic name/area matches are resolved against it. While a new search runs, the
+ * previous results (or `placeholder`) stay visible.
+ */
+export function useDoctorSearch(
+  filters: DoctorFilters,
+  catalog: SearchCatalog | undefined,
+  placeholder: Doctor[] | undefined,
+) {
   return useQuery({
     queryKey: ["doctor-search", filters],
-    placeholderData: keepPreviousData,
+    enabled: !!catalog && hasDoctorCriteria(filters),
+    placeholderData: (previous: Doctor[] | undefined) => previous ?? placeholder,
     staleTime: 60 * 1000,
     queryFn: async () => {
+      if (!catalog) throw new Error("Doctor search ran before the catalog loaded.");
       const words = searchWords(filters.text);
-      const clinicMatches = await doctorIdsByClinicMatch(words);
+      const clinicMatches = doctorIdsByClinicMatch(words, catalog);
 
       let query = supabase.from("doctors").select(DOCTOR_SELECT);
 
@@ -257,10 +310,12 @@ export function useDoctorSearch(filters: DoctorFilters) {
   });
 }
 
-export function useClinicSearch(filters: ClinicFilters) {
+/** Filtered clinic search (one request). Unfiltered results come from the catalog instead. */
+export function useClinicSearch(filters: ClinicFilters, placeholder: Clinic[] | undefined) {
   return useQuery({
     queryKey: ["clinic-search", filters],
-    placeholderData: keepPreviousData,
+    enabled: hasClinicCriteria(filters),
+    placeholderData: (previous: Clinic[] | undefined) => previous ?? placeholder,
     staleTime: 60 * 1000,
     queryFn: async () => {
       let query = supabase.from("clinics").select("*");

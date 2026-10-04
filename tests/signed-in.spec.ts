@@ -2,6 +2,7 @@ import { test as base, expect } from "@playwright/test";
 import {
   appointmentRow,
   conversationRow,
+  defaultState,
   fakeAccessToken,
   ids,
   mockBackend,
@@ -121,6 +122,60 @@ test.describe("Patient account", () => {
     await page.goto("/appointments");
     await expect(page).toHaveURL(/\/login\?redirect=%2Fappointments$/);
     await expect(page.getByText("Dr. Verified Tester")).toHaveCount(0);
+  });
+});
+
+test.describe("Discover request efficiency", () => {
+  test("an unfiltered visit loads doctors and clinics once each", async ({ page, backend }) => {
+    const mock = await backend({}, { signedIn: false });
+    await page.goto("/discover");
+    await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    expect(mock.callsTo("GET", "/rest/v1/doctors")).toHaveLength(1);
+    expect(mock.callsTo("GET", "/rest/v1/clinics")).toHaveLength(1);
+
+    // Sorting alone re-orders the same rows without another request.
+    await page.getByLabel("Sort by").selectOption("fee_desc");
+    await page.waitForLoadState("networkidle");
+    expect(mock.callsTo("GET", "/rest/v1/doctors")).toHaveLength(1);
+  });
+
+  test("a search is one doctors request and one clinics request, with no waterfall", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({}, { signedIn: false });
+    await page.goto("/discover");
+    await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
+    await page.fill("#discover-search", "adyar");
+    await expect.poll(() => mock.callsTo("GET", "/rest/v1/doctors").length).toBe(2);
+    await page.waitForLoadState("networkidle");
+    expect(mock.callsTo("GET", "/rest/v1/clinics")).toHaveLength(2);
+    expect(mock.callsTo("GET", "/rest/v1/clinic_doctors")).toEqual([]);
+    // Clinic matches still resolve to doctors: Test Clinic A is in Adyar.
+    const search = mock.callsTo("GET", "/rest/v1/doctors").at(-1)?.search ?? "";
+    expect(decodeURIComponent(search)).toContain(`id.in.(${ids.doctorVerified})`);
+  });
+
+  test("a direct search link never shows unfiltered results first", async ({ page, backend }) => {
+    const seen = new Set<string>();
+    await backend(
+      { doctorSearch: [defaultState().doctors[0]!], doctorSearchDelayMs: 1200 },
+      { signedIn: false },
+    );
+    await page.exposeFunction("recordDoctor", (name: string) => seen.add(name));
+    await page.addInitScript(() => {
+      new MutationObserver(() => {
+        for (const h of document.querySelectorAll('[role="tabpanel"] article h3')) {
+          (window as unknown as { recordDoctor: (n: string) => void }).recordDoctor(
+            h.textContent ?? "",
+          );
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await page.goto("/discover?q=verified");
+    await expect(page.getByText("1 doctor matches your search.")).toBeVisible();
+    expect([...seen]).toEqual(["Dr. Verified Tester"]);
   });
 });
 

@@ -12,11 +12,17 @@ import { SPECIALTIES, inr, pluralize, specialtyInfo } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import {
   SEARCH_RESULT_LIMIT,
+  hasClinicCriteria,
+  hasDoctorCriteria,
+  unfilteredClinics,
+  unfilteredDoctors,
   useClinicSearch,
   useDoctorSearch,
+  type ClinicFilters,
   type DoctorFilters,
   type DoctorSort,
 } from "@/lib/supabase/queries";
+import type { Clinic, Doctor } from "@/lib/types";
 import { describeDataError } from "@/lib/supabase/errors";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
@@ -75,7 +81,7 @@ const SORT_OPTIONS: { value: DoctorSort; label: string }[] = [
 function Discover() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/discover" });
-  const { doctors: catalogDoctors, clinics: catalogClinics } = useApp();
+  const { doctors: catalogDoctors, clinics: catalogClinics, catalog } = useApp();
 
   const [text, setText] = useState(search.q ?? "");
   const debouncedText = useDebouncedValue(text.trim(), SEARCH_DEBOUNCE_MS);
@@ -143,8 +149,45 @@ function Discover() {
     minExperience,
     sort,
   };
-  const doctorsQuery = useDoctorSearch(doctorFilters);
-  const clinicsQuery = useClinicSearch({ text: debouncedText, specialtyId });
+  const clinicFilters: ClinicFilters = { text: debouncedText, specialtyId };
+
+  // The shared catalog (also needed for the filter options above and clinic names on cards)
+  // already holds every doctor and clinic, so unfiltered results are read from it instead of
+  // re-requesting the same rows. Filtered searches still run in Postgres.
+  const catalogReady = !catalog.isLoading && !catalog.error;
+  const searchCatalog = useMemo(
+    () => (catalogReady ? { clinics: catalogClinics, doctors: catalogDoctors } : undefined),
+    [catalogReady, catalogClinics, catalogDoctors],
+  );
+  const allDoctors = useMemo(
+    () => (catalogReady ? unfilteredDoctors(catalogDoctors, sort) : undefined),
+    [catalogReady, catalogDoctors, sort],
+  );
+  const allClinics = useMemo(
+    () => (catalogReady ? unfilteredClinics(catalogClinics) : undefined),
+    [catalogReady, catalogClinics],
+  );
+  // While a new search loads, keep showing the list the user was already looking at (never
+  // a list they haven't seen: a direct link to a search shows a skeleton until it resolves).
+  const shownDoctors = useRef<Doctor[] | undefined>(undefined);
+  const shownClinics = useRef<Clinic[] | undefined>(undefined);
+  const doctorsQuery = useDoctorSearch(doctorFilters, searchCatalog, shownDoctors.current);
+  const clinicsQuery = useClinicSearch(clinicFilters, shownClinics.current);
+
+  const catalogSource = <T,>(data: T[] | undefined): ResultsSource<T> => ({
+    data,
+    error: catalog.error,
+    isPending: catalog.isLoading,
+    refetch: catalog.refetch,
+  });
+  const doctorResults: ResultsSource<Doctor> = hasDoctorCriteria(doctorFilters)
+    ? catalog.error
+      ? catalogSource(undefined)
+      : doctorsQuery
+    : catalogSource(allDoctors);
+  const clinicResults: ResultsSource<Clinic> = hasClinicCriteria(clinicFilters)
+    ? clinicsQuery
+    : catalogSource(allClinics);
 
   const setSpecialty = (id: string) =>
     navigate({ search: (prev) => withParam(prev, "specialty", id), replace: true });
@@ -180,8 +223,12 @@ function Discover() {
       active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted",
     );
 
-  const doctors = doctorsQuery.data;
-  const clinics = clinicsQuery.data;
+  const doctors = doctorResults.data;
+  const clinics = clinicResults.data;
+  useEffect(() => {
+    if (doctors) shownDoctors.current = doctors;
+    if (clinics) shownClinics.current = clinics;
+  }, [doctors, clinics]);
   const updating =
     (doctorsQuery.isFetching && doctorsQuery.isPlaceholderData) ||
     (clinicsQuery.isFetching && clinicsQuery.isPlaceholderData) ||
@@ -442,7 +489,7 @@ function Discover() {
 
               <TabsContent value="doctors" className="mt-1">
                 <ResultsState
-                  query={doctorsQuery}
+                  query={doctorResults}
                   noun="doctors"
                   loadingLabel="Loading doctors"
                   emptyTitle="No matching doctors"
@@ -481,7 +528,7 @@ function Discover() {
 
               <TabsContent value="clinics" className="mt-1">
                 <ResultsState
-                  query={clinicsQuery}
+                  query={clinicResults}
                   noun="clinics"
                   loadingLabel="Loading clinics"
                   emptyTitle="No matching clinics"
@@ -509,6 +556,14 @@ function Discover() {
   );
 }
 
+/** What a results list needs, whether it comes from the catalog or a search query. */
+interface ResultsSource<T> {
+  data: T[] | undefined;
+  error: Error | null;
+  isPending: boolean;
+  refetch: () => unknown;
+}
+
 function FilterGroup({ label, id, children }: { label: string; id: string; children: ReactNode }) {
   return (
     <div>
@@ -529,7 +584,7 @@ function ResultsState<T>({
   onClear,
   children,
 }: {
-  query: { data: T[] | undefined; error: Error | null; isPending: boolean; refetch: () => unknown };
+  query: ResultsSource<T>;
   noun: string;
   loadingLabel: string;
   emptyTitle: string;
