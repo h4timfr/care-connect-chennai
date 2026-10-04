@@ -52,8 +52,6 @@ export function useConversations(patientId?: string, clinicIds: string[] = [], e
         patientName: c.patients?.full_name || "Unknown patient",
         kind: c.kind,
         appointmentId: c.appointment_id ?? undefined,
-        unreadForPatient: c.unread_for_patient,
-        unreadForClinic: c.unread_for_clinic,
         messages: (c.messages ?? [])
           .map((m) => ({
             id: m.id,
@@ -90,30 +88,6 @@ export function useSendMessage() {
 
       if (error) throw error;
       return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    },
-  });
-}
-
-export function useMarkRead() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      conversationId,
-      side,
-    }: {
-      conversationId: string;
-      side: "patient" | "clinic";
-    }) => {
-      const { error } = await supabase
-        .from("conversations")
-        .update(side === "patient" ? { unread_for_patient: 0 } : { unread_for_clinic: 0 })
-        .eq("id", conversationId);
-
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });

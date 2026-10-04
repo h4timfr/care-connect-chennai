@@ -12,7 +12,8 @@ import {
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { PageLoader } from "@/components/common";
+import { ErrorState, PageLoader } from "@/components/common";
+import { describeDataError } from "@/lib/supabase/errors";
 import { useApp } from "@/lib/store";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { Button } from "@/components/ui/button";
@@ -39,18 +40,33 @@ export function ClinicShell({
   children: ReactNode;
 }) {
   const { loading, user } = useProtectedRoute();
-  const { activeClinic, isLoadingClinicAccess, conversations } = useApp();
+  const { activeClinic, isLoadingClinicAccess, clinicAccessError, refetchClinicAccess } = useApp();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  if (loading || isLoadingClinicAccess) {
+  if (loading || !user || isLoadingClinicAccess) {
     return (
       <div className="min-h-screen bg-surface p-6">
-        <PageLoader label="Loading clinic portal…" />
+        <PageLoader
+          label={!loading && !user ? "Redirecting to sign in…" : "Loading clinic portal…"}
+        />
       </div>
     );
   }
 
-  if (!user) return null;
+  // A failed membership lookup is not the same as having no membership.
+  if (clinicAccessError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface p-6">
+        <div className="w-full max-w-md">
+          <ErrorState
+            title="We couldn't check your clinic access"
+            message={describeDataError(clinicAccessError)}
+            onRetry={refetchClinicAccess}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (!activeClinic) {
     return (
@@ -67,10 +83,6 @@ export function ClinicShell({
       </div>
     );
   }
-  const unread = conversations
-    .filter((c) => c.clinicId === activeClinic.id)
-    .reduce((n, c) => n + c.unreadForClinic, 0);
-
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
 
@@ -92,6 +104,9 @@ export function ClinicShell({
               <Link
                 key={item.to}
                 to={item.to}
+                aria-current={
+                  isActive(item.to, "exact" in item ? item.exact : false) ? "page" : undefined
+                }
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive(item.to, "exact" in item ? item.exact : false)
@@ -101,17 +116,14 @@ export function ClinicShell({
               >
                 <item.icon className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="min-w-0 truncate">{item.label}</span>
-                {item.to === "/clinic/messages" && unread > 0 ? (
-                  <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
-                    {unread}
-                  </span>
-                ) : null}
               </Link>
             ))}
           </nav>
           <div className="mt-4 rounded-xl border bg-card p-3">
             <p className="truncate text-sm font-semibold">{activeClinic.name}</p>
-            <p className="truncate text-xs text-muted-foreground">{activeClinic.area}, Chennai</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {[activeClinic.area, "Chennai"].filter(Boolean).join(", ")}
+            </p>
             <Button asChild variant="outline" size="sm" className="mt-3 w-full">
               <Link to="/">Switch to patient app</Link>
             </Button>
@@ -140,6 +152,9 @@ export function ClinicShell({
                 <Link
                   key={item.to}
                   to={item.to}
+                  aria-current={
+                    isActive(item.to, "exact" in item ? item.exact : false) ? "page" : undefined
+                  }
                   className={cn(
                     "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                     isActive(item.to, "exact" in item ? item.exact : false)
@@ -150,6 +165,12 @@ export function ClinicShell({
                   {item.label}
                 </Link>
               ))}
+              <Link
+                to="/"
+                className="shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+              >
+                Patient app
+              </Link>
             </nav>
           </header>
           <main className="px-4 py-6 sm:px-6">{children}</main>

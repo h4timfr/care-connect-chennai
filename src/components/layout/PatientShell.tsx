@@ -29,14 +29,9 @@ const NAV = [
 ] as const;
 
 export function PatientShell({ children }: { children: ReactNode }) {
-  const { patient, conversations, activeClinic } = useApp();
+  const { patient, activeClinic } = useApp();
   const { user, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const unread = patient
-    ? conversations
-        .filter((c) => c.patientId === patient.id)
-        .reduce((n, c) => n + c.unreadForPatient, 0)
-    : 0;
 
   const isActive = (to: string, exact: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
@@ -74,13 +69,6 @@ export function PatientShell({ children }: { children: ReactNode }) {
                     )}
                   >
                     {item.label}
-                    {item.to === "/messages" && unread > 0 ? (
-                      <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
-                        <span className="sr-only">, </span>
-                        {unread}
-                        <span className="sr-only"> unread</span>
-                      </span>
-                    ) : null}
                   </Link>
                 );
               })}
@@ -149,11 +137,6 @@ export function PatientShell({ children }: { children: ReactNode }) {
                 >
                   <span className="relative">
                     <item.icon className="h-5 w-5" aria-hidden />
-                    {item.to === "/messages" && unread > 0 ? (
-                      <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-primary">
-                        <span className="sr-only">Unread messages</span>
-                      </span>
-                    ) : null}
                   </span>
                   {item.mobileLabel}
                 </Link>

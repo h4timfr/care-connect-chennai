@@ -1,24 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AlertCircle, Loader2, MailCheck, Stethoscope } from "lucide-react";
-import { isSupabaseConfigured, supabase, supabaseConfigError } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabase, supabaseConfigMessage } from "@/lib/supabase/client";
 import { describeAuthError } from "@/lib/supabase/errors";
 import { useAuth } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { safeRedirect } from "@/lib/redirect";
 
 interface LoginSearch {
   redirect?: string;
   signup?: boolean;
-}
-
-/** Only same-origin paths are accepted, so ?redirect= can't send users to another site. */
-function safeRedirect(value: string | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/login")) {
-    return "/";
-  }
-  return value;
 }
 
 export const Route = createFileRoute("/login")({
@@ -138,7 +131,7 @@ function LoginPage() {
             className="mb-4 flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <p>{supabaseConfigError}</p>
+            <p>{supabaseConfigMessage}</p>
           </div>
         ) : null}
 

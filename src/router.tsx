@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
-import { isNetworkError } from "./lib/supabase/errors";
+import { codeOf, isNetworkError } from "./lib/supabase/errors";
 
 const MAX_QUERY_RETRIES = 1;
 
@@ -11,10 +11,7 @@ function shouldRetry(failureCount: number, error: unknown) {
   if (error instanceof Error && error.name === "SupabaseConfigError") return false;
   // supabase-js has already retried network failures for reads; don't make the user wait longer.
   if (isNetworkError(error)) return false;
-  const code =
-    error && typeof error === "object" && "code" in error
-      ? String((error as { code: unknown }).code)
-      : "";
+  const code = codeOf(error);
   // PostgREST (PGRST*) and Postgres SQLSTATE codes describe request problems, not outages.
   return code === "";
 }

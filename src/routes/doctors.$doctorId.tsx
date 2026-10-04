@@ -14,7 +14,7 @@ import {
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { DateStrip, SlotGrid } from "@/components/SlotPicker";
 import { Button } from "@/components/ui/button";
-import { inr, isoDate, specialtyName } from "@/lib/format";
+import { inr, isoDate, pluralize, specialtyName } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { describeDataError } from "@/lib/supabase/errors";
 import { bookableClinicIds } from "@/lib/supabase/queries";
@@ -84,15 +84,15 @@ function DoctorProfile() {
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <GraduationCap className="h-4 w-4" aria-hidden /> {doctor.experienceYears} yrs
-                  experience
+                  <GraduationCap className="h-4 w-4" aria-hidden />{" "}
+                  {pluralize(doctor.experienceYears, "year")} experience
                 </span>
                 {doctor.languages.length ? (
                   <span className="flex items-center gap-1">
                     <Languages className="h-4 w-4" aria-hidden /> {doctor.languages.join(", ")}
                   </span>
                 ) : null}
-                <Rating value={doctor.rating} count={doctor.reviewCount} />
+                <Rating value={doctor.rating} count={doctor.reviewCount} sample={doctor.isSample} />
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="rounded-full bg-muted px-3 py-1 font-medium">

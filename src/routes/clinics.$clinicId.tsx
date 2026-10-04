@@ -80,7 +80,7 @@ function ClinicProfile() {
                 <p className="mt-1 text-lg text-muted-foreground">{clinic.area}</p>
               ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                <Rating value={clinic.rating} count={clinic.reviewCount} />
+                <Rating value={clinic.rating} count={clinic.reviewCount} sample={clinic.isSample} />
                 {maxFee > 0 ? (
                   <span className="text-muted-foreground">
                     Consultations {inr(minFee)} – {inr(maxFee)}

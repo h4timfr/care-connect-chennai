@@ -1,3 +1,8 @@
+/** "1 doctor", "3 doctors". */
+export function pluralize(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
 export const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
 export function to12h(time: string) {

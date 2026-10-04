@@ -1,169 +1,190 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
-import { ClinicShell } from "@/components/layout/ClinicShell";
-import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { useApp } from "@/lib/store";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { StatusBadge } from "@/components/common";
-import { shortDate, to12h } from "@/lib/format";
+import { toast } from "sonner";
+import { ClinicShell } from "@/components/layout/ClinicShell";
+import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import type { AppointmentStatus } from "@/lib/types";
+import { useApp } from "@/lib/store";
+import { shortDate, to12h } from "@/lib/format";
+import { describeStatusError } from "@/lib/supabase/appointments";
+import { cn } from "@/lib/utils";
+import type { Appointment, AppointmentStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/clinic/appointments")({
   component: ClinicAppointments,
 });
 
+type Filter = "all" | "upcoming" | "pending";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "upcoming", label: "Upcoming" },
+  { value: "pending", label: "Awaiting confirmation" },
+];
+
+/** Transitions the check_appointment_update trigger allows clinic staff to make. */
+const ACTIONS: Partial<
+  Record<AppointmentStatus, { status: AppointmentStatus; label: string; danger?: boolean }[]>
+> = {
+  pending: [
+    { status: "confirmed", label: "Confirm" },
+    { status: "cancelled", label: "Decline", danger: true },
+  ],
+  confirmed: [
+    { status: "arrived", label: "Mark arrived" },
+    { status: "cancelled", label: "Cancel", danger: true },
+  ],
+  arrived: [{ status: "completed", label: "Mark completed" }],
+};
+
+const SUCCESS: Record<AppointmentStatus, string> = {
+  pending: "Appointment updated",
+  confirmed: "Appointment confirmed",
+  arrived: "Marked as arrived",
+  completed: "Marked as completed",
+  cancelled: "Appointment cancelled",
+};
+
 function ClinicAppointments() {
-  const { loading, user } = useProtectedRoute();
-  const {
-    clinicAppointments: appointments,
-    activeClinic,
-    setAppointmentStatus,
-    doctorById,
-  } = useApp();
+  const { clinicAppointments, clinicAppointmentsStatus: status, activeClinic } = useApp();
+  const [filter, setFilter] = useState<Filter>("all");
 
-  const [filter, setFilter] = useState<"all" | "upcoming" | "pending">("all");
+  let body;
+  if (!activeClinic) {
+    body = null;
+  } else if (status.isLoading) {
+    body = <PageLoader label="Loading appointments…" />;
+  } else if (status.error) {
+    body = (
+      <ErrorState
+        title="We couldn't load appointments"
+        message={describeStatusError(status.error)}
+        onRetry={status.refetch}
+      />
+    );
+  } else {
+    const rows = clinicAppointments
+      .filter((a) => a.clinicId === activeClinic.id)
+      .filter((a) => {
+        if (filter === "upcoming") return a.status === "confirmed" || a.status === "pending";
+        if (filter === "pending") return a.status === "pending";
+        return true;
+      })
+      .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+    body = (
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter appointments">
+          {FILTERS.map((f) => (
+            <Button
+              key={f.value}
+              variant={filter === f.value ? "default" : "outline"}
+              size="sm"
+              aria-pressed={filter === f.value}
+              onClick={() => setFilter(f.value)}
+            >
+              {f.label}
+            </Button>
+          ))}
+        </div>
+        <AppointmentTable rows={rows} />
+      </div>
+    );
+  }
 
-  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
+  return (
+    <ClinicShell title="Appointments" description="Appointment requests and visits">
+      {body}
+    </ClinicShell>
+  );
+}
 
-  const clinicAppointments = appointments
-    .filter((a) => a.clinicId === activeClinic.id)
-    .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
+function AppointmentTable({ rows }: { rows: Appointment[] }) {
+  const { setAppointmentStatus, doctorById } = useApp();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const filtered = clinicAppointments.filter((a) => {
-    if (filter === "upcoming") return a.status === "confirmed" || a.status === "pending";
-    if (filter === "pending") return a.status === "pending";
-    return true;
-  });
-
-  const updateStatus = (id: string, status: AppointmentStatus) => {
-    setAppointmentStatus(id, status);
+  const update = async (id: string, next: AppointmentStatus) => {
+    if (updatingId) return;
+    setUpdatingId(id);
+    try {
+      await setAppointmentStatus(id, next);
+      toast.success(SUCCESS[next]);
+    } catch (err) {
+      toast.error(describeStatusError(err));
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   return (
-    <ClinicShell title="Appointments" description="Manage all patient appointments">
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <Button
-            variant={filter === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("all")}
-          >
-            All
-          </Button>
-          <Button
-            variant={filter === "upcoming" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("upcoming")}
-          >
-            Upcoming
-          </Button>
-          <Button
-            variant={filter === "pending" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("pending")}
-          >
-            Pending
-          </Button>
-        </div>
-
-        <div className="surface-card overflow-hidden overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap min-w-[700px]">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="font-medium p-4">Patient</th>
-                <th className="font-medium p-4">Date & Time</th>
-                <th className="font-medium p-4">Doctor</th>
-                <th className="font-medium p-4">Reason</th>
-                <th className="font-medium p-4">Status</th>
-                <th className="font-medium p-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.map((a) => {
-                const doctor = doctorById(a.doctorId);
-                return (
-                  <tr key={a.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-4">
-                      <p className="font-medium">{a.patientName}</p>
-                      <p className="text-xs text-muted-foreground">{a.patientPhone}</p>
-                    </td>
-                    <td className="p-4">
-                      <p>{shortDate(a.date)}</p>
-                      <p className="text-xs text-muted-foreground">{to12h(a.time)}</p>
-                    </td>
-                    <td className="p-4">{doctor?.name}</td>
-                    <td className="p-4 max-w-[150px] truncate" title={a.reason}>
-                      {a.reason}
-                    </td>
-                    <td className="p-4">
-                      <StatusBadge status={a.status} />
-                    </td>
-                    <td className="p-4">
-                      {a.status === "pending" && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs"
-                            onClick={() => updateStatus(a.id, "confirmed")}
-                          >
-                            Confirm
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs text-destructive hover:bg-destructive/10"
-                            onClick={() => updateStatus(a.id, "cancelled")}
-                          >
-                            Reject
-                          </Button>
-                        </div>
+    <div className="surface-card overflow-x-auto">
+      <table className="w-full min-w-[680px] text-left text-sm">
+        <thead className="bg-muted/50 text-muted-foreground">
+          <tr>
+            <th scope="col" className="p-4 font-medium">
+              Patient
+            </th>
+            <th scope="col" className="p-4 font-medium">
+              Date & time (IST)
+            </th>
+            <th scope="col" className="p-4 font-medium">
+              Doctor
+            </th>
+            <th scope="col" className="p-4 font-medium">
+              Reason
+            </th>
+            <th scope="col" className="p-4 font-medium">
+              Status
+            </th>
+            <th scope="col" className="p-4 font-medium">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {rows.map((a) => (
+            <tr key={a.id} className="align-top transition-colors hover:bg-muted/30">
+              <td className="p-4 font-medium">{a.patientName}</td>
+              <td className="whitespace-nowrap p-4">
+                {shortDate(a.date)}
+                <span className="block text-xs text-muted-foreground">{to12h(a.time)}</span>
+              </td>
+              <td className="p-4">{doctorById(a.doctorId)?.name ?? "—"}</td>
+              <td className="max-w-[180px] truncate p-4" title={a.reason || undefined}>
+                {a.reason || <span className="text-muted-foreground">—</span>}
+              </td>
+              <td className="p-4">
+                <StatusBadge status={a.status} />
+              </td>
+              <td className="p-4">
+                <div className="flex flex-wrap gap-2">
+                  {(ACTIONS[a.status] ?? []).map((action) => (
+                    <Button
+                      key={action.status}
+                      size="sm"
+                      variant="outline"
+                      disabled={updatingId !== null}
+                      className={cn(
+                        "h-8 text-xs",
+                        action.danger && "text-destructive hover:bg-destructive/10",
                       )}
-                      {a.status === "confirmed" && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs"
-                            onClick={() => updateStatus(a.id, "arrived")}
-                          >
-                            Arrived
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs text-destructive hover:bg-destructive/10"
-                            onClick={() => updateStatus(a.id, "cancelled")}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      )}
-                      {a.status === "arrived" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={() => updateStatus(a.id, "completed")}
-                        >
-                          Complete
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                    No appointments found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </ClinicShell>
+                      onClick={() => update(a.id, action.status)}
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              </td>
+            </tr>
+          ))}
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                No appointments match this filter.
+              </td>
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
+    </div>
   );
 }

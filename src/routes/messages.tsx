@@ -58,7 +58,7 @@ function MessagesView() {
 }
 
 function Inbox({ conversations }: { conversations: Conversation[] }) {
-  const { markRead, sendMessage, clinicById, doctorById } = useApp();
+  const { sendMessage, clinicById, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/messages" });
   const [text, setText] = useState("");
@@ -67,12 +67,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
 
   const active = search.c ? conversations.find((c) => c.id === search.c) : undefined;
   const activeId = active?.id;
-  const activeUnread = active?.unreadForPatient ?? 0;
   const activeMessageCount = active?.messages.length ?? 0;
-
-  useEffect(() => {
-    if (activeId && activeUnread > 0) markRead(activeId, "patient");
-  }, [activeId, activeUnread, markRead]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
@@ -134,7 +129,6 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
             const last = c.messages[c.messages.length - 1];
             const title = titleOf(c);
             const isActive = c.id === activeId;
-            const unread = c.unreadForPatient > 0 && !isActive;
             return (
               <li key={c.id}>
                 <button
@@ -148,31 +142,17 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                 >
                   <span className="relative shrink-0">
                     <Initials name={title} className="h-10 w-10 text-xs" />
-                    {unread ? (
-                      <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-card bg-primary">
-                        <span className="sr-only">Unread</span>
-                      </span>
-                    ) : null}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="mb-0.5 flex items-baseline justify-between gap-2">
-                      <span
-                        className={cn("truncate text-sm", unread ? "font-bold" : "font-medium")}
-                      >
-                        {title}
-                      </span>
+                      <span className="truncate text-sm font-medium">{title}</span>
                       {last ? (
                         <span className="shrink-0 text-[10px] text-muted-foreground">
                           {shortDate(isoDate(new Date(last.sentAt)))}
                         </span>
                       ) : null}
                     </span>
-                    <span
-                      className={cn(
-                        "block truncate text-xs",
-                        unread ? "font-medium text-foreground" : "text-muted-foreground",
-                      )}
-                    >
+                    <span className="block truncate text-xs text-muted-foreground">
                       {last
                         ? `${last.sender === "patient" ? "You: " : ""}${last.body}`
                         : "No messages yet"}

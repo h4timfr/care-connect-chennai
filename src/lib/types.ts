@@ -132,8 +132,6 @@ export interface Conversation {
   patientName: string;
   kind: ConversationKind;
   appointmentId?: string | undefined;
-  unreadForPatient: number;
-  unreadForClinic: number;
   messages: Message[];
 }
 

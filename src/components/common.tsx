@@ -39,9 +39,20 @@ export function SpecialtyIcon({ icon, className }: { icon: string; className?: s
   return <Icon className={cn("h-5 w-5", className)} aria-hidden />;
 }
 
-/** Stored rating summary. Hidden when there are no reviews to summarise. */
-export function Rating({ value, count }: { value: number; count: number }) {
-  if (count <= 0) return null;
+/**
+ * Stored rating summary. Hidden when there are no reviews, and for sample listings: their
+ * seeded ratings have no reviews behind them and must not read as real patient feedback.
+ */
+export function Rating({
+  value,
+  count,
+  sample,
+}: {
+  value: number;
+  count: number;
+  sample: boolean;
+}) {
+  if (sample || count <= 0) return null;
   return (
     <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
       <Star className="h-3.5 w-3.5 fill-warning text-warning" aria-hidden />

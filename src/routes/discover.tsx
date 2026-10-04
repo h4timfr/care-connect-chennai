@@ -8,7 +8,7 @@ import { CardGridSkeleton, EmptyState, ErrorState } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { SPECIALTIES, inr } from "@/lib/format";
+import { SPECIALTIES, inr, pluralize } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import {
   SEARCH_RESULT_LIMIT,
@@ -322,7 +322,7 @@ function Discover() {
               <FilterGroup
                 label={
                   minExperience > 0
-                    ? `Minimum experience: ${minExperience} yrs`
+                    ? `Minimum experience: ${pluralize(minExperience, "year")}`
                     : "Minimum experience: any"
                 }
                 id="experience-filter"
@@ -330,7 +330,9 @@ function Discover() {
                 <Slider
                   aria-labelledby="experience-filter"
                   thumbLabel="Minimum years of experience"
-                  valueText={minExperience > 0 ? `${minExperience} years or more` : "Any"}
+                  valueText={
+                    minExperience > 0 ? `${pluralize(minExperience, "year")} or more` : "Any"
+                  }
                   className="mt-3"
                   min={0}
                   max={maxExperienceOption}
@@ -411,7 +413,10 @@ function Discover() {
                     <select
                       id="sort"
                       value={sort}
-                      onChange={(e) => setSort(e.target.value as DoctorSort)}
+                      onChange={(e) => {
+                        const next = SORT_OPTIONS.find((o) => o.value === e.target.value);
+                        if (next) setSort(next.value);
+                      }}
                       className="rounded-lg border bg-card px-2.5 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {SORT_OPTIONS.map((o) => (

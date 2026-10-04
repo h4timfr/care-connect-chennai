@@ -26,12 +26,7 @@ import {
   useToggleSavedDoctor,
   useToggleSavedClinic,
 } from "@/lib/supabase/queries";
-import {
-  useConversations,
-  useSendMessage,
-  useMarkRead,
-  useEnsureConversation,
-} from "@/lib/supabase/messaging";
+import { useConversations, useSendMessage, useEnsureConversation } from "@/lib/supabase/messaging";
 
 const NO_DOCTORS: Doctor[] = [];
 const NO_CLINICS: Clinic[] = [];
@@ -58,6 +53,9 @@ interface AppState {
   activeClinic: Clinic | undefined;
   /** True until clinic memberships for the signed-in user are known. */
   isLoadingClinicAccess: boolean;
+  /** Set when the membership lookup itself failed (distinct from "no membership"). */
+  clinicAccessError: Error | null;
+  refetchClinicAccess: () => void;
   doctorById: (id: string) => Doctor | undefined;
   clinicById: (id: string) => Clinic | undefined;
   doctorsOfClinic: (clinicId: string) => Doctor[];
@@ -65,14 +63,15 @@ interface AppState {
   patientAppointments: Appointment[];
   patientAppointmentsStatus: QueryStatus;
   clinicAppointments: Appointment[];
+  clinicAppointmentsStatus: QueryStatus;
   bookAppointment: (input: BookingRequest) => Promise<Appointment>;
   cancelAppointment: (id: string) => Promise<void>;
-  setAppointmentStatus: (id: string, status: AppointmentStatus) => void;
+  /** Resolves once the clinic-side status change is saved; rejects with the backend error. */
+  setAppointmentStatus: (id: string, status: AppointmentStatus) => Promise<void>;
 
   conversations: Conversation[];
   conversationsStatus: QueryStatus;
   sendMessage: (conversationId: string, body: string) => Promise<void>;
-  markRead: (conversationId: string, side: "patient" | "clinic") => void;
   ensureConversation: (args: {
     clinicId: string;
     doctorId?: string;
@@ -111,14 +110,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const conversationsQuery = useConversations(patient?.id, authorizedClinicIds, isLoggedIn);
 
-  const bookMut = useBookAppointment();
-  const cancelMut = useCancelAppointment();
-  const updateStatusMut = useUpdateAppointmentStatus();
-  const sendMsgMut = useSendMessage();
-  const markReadMut = useMarkRead();
-  const ensureConvMut = useEnsureConversation();
-  const toggleDoctorMut = useToggleSavedDoctor();
-  const toggleClinicMut = useToggleSavedClinic();
+  // useMutation returns a new object every render, but its mutate/mutateAsync functions are stable.
+  // Depending only on those keeps the callbacks below (and the context value) from rebuilding.
+  const { mutateAsync: book } = useBookAppointment();
+  const { mutateAsync: cancel } = useCancelAppointment();
+  const { mutateAsync: updateStatus } = useUpdateAppointmentStatus();
+  const { mutateAsync: send } = useSendMessage();
+  const { mutateAsync: createConversation } = useEnsureConversation();
+  const { mutate: toggleDoctor } = useToggleSavedDoctor();
+  const { mutate: toggleClinic } = useToggleSavedClinic();
 
   const clinics = clinicsQuery.data ?? NO_CLINICS;
   const doctors = doctorsQuery.data ?? NO_DOCTORS;
@@ -141,6 +141,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refetch: refetchConversations,
   } = conversationsQuery;
 
+  const {
+    isPending: clinicAccessPending,
+    error: clinicAccessError,
+    refetch: refetchClinicAccessQuery,
+  } = authorizedClinicsQuery;
+  const {
+    isPending: clinicAppointmentsPending,
+    isEnabled: clinicAppointmentsEnabled,
+    error: clinicAppointmentsError,
+    refetch: refetchClinicAppointments,
+  } = clinicAppointmentsQuery;
+
   const { refetch: refetchClinics } = clinicsQuery;
   const { refetch: refetchDoctors } = doctorsQuery;
   const refetchCatalog = useCallback(() => {
@@ -151,39 +163,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const bookAppointment = useCallback(
     async (input: BookingRequest) => {
       if (!auth.user) throw new Error("Please sign in to book an appointment.");
-      return bookMut.mutateAsync(input);
+      return book(input);
     },
-    [auth.user, bookMut],
+    [auth.user, book],
   );
 
   const cancelAppointment = useCallback(
     async (id: string) => {
-      await cancelMut.mutateAsync(id);
+      await cancel(id);
     },
-    [cancelMut],
+    [cancel],
   );
 
   const setAppointmentStatus = useCallback(
-    (id: string, status: AppointmentStatus) => {
-      if (!activeClinic) return;
-      updateStatusMut.mutate({ id, status, clinicId: activeClinic.id });
+    async (id: string, status: AppointmentStatus) => {
+      if (!activeClinic) throw new Error("No clinic selected.");
+      await updateStatus({ id, status, clinicId: activeClinic.id });
     },
-    [activeClinic, updateStatusMut],
+    [activeClinic, updateStatus],
   );
 
   const sendMessage = useCallback(
     async (conversationId: string, body: string) => {
       if (!auth.user) throw new Error("Please sign in to send messages.");
-      await sendMsgMut.mutateAsync({ conversationId, senderId: auth.user.id, body });
+      await send({ conversationId, senderId: auth.user.id, body });
     },
-    [auth.user, sendMsgMut],
-  );
-
-  const markRead = useCallback(
-    (conversationId: string, side: "patient" | "clinic") => {
-      markReadMut.mutate({ conversationId, side });
-    },
-    [markReadMut],
+    [auth.user, send],
   );
 
   const ensureConversation = useCallback(
@@ -203,28 +208,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         (c) => c.clinicId === clinicId && c.patientId === patient.id,
       );
       if (existing) return existing.id;
-      return ensureConvMut.mutateAsync({
+      return createConversation({
         clinicId,
         patientId: patient.id,
         ...(doctorId ? { doctorId } : {}),
         ...(appointmentId ? { appointmentId } : {}),
       });
     },
-    [conversations, auth.user, ensureConvMut, patient],
+    [conversations, auth.user, createConversation, patient],
   );
 
   const toggleSavedDoctor = useCallback(
     (id: string) => {
-      if (patient) toggleDoctorMut.mutate(id);
+      if (patient) toggleDoctor(id);
     },
-    [patient, toggleDoctorMut],
+    [patient, toggleDoctor],
   );
 
   const toggleSavedClinic = useCallback(
     (id: string) => {
-      if (patient) toggleClinicMut.mutate(id);
+      if (patient) toggleClinic(id);
     },
-    [patient, toggleClinicMut],
+    [patient, toggleClinic],
   );
 
   const value = useMemo<AppState>(
@@ -242,7 +247,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refetch: refetchCatalog,
       },
       activeClinic,
-      isLoadingClinicAccess: auth.loading || (isLoggedIn && authorizedClinicsQuery.isPending),
+      isLoadingClinicAccess: auth.loading || (isLoggedIn && clinicAccessPending),
+      clinicAccessError,
+      refetchClinicAccess: () => void refetchClinicAccessQuery(),
       doctorById: (id) => doctors.find((d) => d.id === id),
       clinicById: (id) => clinics.find((c) => c.id === id),
       doctorsOfClinic: (cid) => doctors.filter((d) => d.clinicIds.includes(cid)),
@@ -254,6 +261,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refetch: () => void refetchAppointments(),
       },
       clinicAppointments,
+      clinicAppointmentsStatus: {
+        isLoading: clinicAppointmentsEnabled && clinicAppointmentsPending,
+        error: clinicAppointmentsError,
+        refetch: () => void refetchClinicAppointments(),
+      },
       bookAppointment,
       cancelAppointment,
       setAppointmentStatus,
@@ -265,7 +277,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refetch: () => void refetchConversations(),
       },
       sendMessage,
-      markRead,
       ensureConversation,
       toggleSavedDoctor,
       toggleSavedClinic,
@@ -285,12 +296,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       doctorsQuery.error,
       refetchCatalog,
       activeClinic,
-      authorizedClinicsQuery.isPending,
+      clinicAccessPending,
+      clinicAccessError,
+      refetchClinicAccessQuery,
       patientAppointments,
       appointmentsPending,
       appointmentsError,
       refetchAppointments,
       clinicAppointments,
+      clinicAppointmentsEnabled,
+      clinicAppointmentsPending,
+      clinicAppointmentsError,
+      refetchClinicAppointments,
       bookAppointment,
       cancelAppointment,
       setAppointmentStatus,
@@ -300,7 +317,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       conversationsError,
       refetchConversations,
       sendMessage,
-      markRead,
       ensureConversation,
       toggleSavedDoctor,
       toggleSavedClinic,

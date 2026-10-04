@@ -30,8 +30,15 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
+/** Greeting by the hour in India, so server-rendered and client-rendered output agree. */
 function greeting() {
-  const h = new Date().getHours();
+  const h = Number(
+    new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: "Asia/Kolkata",
+    }).format(new Date()),
+  );
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   return "Good evening";
@@ -64,10 +71,12 @@ function Home() {
     <PatientShell>
       <div className="space-y-10">
         <section aria-labelledby="home-heading">
-          <p className="text-sm text-muted-foreground">{greeting()},</p>
           <h1 id="home-heading" className="font-display text-2xl font-bold sm:text-3xl">
-            {patient?.name ?? "Welcome to CareConnect"}
+            {patient?.name ? `${greeting()}, ${patient.name}` : "Find a doctor in Chennai"}
           </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Search clinics and doctors, book appointments and message your clinic.
+          </p>
 
           <form
             className="mt-5"

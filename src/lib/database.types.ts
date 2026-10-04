@@ -673,13 +673,22 @@ export type Database = {
           available_time: string;
         }[];
       };
-      get_doctor_slots: {
-        Args: { p_date: string; p_doctor_id: string };
-        Returns: {
-          available: boolean;
-          slot_time: string;
-        }[];
-      };
+      get_doctor_slots:
+        | {
+            Args: { p_date: string; p_doctor_id: string };
+            Returns: {
+              available: boolean;
+              slot_time: string;
+            }[];
+          }
+        | {
+            // Clinic-aware overload added in migration 00047 (the one the app calls).
+            Args: { p_clinic_id: string; p_date: string; p_doctor_id: string };
+            Returns: {
+              available: boolean;
+              slot_time: string;
+            }[];
+          };
       toggle_saved_clinic: { Args: { p_clinic_id: string }; Returns: string[] };
       toggle_saved_doctor: { Args: { p_doctor_id: string }; Returns: string[] };
     };

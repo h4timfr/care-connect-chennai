@@ -13,7 +13,7 @@ import { ThemeProvider } from "next-themes";
 import appCss from "../styles.css?url";
 import { AppProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/supabase/auth";
-import { isSupabaseConfigured, supabaseConfigError } from "@/lib/supabase/client";
+import { isSupabaseConfigured, supabaseConfigMessage } from "@/lib/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
 const SITE_TITLE = "CareConnect — Find doctors and book clinic appointments in Chennai";
@@ -78,11 +78,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  head: ({ match }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: SITE_TITLE },
+      // No child route matched: the root renders the 404 page, so give it its own title.
+      { title: match.globalNotFound ? "Page not found — CareConnect" : SITE_TITLE },
       { name: "description", content: SITE_DESCRIPTION },
       { name: "application-name", content: "CareConnect" },
       { name: "theme-color", content: "#047879" },
@@ -126,7 +127,7 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Developer-facing notice: the app cannot reach its backend without these env vars. */
+/** Shown when the app has no usable backend configuration (details only in development). */
 function ConfigErrorBanner() {
   if (isSupabaseConfigured) return null;
   return (
@@ -134,7 +135,10 @@ function ConfigErrorBanner() {
       role="alert"
       className="border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-sm text-destructive"
     >
-      <strong className="font-semibold">Configuration error:</strong> {supabaseConfigError}
+      {import.meta.env.DEV ? (
+        <strong className="font-semibold">Configuration error: </strong>
+      ) : null}
+      {supabaseConfigMessage}
     </div>
   );
 }

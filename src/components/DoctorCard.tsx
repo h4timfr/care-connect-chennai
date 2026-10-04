@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Bookmark, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Initials, Rating, SampleBadge } from "@/components/common";
-import { inr, specialtyName } from "@/lib/format";
+import { inr, pluralize, specialtyName } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { bookableClinicIds } from "@/lib/supabase/queries";
 import { cn } from "@/lib/utils";
@@ -54,8 +54,8 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">{inr(doctor.consultationFee)}</span>
-        <span>{doctor.experienceYears} yrs experience</span>
-        <Rating value={doctor.rating} count={doctor.reviewCount} />
+        <span>{pluralize(doctor.experienceYears, "year")} experience</span>
+        <Rating value={doctor.rating} count={doctor.reviewCount} sample={doctor.isSample} />
         {doctor.isSample ? <SampleBadge /> : null}
       </div>
 

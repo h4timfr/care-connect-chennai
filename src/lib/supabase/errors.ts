@@ -3,7 +3,7 @@ import {
   isAuthRetryableFetchError,
   isAuthWeakPasswordError,
 } from "@supabase/supabase-js";
-import { supabaseConfigError } from "./client";
+import { supabaseConfigError, supabaseConfigMessage } from "./client";
 
 // Turns Supabase/PostgREST/Auth errors into short, user-facing messages. Raw backend messages are
 // only passed through where Supabase documents them as user-facing (e.g. password rules).
@@ -24,13 +24,20 @@ const CONFIRMATION_EMAIL_FAILED =
 const CONNECTION_MESSAGE =
   "We couldn't reach CareConnect's servers. Check your internet connection and try again.";
 
-function messageOf(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === "object" && "message" in error) {
-    const { message } = error as { message: unknown };
-    if (typeof message === "string") return message;
-  }
-  return "";
+function stringField(error: unknown, field: "message" | "code"): string {
+  if (!error || typeof error !== "object" || !(field in error)) return "";
+  const value: unknown = Reflect.get(error, field);
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
+/** `error.message` for any error-like value (Error, PostgrestError, plain object), else "". */
+export function messageOf(error: unknown): string {
+  return stringField(error, "message");
+}
+
+/** `error.code` (PostgREST / SQLSTATE / Auth error code) for any error-like value, else "". */
+export function codeOf(error: unknown): string {
+  return stringField(error, "code");
 }
 
 function isConfigError(error: unknown) {
@@ -47,7 +54,9 @@ export function isNetworkError(error: unknown) {
 }
 
 function configMessage() {
-  return `CareConnect isn't connected to its backend. ${supabaseConfigError ?? ""}`.trim();
+  return import.meta.env.DEV
+    ? `CareConnect isn't connected to its backend. ${supabaseConfigMessage ?? ""}`.trim()
+    : (supabaseConfigMessage ?? "CareConnect is temporarily unavailable. Please try again later.");
 }
 
 /** Message for failures of data queries and mutations (PostgREST / RPC). */
@@ -55,10 +64,7 @@ export function describeDataError(error: unknown): string {
   if (isConfigError(error)) return configMessage();
   if (isNetworkError(error)) return CONNECTION_MESSAGE;
 
-  const code =
-    error && typeof error === "object" && "code" in error
-      ? String((error as { code: unknown }).code)
-      : "";
+  const code = codeOf(error);
   if (code === "PGRST301" || code === "PGRST303" || messageOf(error).includes("JWT expired")) {
     return "Your session has expired. Please sign in again.";
   }

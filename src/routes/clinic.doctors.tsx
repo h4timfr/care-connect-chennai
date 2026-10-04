@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { useApp } from "@/lib/store";
 import { Initials } from "@/components/common";
-import { inr, specialtyName } from "@/lib/format";
+import { inr, pluralize, specialtyName } from "@/lib/format";
 
 export const Route = createFileRoute("/clinic/doctors")({
   component: ClinicDoctors,
@@ -34,7 +34,7 @@ function ClinicDoctors() {
                   <strong>Fee:</strong> {inr(d.consultationFee)}
                 </p>
                 <p>
-                  <strong>Experience:</strong> {d.experienceYears} years
+                  <strong>Experience:</strong> {pluralize(d.experienceYears, "year")}
                 </p>
                 <p className="truncate">
                   <strong>Languages:</strong> {d.languages.join(", ")}

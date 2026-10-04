@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
-import { describeDataError, isNetworkError } from "./errors";
+import { codeOf, describeDataError, isNetworkError, messageOf } from "./errors";
 import type { Database } from "@/lib/database.types";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 
@@ -17,7 +17,7 @@ function mapAppointment(a: AppointmentRow, patientName: string): Appointment {
     date: a.date,
     time: a.time,
     reason: a.reason ?? "",
-    status: a.status as AppointmentStatus,
+    status: a.status,
     fee: Number(a.fee),
     createdAt: a.created_at,
   };
@@ -62,14 +62,8 @@ export function useClinicAppointments(clinicIds: string[], options?: { enabled?:
 /** Maps the booking RPC's validation exceptions to messages a patient can act on. */
 export function describeBookingError(error: unknown): string {
   if (isNetworkError(error)) return describeDataError(error);
-  const message =
-    error && typeof error === "object" && "message" in error
-      ? String((error as { message: unknown }).message)
-      : "";
-  const code =
-    error && typeof error === "object" && "code" in error
-      ? String((error as { code: unknown }).code)
-      : "";
+  const message = messageOf(error);
+  const code = codeOf(error);
 
   if (code === "23505" || /no longer available|not available|overlap/i.test(message)) {
     return "That time slot is no longer available. Please choose another time.";
@@ -132,11 +126,17 @@ export function isCancellable(appointment: Appointment) {
 }
 
 export function describeCancelError(error: unknown): string {
-  const message =
-    error && typeof error === "object" && "message" in error
-      ? String((error as { message: unknown }).message)
-      : "";
+  const message = messageOf(error);
   if (/terminal|only cancel/i.test(message)) return "This appointment can no longer be cancelled.";
+  return describeDataError(error);
+}
+
+/** Messages for clinic-side status changes rejected by the check_appointment_update trigger. */
+export function describeStatusError(error: unknown): string {
+  const message = messageOf(error);
+  if (/Terminal states|can only be|cannot/i.test(message)) {
+    return "This appointment's status has already changed. Refresh to see the latest.";
+  }
   return describeDataError(error);
 }
 

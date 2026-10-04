@@ -34,7 +34,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
               </p>
             ) : null}
           </div>
-          <Rating value={clinic.rating} count={clinic.reviewCount} />
+          <Rating value={clinic.rating} count={clinic.reviewCount} sample={clinic.isSample} />
         </div>
 
         {clinic.specialtyIds.length ? (

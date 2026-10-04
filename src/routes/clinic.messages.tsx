@@ -1,254 +1,256 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ClinicShell } from "@/components/layout/ClinicShell";
-import { MessageSquare, ArrowLeft, Send } from "lucide-react";
-import { useApp } from "@/lib/store";
-import { cn } from "@/lib/utils";
-import { Initials } from "@/components/common";
-import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { clockTime } from "@/lib/format";
-import { describeDataError } from "@/lib/supabase/errors";
+import { ArrowLeft, Loader2, MessageSquare, Send } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-
-import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { ClinicShell } from "@/components/layout/ClinicShell";
+import { ErrorState, Initials, PageLoader } from "@/components/common";
+import { Button } from "@/components/ui/button";
+import { useApp } from "@/lib/store";
+import { clockTime, isoDate, shortDate } from "@/lib/format";
+import { describeDataError } from "@/lib/supabase/errors";
+import { cn } from "@/lib/utils";
+import type { Conversation } from "@/lib/types";
 
 export const Route = createFileRoute("/clinic/messages")({
+  validateSearch: ({ c }: Record<string, unknown>): { c?: string } =>
+    typeof c === "string" && c ? { c } : {},
   component: ClinicMessages,
-  validateSearch: (search: Record<string, unknown>) => {
-    const params: { c?: string } = {};
-    if (typeof search["c"] === "string" && search["c"]) {
-      params.c = search["c"];
-    }
-    return params;
-  },
 });
 
+const MAX_MESSAGE_LENGTH = 2000;
+const lastSentAt = (c: Conversation) => c.messages[c.messages.length - 1]?.sentAt ?? "";
+const sentLabel = (iso: string) => `${shortDate(isoDate(new Date(iso)))}, ${clockTime(iso)}`;
+
 function ClinicMessages() {
-  const { conversations, activeClinic, markRead, sendMessage, doctorById } = useApp();
+  const { conversations, conversationsStatus: status, activeClinic } = useApp();
+
+  let body;
+  if (!activeClinic) {
+    body = null; // ClinicShell renders the loading / access states.
+  } else if (status.isLoading) {
+    body = <PageLoader label="Loading messages…" />;
+  } else if (status.error) {
+    body = (
+      <ErrorState
+        title="We couldn't load messages"
+        message={describeDataError(status.error)}
+        onRetry={status.refetch}
+      />
+    );
+  } else {
+    const mine = conversations
+      .filter((c) => c.clinicId === activeClinic.id)
+      .sort((a, b) => lastSentAt(b).localeCompare(lastSentAt(a)));
+    body = <ClinicInbox conversations={mine} />;
+  }
+
+  return (
+    <ClinicShell title="Messages" description="Conversations started by patients">
+      {body}
+    </ClinicShell>
+  );
+}
+
+function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
+  const { sendMessage, doctorById } = useApp();
   const search = Route.useSearch();
-  const navigate = useNavigate();
-  const { loading, user } = useProtectedRoute();
-
-  const clinicConversations = conversations
-    .filter((c) => c.clinicId === activeClinic?.id)
-    .sort((a, b) => {
-      const lastA = a.messages[a.messages.length - 1]?.sentAt ?? "";
-      const lastB = b.messages[b.messages.length - 1]?.sentAt ?? "";
-      return lastB.localeCompare(lastA);
-    });
-
-  const activeConversation = search.c
-    ? clinicConversations.find((c) => c.id === search.c)
-    : undefined;
-
+  const navigate = useNavigate({ from: "/clinic/messages" });
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
+  const active = search.c ? conversations.find((c) => c.id === search.c) : undefined;
+  const activeId = active?.id;
+  const activeMessageCount = active?.messages.length ?? 0;
+
   useEffect(() => {
-    if (activeConversation && activeConversation.unreadForClinic > 0) {
-      markRead(activeConversation.id, "clinic");
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [activeId, activeMessageCount]);
+
+  const subtitleOf = (c: Conversation) => {
+    const doctor = c.doctorId ? doctorById(c.doctorId) : undefined;
+    if (c.kind === "appointment") {
+      return doctor ? `About an appointment with ${doctor.name}` : "About an appointment";
     }
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeConversation, markRead]);
+    return "General enquiry";
+  };
 
-  if (loading)
-    return <ClinicShell title="Loading..." children={<div className="p-8">Loading...</div>} />;
-
-  if (!user || !activeClinic) return null;
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSend = async (e?: FormEvent) => {
+    e?.preventDefault();
     const body = text.trim();
-    if (!body || !activeConversation) return;
+    if (!body || !active || sending) return;
+    setSending(true);
     try {
-      await sendMessage(activeConversation.id, body);
+      await sendMessage(active.id, body);
       setText("");
     } catch (err) {
       toast.error(`Message not sent. ${describeDataError(err)}`);
+    } finally {
+      setSending(false);
     }
   };
 
+  if (!conversations.length) {
+    return (
+      <div className="surface-card flex flex-col items-center gap-3 px-6 py-12 text-center text-muted-foreground">
+        <MessageSquare className="h-10 w-10 opacity-30" aria-hidden />
+        <p className="font-medium text-foreground">No conversations yet</p>
+        <p className="max-w-sm text-sm">
+          Patients can message your clinic from your clinic page or from their appointments. Their
+          messages will appear here.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <ClinicShell title="Messages" description="Communicate with patients">
-      <div
+    <div className="grid h-[calc(100dvh-12rem)] min-h-[420px] overflow-hidden rounded-xl border bg-card shadow-sm md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)]">
+      <ul
+        aria-label="Conversations"
         className={cn(
-          "grid h-[calc(100vh-180px)] min-h-[400px] overflow-hidden rounded-xl border bg-card shadow-sm md:grid-cols-[320px_minmax(0,1fr)] lg:grid-cols-[380px_minmax(0,1fr)]",
+          "min-h-0 divide-y overflow-y-auto border-r bg-muted/20",
+          active ? "hidden md:block" : "block",
         )}
       >
-        {/* Sidebar */}
-        <div
-          className={cn(
-            "flex flex-col border-r bg-muted/20",
-            activeConversation ? "hidden md:flex" : "flex",
-          )}
-        >
-          <div className="flex-1 overflow-y-auto">
-            {clinicConversations.length > 0 ? (
-              <div className="divide-y">
-                {clinicConversations.map((c) => {
-                  const last = c.messages[c.messages.length - 1];
-                  const isActive = search.c === c.id;
-                  const doc = c.doctorId ? doctorById(c.doctorId) : undefined;
+        {conversations.map((c) => {
+          const last = c.messages[c.messages.length - 1];
+          const isActive = c.id === activeId;
+          return (
+            <li key={c.id}>
+              <button
+                type="button"
+                onClick={() => navigate({ search: { c: c.id } })}
+                aria-current={isActive ? "true" : undefined}
+                className={cn(
+                  "flex w-full items-center gap-3 p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  isActive ? "bg-primary-soft/50" : "hover:bg-muted/50",
+                )}
+              >
+                <Initials name={c.patientName} className="h-10 w-10 text-xs" />
+                <span className="min-w-0 flex-1">
+                  <span className="mb-0.5 flex items-baseline justify-between gap-2">
+                    <span className="truncate text-sm font-medium">{c.patientName}</span>
+                    {last ? (
+                      <span className="shrink-0 text-[10px] text-muted-foreground">
+                        {shortDate(isoDate(new Date(last.sentAt)))}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {subtitleOf(c)}
+                  </span>
+                  <span className="mt-1 block truncate text-xs text-muted-foreground">
+                    {last
+                      ? `${last.sender === "clinic" ? "You: " : ""}${last.body}`
+                      : "No messages yet"}
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
 
-                  return (
-                    <div
-                      key={c.id}
-                      className={cn(
-                        "p-4 flex items-center gap-3 cursor-pointer transition-colors",
-                        isActive ? "bg-primary-soft/50" : "hover:bg-muted/50",
-                      )}
-                      onClick={() => navigate({ to: "/clinic/messages", search: { c: c.id } })}
-                    >
-                      <div className="relative shrink-0">
-                        <Initials name={c.patientName} className="h-10 w-10 text-xs" />
-                        {c.unreadForClinic > 0 && !isActive && (
-                          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-card bg-primary" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex justify-between items-baseline mb-0.5">
-                          <h3
-                            className={cn(
-                              "font-medium truncate text-sm",
-                              c.unreadForClinic > 0 && !isActive && "font-bold text-foreground",
-                            )}
-                          >
-                            {c.patientName}
-                          </h3>
-                          {last && (
-                            <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                              {new Date(last.sentAt).toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {c.kind === "appointment"
-                            ? `Appt Enquiry ${doc ? "with " + doc.name : ""}`
-                            : "General Inquiry"}
-                        </p>
-                        <p
-                          className={cn(
-                            "text-xs truncate mt-1",
-                            c.unreadForClinic > 0 && !isActive
-                              ? "font-medium text-foreground"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {last
-                            ? last.sender === "clinic"
-                              ? `You: ${last.body}`
-                              : last.body
-                            : "No messages"}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+      <div
+        className={cn("flex min-h-0 flex-col bg-background/50", active ? "flex" : "hidden md:flex")}
+      >
+        {active ? (
+          <>
+            <div className="flex items-center gap-3 border-b bg-card p-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => navigate({ search: {} })}
+                aria-label="Back to conversations"
+              >
+                <ArrowLeft className="h-5 w-5" aria-hidden />
+              </Button>
+              <Initials name={active.patientName} className="h-9 w-9 text-xs" />
+              <div className="min-w-0">
+                <h2 className="truncate text-sm font-semibold">{active.patientName}</h2>
+                <p className="truncate text-xs text-muted-foreground">{subtitleOf(active)}</p>
               </div>
-            ) : (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                No conversations yet.
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Chat Area */}
-        <div
-          className={cn(
-            "flex flex-col bg-background/50",
-            !activeConversation ? "hidden md:flex" : "flex",
-          )}
-        >
-          {activeConversation ? (
-            <>
-              <div className="flex items-center gap-3 p-3 border-b bg-card">
-                <button
-                  onClick={() => navigate({ to: "/clinic/messages" })}
-                  className="md:hidden p-2 -ml-2 text-muted-foreground"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-                <Initials name={activeConversation.patientName} className="h-9 w-9 text-xs" />
-                <div className="min-w-0">
-                  <h2 className="font-semibold text-sm truncate">
-                    {activeConversation.patientName}
-                  </h2>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {activeConversation.kind === "appointment"
-                      ? "Appointment Query"
-                      : "General Inquiry"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {activeConversation.messages.map((m) => {
+            <div className="flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite">
+              {active.messages.length ? (
+                active.messages.map((m) => {
                   const isMe = m.sender === "clinic";
                   return (
                     <div
                       key={m.id}
                       className={cn(
-                        "flex flex-col max-w-[80%]",
+                        "flex max-w-[80%] flex-col",
                         isMe ? "ml-auto items-end" : "mr-auto items-start",
                       )}
                     >
                       <div
                         className={cn(
-                          "px-4 py-2 rounded-2xl text-sm",
+                          "whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm",
                           isMe
-                            ? "bg-primary text-primary-foreground rounded-tr-sm"
-                            : "bg-muted text-foreground rounded-tl-sm",
+                            ? "rounded-tr-sm bg-primary text-primary-foreground"
+                            : "rounded-tl-sm bg-muted text-foreground",
                         )}
                       >
+                        <span className="sr-only">{isMe ? "Clinic: " : "Patient: "}</span>
                         {m.body}
                       </div>
-                      <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-                        {clockTime(m.sentAt)}
+                      <span className="mx-1 mt-1 text-[10px] text-muted-foreground">
+                        {sentLabel(m.sentAt)}
                       </span>
                     </div>
                   );
-                })}
-                <div ref={endRef} />
-              </div>
-
-              <form onSubmit={handleSend} className="p-3 border-t bg-card">
-                <div className="flex items-end gap-2 bg-muted/50 rounded-xl p-1 border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
-                  <textarea
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder="Reply to patient..."
-                    className="flex-1 max-h-32 min-h-[40px] resize-none bg-transparent px-3 py-2.5 text-sm outline-none"
-                    rows={1}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend(e);
-                      }
-                    }}
-                  />
-                  <Button
-                    type="submit"
-                    size="icon"
-                    className="h-9 w-9 rounded-lg shrink-0 mb-0.5 mr-0.5"
-                    disabled={!text.trim()}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </form>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mb-4 opacity-20" />
-              <p>Select a conversation</p>
+                })
+              ) : (
+                <p className="pt-8 text-center text-sm text-muted-foreground">No messages yet.</p>
+              )}
+              <div ref={endRef} />
             </div>
-          )}
-        </div>
+
+            <form onSubmit={handleSend} className="border-t bg-card p-3">
+              <div className="flex items-end gap-2 rounded-xl border bg-muted/50 p-1 transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
+                <label htmlFor="clinic-message-input" className="sr-only">
+                  Reply to patient
+                </label>
+                <textarea
+                  id="clinic-message-input"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Reply to patient…"
+                  maxLength={MAX_MESSAGE_LENGTH}
+                  className="max-h-32 min-h-10 flex-1 resize-none bg-transparent px-3 py-2 text-sm outline-none"
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleSend();
+                    }
+                  }}
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="mb-0.5 mr-0.5 h-9 w-9 shrink-0 rounded-lg"
+                  disabled={!text.trim() || sending}
+                  aria-label="Send reply"
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Send className="h-4 w-4" aria-hidden />
+                  )}
+                </Button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
+            <MessageSquare className="h-12 w-12 opacity-20" aria-hidden />
+            <p>{search.c ? "That conversation isn't available." : "Select a conversation"}</p>
+          </div>
+        )}
       </div>
-    </ClinicShell>
+    </div>
   );
 }

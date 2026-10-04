@@ -96,7 +96,7 @@ export function useDoctors(options?: { enabled?: boolean }) {
     queryFn: async () => {
       const { data, error } = await supabase.from("doctors").select(DOCTOR_SELECT).order("name");
       if (error) throw error;
-      return (data as DoctorWithLinks[]).map(mapDoctor);
+      return data.map(mapDoctor);
     },
   });
 }
@@ -151,7 +151,7 @@ const STOP_WORDS = new Set([
 export function searchWords(text: string): string[] {
   return text
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
     .split(/\s+/)
     .filter((w) => w.length >= 2 && !STOP_WORDS.has(w))
     .slice(0, 5);
@@ -170,7 +170,7 @@ function wordPrefixConditions(column: string, word: string) {
 function startsAnyWord(haystack: string, word: string) {
   return haystack
     .toLowerCase()
-    .split(/[^\p{L}\p{N}]+/u)
+    .split(/[^\p{L}\p{M}\p{N}]+/u)
     .some((part) => part.startsWith(word));
 }
 
@@ -253,7 +253,7 @@ export function useDoctorSearch(filters: DoctorFilters) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data as DoctorWithLinks[]).map(mapDoctor);
+      return data.map(mapDoctor);
     },
   });
 }
@@ -394,7 +394,8 @@ export function useDoctorAvailability(
         p_date: date,
       });
       if (error) throw error;
-      return (data ?? []) as SlotAvailability[];
+      const slots: SlotAvailability[] = data ?? [];
+      return slots;
     },
   });
 }
