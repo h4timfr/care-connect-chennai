@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useApp } from "@/lib/store";
@@ -13,8 +13,14 @@ export const Route = createFileRoute("/clinic/")({
 });
 
 function ClinicDashboard() {
-  const { loading, user } = useProtectedRoute();
-  const { clinicAppointments: appointments, activeClinic, doctors, doctorById } = useApp();
+  useProtectedRoute();
+  const {
+    clinicAppointments: appointments,
+    activeClinic,
+    doctors,
+    doctorById,
+    setAppointmentStatus,
+  } = useApp();
 
   if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
   const today = isoDate(new Date());
@@ -32,11 +38,7 @@ function ClinicDashboard() {
   const activeDoctors = doctors.filter((d) => d.clinicIds?.includes(activeClinic.id)).length;
 
   return (
-    <ClinicShell
-      title="Dashboard"
-      description={`Overview for ${shortDate(today)}`}
-      actions={<Button size="sm">New Appointment</Button>}
-    >
+    <ClinicShell title="Dashboard" description={`Overview for ${shortDate(today)}`}>
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="surface-card p-5 border-l-4 border-l-primary">
@@ -114,13 +116,18 @@ function ClinicDashboard() {
                     {shortDate(a.date)} at {to12h(a.time)}
                   </p>
                   <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 h-7 text-xs">
+                    <Button
+                      size="sm"
+                      className="flex-1 h-7 text-xs"
+                      onClick={() => setAppointmentStatus(a.id, "confirmed")}
+                    >
                       Confirm
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       className="flex-1 h-7 text-xs text-destructive"
+                      onClick={() => setAppointmentStatus(a.id, "cancelled")}
                     >
                       Decline
                     </Button>

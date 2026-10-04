@@ -1,54 +1,40 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Documented technical reason: Generic API returns and complex UI component mappings */
-import { useEffect, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useId } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import type { Conversation } from "@/lib/types";
-import { useAuthorizedClinics } from "./queries";
 
-export function useConversations(patientId?: string, clinicIds: string[] = [], enabled?: boolean) {
+export function useConversations(patientId?: string, clinicIds: string[] = [], enabled = true) {
   const queryClient = useQueryClient();
-  const clinicIdsStr = clinicIds.join(",");
+  const channelId = useId();
+  const clinicIdsKey = clinicIds.join(",");
+  const active = enabled && (!!patientId || clinicIds.length > 0);
 
   useEffect(() => {
-    if ((!patientId && clinicIdsStr.length === 0) || enabled === false) return;
+    if (!active) return;
 
-    // Subscribe to new messages
+    // Realtime respects RLS: only inserts on conversations this user can read are delivered.
     const channel = supabase
-      .channel("messages_channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["conversations", patientId, clinicIdsStr] });
-        },
-      )
+      .channel(`messages:${channelId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [patientId, clinicIdsStr, queryClient, enabled]);
+  }, [active, channelId, queryClient]);
 
   return useQuery({
-    queryKey: ["conversations", patientId, clinicIdsStr],
-    queryFn: async () => {
-      if (!patientId && clinicIds.length === 0) return [];
-
-      let query = supabase.from("conversations").select(
-        `
-          *,
-          messages(*),
-          clinics(name),
-          patients(full_name, user_id)
-        `,
-      );
+    queryKey: ["conversations", patientId, clinicIdsKey],
+    enabled: active,
+    queryFn: async (): Promise<Conversation[]> => {
+      let query = supabase
+        .from("conversations")
+        .select("*, messages(*), patients(full_name, user_id)");
 
       if (clinicIds.length > 0 && patientId) {
-        query = query.or(`patient_id.eq.${patientId},clinic_id.in.(${clinicIds.join(",")})`);
+        query = query.or(`patient_id.eq.${patientId},clinic_id.in.(${clinicIdsKey})`);
       } else if (clinicIds.length > 0) {
         query = query.in("clinic_id", clinicIds);
       } else if (patientId) {
@@ -56,34 +42,30 @@ export function useConversations(patientId?: string, clinicIds: string[] = [], e
       }
 
       const { data, error } = await query.order("created_at", { ascending: false });
-
       if (error) throw error;
 
-      return data.map((c: any) => ({
+      return data.map((c) => ({
         id: c.id,
         clinicId: c.clinic_id,
-        doctorId: c.doctor_id,
+        doctorId: c.doctor_id ?? undefined,
         patientId: c.patient_id,
-        patientName: c.patients?.full_name || "Unknown Patient",
+        patientName: c.patients?.full_name || "Unknown patient",
         kind: c.kind,
-        appointmentId: c.appointment_id,
+        appointmentId: c.appointment_id ?? undefined,
         unreadForPatient: c.unread_for_patient,
         unreadForClinic: c.unread_for_clinic,
-        messages: (c.messages || [])
-          .map((m: any) => ({
+        messages: (c.messages ?? [])
+          .map((m) => ({
             id: m.id,
             conversationId: m.conversation_id,
-            sender: m.sender_id === c.patients?.user_id ? "patient" : "clinic",
+            sender:
+              m.sender_id === c.patients?.user_id ? ("patient" as const) : ("clinic" as const),
             body: m.body,
             sentAt: m.created_at,
           }))
-          .sort(
-            (a: { sentAt: string }, b: { sentAt: string }) =>
-              new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
-          ),
-      })) as Conversation[];
+          .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()),
+      }));
     },
-    enabled: enabled ?? (!!patientId || clinicIds.length > 0),
   });
 }
 
@@ -102,19 +84,11 @@ export function useSendMessage() {
     }) => {
       const { data, error } = await supabase
         .from("messages")
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          body,
-        })
+        .insert({ conversation_id: conversationId, sender_id: senderId, body })
         .select()
         .single();
 
       if (error) throw error;
-
-      // Update unread count
-      // We would normally do this in an RPC or trigger, but for now we can do a second update or rely on a DB trigger.
-
       return data;
     },
     onSuccess: () => {
@@ -134,7 +108,6 @@ export function useMarkRead() {
       conversationId: string;
       side: "patient" | "clinic";
     }) => {
-      const column = side === "patient" ? "unread_for_patient" : "unread_for_clinic";
       const { error } = await supabase
         .from("conversations")
         .update(side === "patient" ? { unread_for_patient: 0 } : { unread_for_clinic: 0 })
@@ -163,7 +136,6 @@ export function useEnsureConversation() {
       appointmentId?: string;
       patientId: string;
     }) => {
-      // Check if exists
       const { data: existing, error: fetchError } = await supabase
         .from("conversations")
         .select("id")
@@ -175,7 +147,6 @@ export function useEnsureConversation() {
       if (fetchError) throw fetchError;
       if (existing) return existing.id;
 
-      // Create new
       const { data, error } = await supabase
         .from("conversations")
         .insert({
@@ -185,7 +156,7 @@ export function useEnsureConversation() {
           appointment_id: appointmentId || null,
           kind: appointmentId ? "appointment" : "general",
         })
-        .select()
+        .select("id")
         .single();
 
       if (error) throw error;

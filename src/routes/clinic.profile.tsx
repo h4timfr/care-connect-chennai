@@ -1,71 +1,45 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
-import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { InfoNotice } from "@/components/common";
 import { useApp } from "@/lib/store";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { specialtyName } from "@/lib/format";
 
 export const Route = createFileRoute("/clinic/profile")({
-  component: ClinicProfileSettings,
+  component: ClinicProfileDetails,
 });
 
-function ClinicProfileSettings() {
-  const { loading, user } = useProtectedRoute();
+function ClinicProfileDetails() {
   const { activeClinic } = useApp();
 
   if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.error("Updating clinic profiles is not supported yet.");
-  };
+  const details: { label: string; value: string }[] = [
+    { label: "Clinic name", value: activeClinic.name },
+    { label: "Description", value: activeClinic.about },
+    { label: "Address", value: activeClinic.address },
+    { label: "Area", value: activeClinic.area },
+    { label: "Phone", value: activeClinic.phone },
+    { label: "Email", value: activeClinic.email },
+    { label: "Specialties", value: activeClinic.specialtyIds.map(specialtyName).join(", ") },
+  ];
 
   return (
-    <ClinicShell title="Clinic Profile" description="Update clinic information">
-      <div className="max-w-2xl space-y-6">
-        <form onSubmit={handleSave} className="surface-card p-6 space-y-6">
-          <div className="space-y-4">
-            <h2 className="font-display font-semibold text-lg border-b pb-2">Basic Information</h2>
-
-            <div className="grid gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Clinic Name</label>
-                <Input defaultValue={activeClinic.name} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Description</label>
-                <textarea
-                  className="w-full bg-background border rounded-lg px-3 py-2 text-sm min-h-[100px]"
-                  defaultValue={activeClinic.about}
-                />
-              </div>
+    <ClinicShell title="Clinic Profile" description="How your clinic appears to patients">
+      <div className="max-w-2xl space-y-4">
+        <InfoNotice className="text-sm">
+          Editing clinic details isn't available in the portal yet. This is the information patients
+          currently see.
+        </InfoNotice>
+        <dl className="surface-card grid gap-4 p-6 text-sm">
+          {details.map((d) => (
+            <div key={d.label}>
+              <dt className="text-muted-foreground">{d.label}</dt>
+              <dd className={d.value ? "font-medium" : "text-muted-foreground"}>
+                {d.value || "Not provided"}
+              </dd>
             </div>
-          </div>
-
-          <div className="space-y-4 pt-4">
-            <h2 className="font-display font-semibold text-lg border-b pb-2">Location</h2>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="text-sm font-medium mb-1 block">Street Address</label>
-                <Input defaultValue={activeClinic.address} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Area</label>
-                <Input defaultValue={activeClinic.area} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Coordinates (Lat, Lng)</label>
-                <Input defaultValue={""} />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 flex justify-end">
-            <Button type="submit">Save Changes</Button>
-          </div>
-        </form>
+          ))}
+        </dl>
       </div>
     </ClinicShell>
   );

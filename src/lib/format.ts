@@ -28,41 +28,106 @@ export function addDays(base: Date, days: number) {
   return d;
 }
 
-export const LANGUAGES = ["English", "Tamil", "Hindi", "Telugu", "Malayalam"];
+export interface SpecialtyInfo {
+  id: string;
+  name: string;
+  /** Key into the icon map in components/common.tsx */
+  icon: string;
+  /** Lower-case words patients use when searching for this specialty. */
+  keywords: string[];
+}
 
-export const SPECIALTIES = [
-  { id: "pediatrics", name: "Pediatrics", icon: "baby" },
-  { id: "orthopedics", name: "Orthopedics", icon: "bone" },
-  { id: "cardiology", name: "Cardiology", icon: "heart" },
-  { id: "dermatology", name: "Dermatology", icon: "scan-face" },
-  { id: "neurology", name: "Neurology", icon: "brain" },
-  { id: "ophthalmology", name: "Ophthalmology", icon: "eye" },
-  { id: "dentistry", name: "Dentistry", icon: "smile" },
-  { id: "gynaecology", name: "Gynaecology", icon: "user-round" },
-  { id: "general_medicine", name: "General", icon: "stethoscope" },
+// Keyed by the `specialty_id` / `specialty_ids` values stored in the database.
+export const SPECIALTIES: SpecialtyInfo[] = [
+  {
+    id: "general",
+    name: "General Medicine",
+    icon: "Stethoscope",
+    keywords: ["general", "physician", "family", "gp"],
+  },
+  {
+    id: "pediatrics",
+    name: "Pediatrics",
+    icon: "Baby",
+    keywords: ["pediatric", "paediatric", "child", "children", "kids"],
+  },
+  {
+    id: "orthopedics",
+    name: "Orthopedics",
+    icon: "Bone",
+    keywords: ["ortho", "orthopaedic", "bone", "joint"],
+  },
+  {
+    id: "cardiology",
+    name: "Cardiology",
+    icon: "HeartPulse",
+    keywords: ["cardio", "cardiac", "heart"],
+  },
+  {
+    id: "dermatology",
+    name: "Dermatology",
+    icon: "Sparkles",
+    keywords: ["derma", "skin"],
+  },
+  {
+    id: "gynecology",
+    name: "Gynaecology",
+    icon: "Heart",
+    keywords: ["gynaec", "gynec", "obstetric", "women"],
+  },
+  {
+    id: "neurology",
+    name: "Neurology",
+    icon: "Brain",
+    keywords: ["neuro"],
+  },
+  {
+    id: "ophthalmology",
+    name: "Ophthalmology",
+    icon: "Eye",
+    keywords: ["ophthalm", "eye", "vision"],
+  },
+  {
+    id: "dentistry",
+    name: "Dentistry",
+    icon: "Smile",
+    keywords: ["dentist", "dental", "teeth", "tooth"],
+  },
+  {
+    id: "ent",
+    name: "ENT",
+    icon: "Ear",
+    keywords: ["ent", "ear", "nose", "throat", "sinus"],
+  },
 ];
 
-export const specialties: Record<string, string> = {
-  pediatrics: "Pediatrics",
-  orthopedics: "Orthopedics",
-  cardiology: "Cardiology",
-  dermatology: "Dermatology",
-  neurology: "Neurology",
-  ophthalmology: "Ophthalmology",
-  dentistry: "Dentistry",
-  gynaecology: "Gynaecology",
-  general_medicine: "General Medicine",
-};
+const SPECIALTY_BY_ID = new Map(SPECIALTIES.map((s) => [s.id, s]));
+
+export function specialtyInfo(id: string): SpecialtyInfo | undefined {
+  return SPECIALTY_BY_ID.get(id);
+}
 
 export function specialtyName(id: string) {
   if (!id) return "";
   return (
-    specialties[id] ||
+    SPECIALTY_BY_ID.get(id)?.name ??
     id
       .split("_")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ")
   );
+}
+
+/** Specialty ids a free-text search word refers to, e.g. "pediatrician" -> ["pediatrics"]. */
+export function specialtiesMatching(word: string): string[] {
+  const w = word.toLowerCase();
+  if (w.length < 3) return [];
+  return SPECIALTIES.filter(
+    (s) =>
+      s.id.startsWith(w) ||
+      s.name.toLowerCase().startsWith(w) ||
+      s.keywords.some((k) => w.startsWith(k) || (w.length >= 4 && k.startsWith(w))),
+  ).map((s) => s.id);
 }
 
 export function longDate(iso: string) {

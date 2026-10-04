@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 import { Initials } from "@/components/common";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { to12h } from "@/lib/format";
+import { clockTime } from "@/lib/format";
+import { describeDataError } from "@/lib/supabase/errors";
+import { toast } from "sonner";
 
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
@@ -25,7 +27,7 @@ function ClinicMessages() {
   const { conversations, activeClinic, markRead, sendMessage, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { loading, user } = useProtectedRoute("/clinic/messages");
+  const { loading, user } = useProtectedRoute();
 
   const clinicConversations = conversations
     .filter((c) => c.clinicId === activeClinic?.id)
@@ -54,11 +56,16 @@ function ClinicMessages() {
 
   if (!user || !activeClinic) return null;
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || !activeConversation) return;
-    sendMessage(activeConversation.id, "clinic", text.trim());
-    setText("");
+    const body = text.trim();
+    if (!body || !activeConversation) return;
+    try {
+      await sendMessage(activeConversation.id, body);
+      setText("");
+    } catch (err) {
+      toast.error(`Message not sent. ${describeDataError(err)}`);
+    }
   };
 
   return (
@@ -200,7 +207,7 @@ function ClinicMessages() {
                         {m.body}
                       </div>
                       <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-                        {to12h(m.sentAt.split("T")[1]?.substring(0, 5) ?? "00:00")}
+                        {clockTime(m.sentAt)}
                       </span>
                     </div>
                   );

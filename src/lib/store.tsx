@@ -1,18 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
-/* eslint-disable @typescript-eslint/no-explicit-any -- Documented technical reason: Generic API returns and complex UI component mappings */
-const EMPTY_ARRAY: any[] = [];
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
 import type {
   Appointment,
   AppointmentStatus,
   Clinic,
   Conversation,
   Doctor,
-  DoctorSchedule,
   Patient,
-  UserRole,
 } from "@/lib/types";
 import { useAuth } from "@/lib/supabase/auth";
 import {
@@ -21,12 +16,12 @@ import {
   useBookAppointment,
   useCancelAppointment,
   useUpdateAppointmentStatus,
+  type BookingRequest,
 } from "@/lib/supabase/appointments";
 import {
   useClinics,
   useAuthorizedClinics,
   useDoctors,
-  useSchedules,
   usePatient,
   useToggleSavedDoctor,
   useToggleSavedClinic,
@@ -38,38 +33,45 @@ import {
   useEnsureConversation,
 } from "@/lib/supabase/messaging";
 
-interface BookingInput {
-  doctorId: string;
-  clinicId: string;
-  date: string;
-  time: string;
-  reason: string;
-  patientName: string;
-  patientPhone: string;
-  fee: number;
+const NO_DOCTORS: Doctor[] = [];
+const NO_CLINICS: Clinic[] = [];
+const NO_APPOINTMENTS: Appointment[] = [];
+const NO_CONVERSATIONS: Conversation[] = [];
+
+interface QueryStatus {
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
 }
 
 interface AppState {
   patient: Patient | undefined;
+  /** True until we know whether the signed-in user has a patient profile. */
   isLoadingPatient: boolean;
+  patientError: Error | null;
+  refetchPatient: () => void;
 
   doctors: Doctor[];
   clinics: Clinic[];
+  /** Status of the doctor + clinic listings shared across the app. */
+  catalog: QueryStatus;
   activeClinic: Clinic | undefined;
+  /** True until clinic memberships for the signed-in user are known. */
+  isLoadingClinicAccess: boolean;
   doctorById: (id: string) => Doctor | undefined;
   clinicById: (id: string) => Clinic | undefined;
   doctorsOfClinic: (clinicId: string) => Doctor[];
-  scheduleOf: (doctorId: string) => DoctorSchedule | undefined;
-  schedules: DoctorSchedule[];
 
   patientAppointments: Appointment[];
+  patientAppointmentsStatus: QueryStatus;
   clinicAppointments: Appointment[];
-  bookAppointment: (input: BookingInput) => Promise<Appointment>;
-  cancelAppointment: (id: string) => void;
+  bookAppointment: (input: BookingRequest) => Promise<Appointment>;
+  cancelAppointment: (id: string) => Promise<void>;
   setAppointmentStatus: (id: string, status: AppointmentStatus) => void;
 
   conversations: Conversation[];
-  sendMessage: (conversationId: string, sender: "patient" | "clinic", body: string) => void;
+  conversationsStatus: QueryStatus;
+  sendMessage: (conversationId: string, body: string) => Promise<void>;
   markRead: (conversationId: string, side: "patient" | "clinic") => void;
   ensureConversation: (args: {
     clinicId: string;
@@ -83,33 +85,31 @@ interface AppState {
 
 const Ctx = createContext<AppState | null>(null);
 
-let counter = 100;
-export const newDoctorId = () => "d" + ++counter;
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
-  const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isAuthPage = pathname === "/login" || pathname === "/signup";
+  const isAuthPage = pathname === "/login";
   const isLoggedIn = !!auth.user && !auth.loading;
 
-  const patientQuery = usePatient(auth.user?.id, { enabled: isLoggedIn });
-  const patientAppointments = usePatientAppointments(patientQuery.data?.id, {
+  const patientQuery = usePatient(auth.user?.id, auth.user?.email, { enabled: isLoggedIn });
+  const patient = patientQuery.data ?? undefined;
+  const { refetch: refetchPatientQuery } = patientQuery;
+  const patientAppointmentsQuery = usePatientAppointments(patient?.id, { enabled: isLoggedIn });
+
+  const clinicsQuery = useClinics({ enabled: !isAuthPage });
+  const doctorsQuery = useDoctors({ enabled: !isAuthPage });
+
+  const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id, { enabled: isLoggedIn });
+  const authorizedClinics = authorizedClinicsQuery.data;
+  const authorizedClinicIds = useMemo(
+    () => (authorizedClinics ?? []).map((c) => c.id),
+    [authorizedClinics],
+  );
+  const clinicAppointmentsQuery = useClinicAppointments(authorizedClinicIds, {
     enabled: isLoggedIn,
   });
-  const clinicsQuery = useClinics({ enabled: !isAuthPage });
-  const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id, { enabled: isLoggedIn });
 
-  const authorizedClinicIds = authorizedClinicsQuery.data?.map((c) => c.id) || [];
-  const clinicAppointments = useClinicAppointments(authorizedClinicIds, { enabled: isLoggedIn });
-
-  const doctorsQuery = useDoctors({ enabled: !isAuthPage });
-  const schedulesQuery = useSchedules({ enabled: !isAuthPage });
-  const conversationsQuery = useConversations(
-    patientQuery.data?.id,
-    authorizedClinicIds,
-    isLoggedIn,
-  );
+  const conversationsQuery = useConversations(patient?.id, authorizedClinicIds, isLoggedIn);
 
   const bookMut = useBookAppointment();
   const cancelMut = useCancelAppointment();
@@ -120,46 +120,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const toggleDoctorMut = useToggleSavedDoctor();
   const toggleClinicMut = useToggleSavedClinic();
 
-  const patient = patientQuery.data || undefined;
-  const clinics = clinicsQuery.data || EMPTY_ARRAY;
-  const doctors = doctorsQuery.data || EMPTY_ARRAY;
-  const schedules = schedulesQuery.data || EMPTY_ARRAY;
+  const clinics = clinicsQuery.data ?? NO_CLINICS;
+  const doctors = doctorsQuery.data ?? NO_DOCTORS;
+  const patientAppointments = patientAppointmentsQuery.data ?? NO_APPOINTMENTS;
+  const clinicAppointments = clinicAppointmentsQuery.data ?? NO_APPOINTMENTS;
+  const conversations = conversationsQuery.data ?? NO_CONVERSATIONS;
 
-  // Merge patient appointments and clinic appointments, removing duplicates by ID
-  const patientAppts = patientAppointments.data || EMPTY_ARRAY;
-  const clinicAppts = clinicAppointments.data || EMPTY_ARRAY;
+  // The clinic portal supports a single active clinic; RLS guarantees the membership is real.
+  const activeClinic = authorizedClinics?.[0];
 
-  const conversations = conversationsQuery.data || EMPTY_ARRAY;
+  const {
+    isPending: appointmentsPending,
+    error: appointmentsError,
+    refetch: refetchAppointments,
+  } = patientAppointmentsQuery;
+  const {
+    isPending: conversationsPending,
+    isEnabled: conversationsEnabled,
+    error: conversationsError,
+    refetch: refetchConversations,
+  } = conversationsQuery;
 
-  // The UI currently only supports a single active clinic context.
-  // We deterministically use the first authorized clinic membership.
-  // The RLS guarantees this clinic is authorized for the user.
-  const authorizedClinics = authorizedClinicsQuery.data || [];
-  const activeClinic = authorizedClinics.length > 0 ? authorizedClinics[0] : undefined;
+  const { refetch: refetchClinics } = clinicsQuery;
+  const { refetch: refetchDoctors } = doctorsQuery;
+  const refetchCatalog = useCallback(() => {
+    void refetchClinics();
+    void refetchDoctors();
+  }, [refetchClinics, refetchDoctors]);
 
   const bookAppointment = useCallback(
-    async (input: BookingInput) => {
-      if (!auth.user) throw new Error("Must be logged in to book");
-      const result = await bookMut.mutateAsync({
-        doctorId: input.doctorId,
-        clinicId: input.clinicId,
-        patientId: patient?.id ?? "",
-        patientName: input.patientName,
-        patientPhone: input.patientPhone,
-        date: input.date,
-        time: input.time,
-        reason: input.reason,
-        fee: input.fee,
-        status: "pending",
-      });
-      return result;
+    async (input: BookingRequest) => {
+      if (!auth.user) throw new Error("Please sign in to book an appointment.");
+      return bookMut.mutateAsync(input);
     },
-    [auth.user, bookMut, patient?.id],
+    [auth.user, bookMut],
   );
 
   const cancelAppointment = useCallback(
-    (id: string) => {
-      cancelMut.mutate(id);
+    async (id: string) => {
+      await cancelMut.mutateAsync(id);
     },
     [cancelMut],
   );
@@ -173,13 +172,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const sendMessage = useCallback(
-    (conversationId: string, sender: "patient" | "clinic", body: string) => {
-      if (!auth.user) return;
-      sendMsgMut.mutate({
-        conversationId,
-        senderId: auth.user.id,
-        body,
-      });
+    async (conversationId: string, body: string) => {
+      if (!auth.user) throw new Error("Please sign in to send messages.");
+      await sendMsgMut.mutateAsync({ conversationId, senderId: auth.user.id, body });
     },
     [auth.user, sendMsgMut],
   );
@@ -192,17 +187,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const ensureConversation = useCallback(
-    async ({ clinicId, doctorId, appointmentId }: any) => {
-      if (!auth.user) throw new Error("Must be logged in");
-      if (!patient) throw new Error("Must have a patient profile to chat");
-      const patientId = patient.id;
+    async ({
+      clinicId,
+      doctorId,
+      appointmentId,
+    }: {
+      clinicId: string;
+      doctorId?: string;
+      appointmentId?: string;
+    }) => {
+      if (!auth.user) throw new Error("Please sign in to message a clinic.");
+      if (!patient)
+        throw new Error("Your account has no patient profile, so it can't message clinics.");
       const existing = conversations.find(
-        (c) => c.clinicId === clinicId && c.patientId === patientId,
+        (c) => c.clinicId === clinicId && c.patientId === patient.id,
       );
       if (existing) return existing.id;
       return ensureConvMut.mutateAsync({
         clinicId,
-        patientId,
+        patientId: patient.id,
         ...(doctorId ? { doctorId } : {}),
         ...(appointmentId ? { appointmentId } : {}),
       });
@@ -212,41 +215,55 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const toggleSavedDoctor = useCallback(
     (id: string) => {
-      if (!patient || !auth.user) return;
-      const isSaved = patient.savedDoctorIds.includes(id);
-      toggleDoctorMut.mutate(id);
+      if (patient) toggleDoctorMut.mutate(id);
     },
-    [patient, auth.user, toggleDoctorMut],
+    [patient, toggleDoctorMut],
   );
 
   const toggleSavedClinic = useCallback(
     (id: string) => {
-      if (!patient || !auth.user) return;
-      const isSaved = patient.savedClinicIds.includes(id);
-      toggleClinicMut.mutate(id);
+      if (patient) toggleClinicMut.mutate(id);
     },
-    [patient, auth.user, toggleClinicMut],
+    [patient, toggleClinicMut],
   );
 
   const value = useMemo<AppState>(
     () => ({
       patient,
-      isLoadingPatient: patientQuery.isLoading,
+      isLoadingPatient: auth.loading || (isLoggedIn && patientQuery.isPending),
+      patientError: patientQuery.error,
+      refetchPatient: () => void refetchPatientQuery(),
 
       doctors,
       clinics,
+      catalog: {
+        isLoading: clinicsQuery.isPending || doctorsQuery.isPending,
+        error: clinicsQuery.error ?? doctorsQuery.error,
+        refetch: refetchCatalog,
+      },
       activeClinic,
+      isLoadingClinicAccess: auth.loading || (isLoggedIn && authorizedClinicsQuery.isPending),
       doctorById: (id) => doctors.find((d) => d.id === id),
       clinicById: (id) => clinics.find((c) => c.id === id),
-      doctorsOfClinic: (cid) => doctors.filter((d) => d.clinicIds?.includes(cid)),
-      scheduleOf: (did) => schedules.find((s) => s.doctorId === did),
-      schedules,
-      patientAppointments: patientAppts,
-      clinicAppointments: clinicAppts,
+      doctorsOfClinic: (cid) => doctors.filter((d) => d.clinicIds.includes(cid)),
+
+      patientAppointments,
+      patientAppointmentsStatus: {
+        isLoading: !!patient && appointmentsPending,
+        error: appointmentsError,
+        refetch: () => void refetchAppointments(),
+      },
+      clinicAppointments,
       bookAppointment,
       cancelAppointment,
       setAppointmentStatus,
+
       conversations,
+      conversationsStatus: {
+        isLoading: conversationsEnabled && conversationsPending,
+        error: conversationsError,
+        refetch: () => void refetchConversations(),
+      },
       sendMessage,
       markRead,
       ensureConversation,
@@ -255,18 +272,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       patient,
-      patientQuery.isLoading,
-
+      auth.loading,
+      isLoggedIn,
+      patientQuery.isPending,
+      patientQuery.error,
+      refetchPatientQuery,
       doctors,
       clinics,
+      clinicsQuery.isPending,
+      clinicsQuery.error,
+      doctorsQuery.isPending,
+      doctorsQuery.error,
+      refetchCatalog,
       activeClinic,
-      schedules,
-      patientAppts,
-      clinicAppts,
-      conversations,
+      authorizedClinicsQuery.isPending,
+      patientAppointments,
+      appointmentsPending,
+      appointmentsError,
+      refetchAppointments,
+      clinicAppointments,
       bookAppointment,
       cancelAppointment,
       setAppointmentStatus,
+      conversations,
+      conversationsEnabled,
+      conversationsPending,
+      conversationsError,
+      refetchConversations,
       sendMessage,
       markRead,
       ensureConversation,

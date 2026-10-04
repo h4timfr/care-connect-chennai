@@ -1,6 +1,5 @@
-﻿// Conceptual data model for CareConnect.
-// Shapes mirror a future PostgreSQL schema so a real backend can be swapped in
-// without changing the UI layer.
+﻿// Frontend domain model for CareConnect. Rows from Supabase are mapped into these shapes in
+// src/lib/supabase/*.ts so components never depend on raw column names.
 
 export type UserRole = "patient" | "doctor" | "clinic";
 
@@ -50,14 +49,25 @@ export interface Clinic {
   rating: number;
   reviewCount: number;
   photoTone: string;
+  /** Mirrors `clinics.is_demo`: the record is sample content, not a real provider. */
+  isSample: boolean;
+}
+
+/** A doctor's association with a clinic (`clinic_doctors`). */
+export interface ClinicLink {
+  clinicId: string;
+  active: boolean;
+  /** Only active + verified links accept online bookings (enforced by the booking RPC). */
+  verified: boolean;
 }
 
 export interface Doctor {
   id: string;
   name: string;
-  gender: "male" | "female";
+  gender: "male" | "female" | "other" | null;
   specialtyId: string;
   clinicIds: string[];
+  clinicLinks: ClinicLink[];
   qualifications: string[];
   experienceYears: number;
   languages: string[];
@@ -67,6 +77,8 @@ export interface Doctor {
   rating: number;
   reviewCount: number;
   registrationNote: string;
+  /** Mirrors `doctors.is_demo`: the record is sample content, not a real provider. */
+  isSample: boolean;
 }
 
 export type DayPart = "morning" | "afternoon" | "evening";

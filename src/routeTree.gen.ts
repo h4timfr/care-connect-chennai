@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MessagesRouteImport } from './routes/messages'
@@ -25,18 +24,12 @@ import { Route as ClinicDoctorsRouteImport } from './routes/clinic.doctors'
 import { Route as ClinicMessagesRouteImport } from './routes/clinic.messages'
 import { Route as ClinicPatientsRouteImport } from './routes/clinic.patients'
 import { Route as ClinicProfileRouteImport } from './routes/clinic.profile'
-import { Route as ClinicSettingsRouteImport } from './routes/clinic.settings'
 import { Route as ClinicsClinicIdRouteImport } from './routes/clinics.$clinicId'
 import { Route as DoctorsDoctorIdRouteImport } from './routes/doctors.$doctorId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AssistantRoute = AssistantRouteImport.update({
-  id: '/assistant',
-  path: '/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverRoute = DiscoverRouteImport.update({
@@ -110,11 +103,6 @@ const ClinicProfileRoute = ClinicProfileRouteImport.update({
   path: '/clinic/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClinicSettingsRoute = ClinicSettingsRouteImport.update({
-  id: '/clinic/settings',
-  path: '/clinic/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ClinicsClinicIdRoute = ClinicsClinicIdRouteImport.update({
   id: '/clinics/$clinicId',
   path: '/clinics/$clinicId',
@@ -128,7 +116,6 @@ const DoctorsDoctorIdRoute = DoctorsDoctorIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/assistant': typeof AssistantRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
@@ -141,7 +128,6 @@ export interface FileRoutesByFullPath {
   '/clinic/messages': typeof ClinicMessagesRoute
   '/clinic/patients': typeof ClinicPatientsRoute
   '/clinic/profile': typeof ClinicProfileRoute
-  '/clinic/settings': typeof ClinicSettingsRoute
   '/clinics/$clinicId': typeof ClinicsClinicIdRoute
   '/doctors/$doctorId': typeof DoctorsDoctorIdRoute
   '/appointments/': typeof AppointmentsIndexRoute
@@ -149,7 +135,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/assistant': typeof AssistantRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
@@ -162,7 +147,6 @@ export interface FileRoutesByTo {
   '/clinic/messages': typeof ClinicMessagesRoute
   '/clinic/patients': typeof ClinicPatientsRoute
   '/clinic/profile': typeof ClinicProfileRoute
-  '/clinic/settings': typeof ClinicSettingsRoute
   '/clinics/$clinicId': typeof ClinicsClinicIdRoute
   '/doctors/$doctorId': typeof DoctorsDoctorIdRoute
   '/appointments': typeof AppointmentsIndexRoute
@@ -171,7 +155,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/assistant': typeof AssistantRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
@@ -184,7 +167,6 @@ export interface FileRoutesById {
   '/clinic/messages': typeof ClinicMessagesRoute
   '/clinic/patients': typeof ClinicPatientsRoute
   '/clinic/profile': typeof ClinicProfileRoute
-  '/clinic/settings': typeof ClinicSettingsRoute
   '/clinics/$clinicId': typeof ClinicsClinicIdRoute
   '/doctors/$doctorId': typeof DoctorsDoctorIdRoute
   '/appointments/': typeof AppointmentsIndexRoute
@@ -194,7 +176,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/assistant'
     | '/discover'
     | '/login'
     | '/messages'
@@ -207,7 +188,6 @@ export interface FileRouteTypes {
     | '/clinic/messages'
     | '/clinic/patients'
     | '/clinic/profile'
-    | '/clinic/settings'
     | '/clinics/$clinicId'
     | '/doctors/$doctorId'
     | '/appointments/'
@@ -215,7 +195,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/assistant'
     | '/discover'
     | '/login'
     | '/messages'
@@ -228,7 +207,6 @@ export interface FileRouteTypes {
     | '/clinic/messages'
     | '/clinic/patients'
     | '/clinic/profile'
-    | '/clinic/settings'
     | '/clinics/$clinicId'
     | '/doctors/$doctorId'
     | '/appointments'
@@ -236,7 +214,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/assistant'
     | '/discover'
     | '/login'
     | '/messages'
@@ -249,7 +226,6 @@ export interface FileRouteTypes {
     | '/clinic/messages'
     | '/clinic/patients'
     | '/clinic/profile'
-    | '/clinic/settings'
     | '/clinics/$clinicId'
     | '/doctors/$doctorId'
     | '/appointments/'
@@ -258,7 +234,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AssistantRoute: typeof AssistantRoute
   DiscoverRoute: typeof DiscoverRoute
   LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRoute
@@ -271,7 +246,6 @@ export interface RootRouteChildren {
   ClinicMessagesRoute: typeof ClinicMessagesRoute
   ClinicPatientsRoute: typeof ClinicPatientsRoute
   ClinicProfileRoute: typeof ClinicProfileRoute
-  ClinicSettingsRoute: typeof ClinicSettingsRoute
   ClinicsClinicIdRoute: typeof ClinicsClinicIdRoute
   DoctorsDoctorIdRoute: typeof DoctorsDoctorIdRoute
   AppointmentsIndexRoute: typeof AppointmentsIndexRoute
@@ -285,13 +259,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/assistant': {
-      id: '/assistant'
-      path: '/assistant'
-      fullPath: '/assistant'
-      preLoaderRoute: typeof AssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/discover': {
@@ -392,13 +359,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClinicProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clinic/settings': {
-      id: '/clinic/settings'
-      path: '/clinic/settings'
-      fullPath: '/clinic/settings'
-      preLoaderRoute: typeof ClinicSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/clinics/$clinicId': {
       id: '/clinics/$clinicId'
       path: '/clinics/$clinicId'
@@ -418,7 +378,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AssistantRoute: AssistantRoute,
   DiscoverRoute: DiscoverRoute,
   LoginRoute: LoginRoute,
   MessagesRoute: MessagesRoute,
@@ -431,7 +390,6 @@ const rootRouteChildren: RootRouteChildren = {
   ClinicMessagesRoute: ClinicMessagesRoute,
   ClinicPatientsRoute: ClinicPatientsRoute,
   ClinicProfileRoute: ClinicProfileRoute,
-  ClinicSettingsRoute: ClinicSettingsRoute,
   ClinicsClinicIdRoute: ClinicsClinicIdRoute,
   DoctorsDoctorIdRoute: DoctorsDoctorIdRoute,
   AppointmentsIndexRoute: AppointmentsIndexRoute,

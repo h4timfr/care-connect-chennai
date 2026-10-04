@@ -1,149 +1,167 @@
-﻿import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, CalendarDays, Clock, MapPin, MessageCircle } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, CalendarDays, Clock, MapPin, SearchX } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
+import { CancelAppointmentButton } from "@/components/AppointmentCard";
+import { isCancellable } from "@/lib/supabase/appointments";
+import { MessageClinicButton } from "@/components/MessageClinicButton";
+import { EmptyState, ErrorState, Initials, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import { StatusBadge, Initials } from "@/components/common";
 import { useApp } from "@/lib/store";
-import { specialtyName } from "@/lib/format";
-import { longDate, to12h, inr } from "@/lib/format";
-
+import { inr, longDate, specialtyName, to12h } from "@/lib/format";
+import { describeDataError } from "@/lib/supabase/errors";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({
+  head: () => ({ meta: [{ title: "Appointment details — CareConnect" }] }),
   component: AppointmentDetails,
-  loader: ({ params }) => ({ appointmentId: params.appointmentId }),
 });
 
+const STATUS_HELP: Record<string, string> = {
+  pending: "Your request has been sent. The clinic will confirm it.",
+  confirmed: "The clinic has confirmed this appointment.",
+  arrived: "The clinic has checked you in.",
+  completed: "This appointment is complete.",
+  cancelled: "This appointment was cancelled.",
+};
+
 function AppointmentDetails() {
-  const { appointmentId } = Route.useLoaderData();
-  const app = useApp();
-  const { patientAppointments, cancelAppointment, ensureConversation } = app;
-  const router = useRouter();
-  const { loading, user } = useProtectedRoute(`/appointments/${appointmentId}`);
+  const { appointmentId } = Route.useParams();
+  const {
+    patientAppointments,
+    patientAppointmentsStatus: status,
+    isLoadingPatient,
+    doctorById,
+    clinicById,
+  } = useApp();
+  const { loading, user } = useProtectedRoute();
 
   const appointment = patientAppointments.find((a) => a.id === appointmentId);
 
-  if (loading)
+  if (loading || !user || isLoadingPatient || status.isLoading) {
     return (
       <PatientShell>
-        <div className="p-8">Loading...</div>
-      </PatientShell>
-    );
-  if (!user) return null;
-
-  if (!appointment) {
-    return (
-      <PatientShell>
-        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-          <h1 className="text-2xl font-bold mb-2">Appointment not found</h1>
-          <p className="text-muted-foreground mb-4">
-            The appointment you are looking for does not exist.
-          </p>
-          <Button onClick={() => router.history.back()}>Go Back</Button>
-        </div>
+        <PageLoader label="Loading appointment…" />
       </PatientShell>
     );
   }
 
-  const doctor = app.doctorById(appointment.doctorId);
-  const clinic = app.clinicById(appointment.clinicId);
-  const active = appointment.status === "confirmed" || appointment.status === "pending";
+  if (status.error) {
+    return (
+      <PatientShell>
+        <ErrorState
+          title="We couldn't load this appointment"
+          message={describeDataError(status.error)}
+          onRetry={status.refetch}
+        />
+      </PatientShell>
+    );
+  }
 
-  const openChat = async () => {
-    const cvId = await ensureConversation({
-      clinicId: appointment.clinicId,
-      doctorId: appointment.doctorId,
-      appointmentId: appointment.id,
-    });
-    router.navigate({ to: "/messages", search: { c: cvId } });
-  };
+  if (!appointment) {
+    return (
+      <PatientShell>
+        <EmptyState
+          icon={SearchX}
+          title="Appointment not found"
+          description="This appointment doesn't exist or isn't linked to your account."
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link to="/appointments">Back to appointments</Link>
+            </Button>
+          }
+        />
+      </PatientShell>
+    );
+  }
+
+  const doctor = doctorById(appointment.doctorId);
+  const clinic = clinicById(appointment.clinicId);
 
   return (
     <PatientShell>
       <div className="mx-auto max-w-2xl space-y-6">
-        <button
-          onClick={() => router.history.back()}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        <Link
+          to="/appointments"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
+          <ArrowLeft className="h-4 w-4" aria-hidden /> All appointments
+        </Link>
 
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-bold">Appointment Details</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-display text-2xl font-bold">Appointment details</h1>
           <StatusBadge status={appointment.status} />
         </div>
+        <p className="text-sm text-muted-foreground">{STATUS_HELP[appointment.status]}</p>
 
-        <div className="surface-card p-6 space-y-6">
+        <div className="surface-card space-y-6 p-5 sm:p-6">
           <div className="flex items-start gap-4 border-b pb-6">
-            <Initials name={doctor?.name ?? "Dr"} className="h-16 w-16 text-xl" />
-            <div>
-              <h2 className="font-display text-xl font-bold">{doctor?.name}</h2>
-              <p className="text-primary font-medium">{specialtyName(doctor?.specialtyId ?? "")}</p>
-              <p className="text-muted-foreground text-sm mt-1">{clinic?.name}</p>
-            </div>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div>
-              <h3 className="font-medium mb-3">Time & Date</h3>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <p className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-foreground" />
-                  {longDate(appointment.date)}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-foreground" />
-                  {to12h(appointment.time)}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="font-medium mb-3">Location</h3>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <p className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 shrink-0 text-foreground" />
-                  <span>{clinic?.address}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-6">
-            <h3 className="font-medium mb-3">Payment</h3>
-            <div className="flex justify-between items-center bg-muted px-4 py-3 rounded-lg">
-              <span className="text-sm font-medium">Consultation Fee</span>
-              <span className="font-bold">{inr(appointment.fee)}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 text-right">Payment at clinic</p>
-          </div>
-
-          <div className="flex flex-wrap gap-3 pt-2">
-            {active && (
-              <>
-                <Button asChild className="flex-1">
+            <Initials name={doctor?.name ?? ""} className="h-16 w-16 text-xl" />
+            <div className="min-w-0">
+              <h2 className="font-display text-xl font-bold">
+                {doctor ? (
                   <Link
-                    to="/book/$doctorId"
-                    params={{ doctorId: appointment.doctorId }}
-                    search={{ reschedule: appointment.id }}
+                    to="/doctors/$doctorId"
+                    params={{ doctorId: doctor.id }}
+                    className="hover:underline"
                   >
-                    Reschedule
+                    {doctor.name}
                   </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 text-destructive hover:bg-destructive/10"
-                  onClick={() => {
-                    if (confirm("Cancel this appointment?")) cancelAppointment(appointment.id);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </>
-            )}
-            <Button variant="outline" className="flex-1" onClick={openChat}>
-              <MessageCircle className="h-4 w-4" /> Message Clinic
-            </Button>
+                ) : (
+                  "Doctor"
+                )}
+              </h2>
+              {doctor ? (
+                <p className="font-medium text-primary">{specialtyName(doctor.specialtyId)}</p>
+              ) : null}
+              {clinic ? <p className="mt-1 text-sm text-muted-foreground">{clinic.name}</p> : null}
+            </div>
+          </div>
+
+          <dl className="grid gap-6 text-sm sm:grid-cols-2">
+            <div className="space-y-2">
+              <dt className="font-medium">Date & time</dt>
+              <dd className="flex items-center gap-2 text-muted-foreground">
+                <CalendarDays className="h-4 w-4 text-foreground" aria-hidden />
+                {longDate(appointment.date)}
+              </dd>
+              <dd className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-4 w-4 text-foreground" aria-hidden />
+                {to12h(appointment.time)} IST
+              </dd>
+            </div>
+            {clinic ? (
+              <div className="space-y-2">
+                <dt className="font-medium">Location</dt>
+                <dd className="flex items-start gap-2 text-muted-foreground">
+                  <MapPin className="h-4 w-4 shrink-0 text-foreground" aria-hidden />
+                  <span>{clinic.address}</span>
+                </dd>
+              </div>
+            ) : null}
+            {appointment.reason ? (
+              <div className="space-y-2 sm:col-span-2">
+                <dt className="font-medium">Reason for visit</dt>
+                <dd className="text-muted-foreground">{appointment.reason}</dd>
+              </div>
+            ) : null}
+            <div className="space-y-2 sm:col-span-2">
+              <dt className="font-medium">Consultation fee</dt>
+              <dd className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
+                <span className="text-muted-foreground">Not charged online</span>
+                <span className="font-bold text-foreground">{inr(appointment.fee)}</span>
+              </dd>
+            </div>
+          </dl>
+
+          <div className="flex flex-wrap gap-3 border-t pt-6">
+            <MessageClinicButton
+              clinicId={appointment.clinicId}
+              doctorId={appointment.doctorId}
+              appointmentId={appointment.id}
+            />
+            {isCancellable(appointment) ? (
+              <CancelAppointmentButton appointment={appointment} />
+            ) : null}
           </div>
         </div>
       </div>

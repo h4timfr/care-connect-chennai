@@ -5,7 +5,6 @@ import {
   CalendarRange,
   LayoutDashboard,
   MessageSquare,
-  Settings,
   Stethoscope,
   UserRound,
   Users,
@@ -13,8 +12,9 @@ import {
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageToggle } from "@/components/LanguageToggle";
+import { PageLoader } from "@/components/common";
 import { useApp } from "@/lib/store";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
@@ -25,10 +25,7 @@ const NAV = [
   { to: "/clinic/patients", label: "Patients", icon: Users },
   { to: "/clinic/messages", label: "Messages", icon: MessageSquare },
   { to: "/clinic/profile", label: "Clinic Profile", icon: Building2 },
-  { to: "/clinic/settings", label: "Settings", icon: Settings },
 ] as const;
-
-import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export function ClinicShell({
   title,
@@ -42,13 +39,13 @@ export function ClinicShell({
   children: ReactNode;
 }) {
   const { loading, user } = useProtectedRoute();
-  const { activeClinic, conversations } = useApp();
+  const { activeClinic, isLoadingClinicAccess, conversations } = useApp();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  if (loading) {
+  if (loading || isLoadingClinicAccess) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-6 text-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-surface p-6">
+        <PageLoader label="Loading clinic portal…" />
       </div>
     );
   }
@@ -59,13 +56,13 @@ export function ClinicShell({
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-6 text-center">
         <Stethoscope className="mb-4 h-12 w-12 text-muted-foreground" />
-        <h1 className="mb-2 font-display text-2xl font-bold">No Authorized Clinic</h1>
+        <h1 className="mb-2 font-display text-2xl font-bold">No clinic access</h1>
         <p className="mb-6 max-w-md text-muted-foreground">
-          You don't have access to any clinic. If you believe this is an error, please contact your
-          administrator.
+          This account isn't a member of any clinic. The clinic portal is only available to clinic
+          staff. If you work at a clinic, ask your clinic administrator to add you.
         </p>
         <Button asChild>
-          <Link to="/">Return to App</Link>
+          <Link to="/">Go to CareConnect</Link>
         </Button>
       </div>
     );
@@ -131,7 +128,6 @@ export function ClinicShell({
                 ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <LanguageToggle />
                 <ThemeToggle />
                 {actions}
               </div>
