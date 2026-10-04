@@ -109,7 +109,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     enabled: isLoggedIn,
   });
 
-  const conversationsQuery = useConversations(patient?.id, authorizedClinicIds, isLoggedIn);
+  // Conversations (with every message) are only loaded, and subscribed to, where they're shown.
+  // ensureConversation checks the server itself, so other pages don't need them.
+  const onMessagesPage = pathname === "/messages" || pathname === "/clinic/messages";
+  const conversationsQuery = useConversations(
+    patient?.id,
+    authorizedClinicIds,
+    isLoggedIn && onMessagesPage,
+  );
 
   // useMutation returns a new object every render, but its mutate/mutateAsync functions are stable.
   // Depending only on those keeps the callbacks below (and the context value) from rebuilding.
