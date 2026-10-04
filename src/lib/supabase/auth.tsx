@@ -3,8 +3,10 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useQueryClient } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./client";
-// Side effect: starts listening for PASSWORD_RECOVERY before React mounts (see recovery.ts).
-import "./recovery";
+import { watchPasswordRecovery } from "./recovery";
+
+// Must run before React mounts so the one-off PASSWORD_RECOVERY event can't be missed.
+watchPasswordRecovery();
 
 interface AuthState {
   session: Session | null;

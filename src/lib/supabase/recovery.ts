@@ -2,7 +2,9 @@ import { useSyncExternalStore } from "react";
 import { supabase } from "./client";
 
 // auth-js emits PASSWORD_RECOVERY once, right after it reads the session from a reset link, and
-// possibly before React has mounted. Listening at module load guarantees the event isn't missed.
+// possibly before React has mounted, so the listener must be registered at startup. It's started
+// by an explicit call (see auth.tsx) rather than as an import side effect: package.json declares
+// "sideEffects": false, so a bare `import "./recovery"` is dropped from production bundles.
 
 let recovering = false;
 const listeners = new Set<() => void>();
@@ -13,7 +15,12 @@ function setRecovering(value: boolean) {
   for (const listener of listeners) listener();
 }
 
-if (typeof window !== "undefined") {
+let watching = false;
+
+/** Starts tracking PASSWORD_RECOVERY. Call once, at module load of the app shell. */
+export function watchPasswordRecovery() {
+  if (watching || typeof window === "undefined") return;
+  watching = true;
   supabase.auth.onAuthStateChange((event) => {
     if (event === "PASSWORD_RECOVERY") setRecovering(true);
     if (event === "SIGNED_OUT") setRecovering(false);
