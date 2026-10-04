@@ -63,6 +63,33 @@ test.describe("Patient account", () => {
     await expect(page.getByRole("link", { name: "Clinic portal" })).toHaveCount(0);
   });
 
+  test("patients can edit their own details; empty values are not invented", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    await page.goto("/profile");
+    await expect(page.getByText("Not provided").first()).toBeVisible();
+    await page.getByRole("button", { name: "Edit" }).click();
+    await expect(page.getByLabel("Gender")).toHaveValue("");
+    await page.getByLabel("Full name").fill("Test Patient Updated");
+    await page.getByLabel("Date of birth").fill("1990-04-12");
+    await page.getByLabel("Area").fill("Velachery");
+    await page.getByRole("button", { name: "Save details" }).click();
+    await expect(page.getByText("Your details have been saved.")).toBeVisible();
+    await expect(page.getByText("12 April 1990")).toBeVisible();
+    const patch = mock.callsTo("PATCH", "/rest/v1/patients").at(-1);
+    expect(patch?.body).toEqual({
+      full_name: "Test Patient Updated",
+      date_of_birth: "1990-04-12",
+      gender: null,
+      area: "Velachery",
+      preferred_language: null,
+    });
+    expect(patch?.search).toContain(`id=eq.${ids.patient}`);
+    expect(mock.callsTo("PATCH", "/rest/v1/users")).toEqual([]);
+  });
+
   test("missing patient profile is explained, not faked", async ({ page, backend }) => {
     const mock = await backend({ patients: [] });
     await page.goto("/profile");

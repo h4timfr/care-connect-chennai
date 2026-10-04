@@ -292,8 +292,14 @@ export async function mockBackend(
         return respond(state.doctors);
       case "clinic_doctors":
         return respond([]);
-      case "patients":
+      case "patients": {
+        if (method === "PATCH" && Array.isArray(state.patients)) {
+          const row = state.patients[0];
+          if (row) Object.assign(row, body as Row);
+          return respond(row ? [row] : []);
+        }
         return respond(state.patients);
+      }
       case "clinic_memberships":
         return respond(state.memberships);
       case "appointments": {

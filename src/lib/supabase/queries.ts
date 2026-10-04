@@ -315,7 +315,7 @@ export function usePatient(
         email: user?.email ?? authEmail ?? "",
         phone: user?.phone ?? "",
         dateOfBirth: data.date_of_birth ?? "",
-        gender: data.gender ?? "other",
+        gender: data.gender,
         preferredLanguage: data.preferred_language ?? "",
         area: data.area ?? "",
         savedDoctorIds: data.saved_doctor_ids ?? [],
@@ -342,6 +342,37 @@ export function useAuthorizedClinics(userId?: string, options?: { enabled?: bool
         mapClinic(Array.isArray(row.clinics) ? row.clinics[0] : row.clinics),
       );
     },
+  });
+}
+
+/** Personal details a patient may edit on their own `patients` row (patients_update_self). */
+export interface PatientDetails {
+  fullName: string;
+  dateOfBirth: string | null;
+  gender: "male" | "female" | "other" | null;
+  area: string | null;
+  preferredLanguage: string | null;
+}
+
+export function useUpdatePatientDetails() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ patientId, details }: { patientId: string; details: PatientDetails }) => {
+      const { error } = await supabase
+        .from("patients")
+        .update({
+          full_name: details.fullName,
+          date_of_birth: details.dateOfBirth,
+          gender: details.gender,
+          area: details.area,
+          preferred_language: details.preferredLanguage,
+        })
+        .eq("id", patientId)
+        .select("id")
+        .single();
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["patient"] }),
   });
 }
 

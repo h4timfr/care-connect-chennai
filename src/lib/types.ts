@@ -19,7 +19,7 @@ export interface Patient {
   email: string;
   phone: string;
   dateOfBirth: string;
-  gender: "male" | "female" | "other";
+  gender: "male" | "female" | "other" | null;
   preferredLanguage: string;
   area: string;
   savedDoctorIds: string[];
