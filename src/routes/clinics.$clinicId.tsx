@@ -13,7 +13,7 @@ import { DoctorCard } from "@/components/DoctorCard";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
-import { inr, specialtyName } from "@/lib/format";
+import { inr, mailtoHref, specialtyName, telHref } from "@/lib/format";
 import { describeDataError } from "@/lib/supabase/errors";
 
 export const Route = createFileRoute("/clinics/$clinicId")({
@@ -162,18 +162,18 @@ function ClinicProfile() {
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
                   {clinic.address}
                 </p>
-                {clinic.phone ? (
+                {telHref(clinic.phone) ? (
                   <a
-                    href={`tel:${clinic.phone.replace(/\s+/g, "")}`}
+                    href={telHref(clinic.phone) ?? undefined}
                     className="flex items-center gap-2 hover:text-foreground"
                   >
                     <Phone className="h-4 w-4 text-foreground" aria-hidden />
                     {clinic.phone}
                   </a>
                 ) : null}
-                {clinic.email ? (
+                {mailtoHref(clinic.email) ? (
                   <a
-                    href={`mailto:${clinic.email}`}
+                    href={mailtoHref(clinic.email) ?? undefined}
                     className="flex items-center gap-2 break-all hover:text-foreground"
                   >
                     <Mail className="h-4 w-4 shrink-0 text-foreground" aria-hidden />

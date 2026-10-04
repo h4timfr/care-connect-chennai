@@ -81,6 +81,15 @@ test.describe("Public Routes", () => {
     await expect(page.getByRole("button", { name: /create an account/i })).toBeVisible();
   });
 
+  test("/signup opens account creation and keeps a safe return path", async ({ page }) => {
+    await page.goto("/signup?redirect=%2Fappointments");
+    await expect(page).toHaveURL(/\/login\?/);
+    await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
+    const params = new URL(page.url()).searchParams;
+    expect(params.get("signup")).toBe("true");
+    expect(params.get("redirect")).toBe("/appointments");
+  });
+
   test("invalid credentials show a clear message", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill("nobody-careconnect-check@example.com");

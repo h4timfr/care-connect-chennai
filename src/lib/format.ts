@@ -1,3 +1,20 @@
+/** tel: link for a stored phone number: digits and a leading + only, or null if unusable. */
+export function telHref(phone: string): string | null {
+  const digits = phone
+    .trim()
+    .replace(/[^\d+]/g, "")
+    .replace(/(?!^)\+/g, "");
+  return /\d{3,}/.test(digits) ? `tel:${digits}` : null;
+}
+
+/** mailto: link for a stored address, or null; extra mailto parameters can't be smuggled in. */
+export function mailtoHref(email: string): string | null {
+  const address = email.trim();
+  return /^[^\s@?&#/\\:]+@[^\s@?&#/\\:]+\.[^\s@?&#/\\:]+$/.test(address)
+    ? `mailto:${encodeURIComponent(address).replace("%40", "@")}`
+    : null;
+}
+
 /** "1 doctor", "3 doctors". */
 export function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;

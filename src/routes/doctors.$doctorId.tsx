@@ -14,7 +14,7 @@ import {
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { DateStrip, SlotGrid } from "@/components/SlotPicker";
 import { Button } from "@/components/ui/button";
-import { inr, isoDate, pluralize, specialtyName } from "@/lib/format";
+import { inr, isoDate, pluralize, specialtyName, telHref } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import { describeDataError } from "@/lib/supabase/errors";
 import { bookableClinicIds } from "@/lib/supabase/queries";
@@ -196,12 +196,12 @@ function DoctorProfile() {
                       ) : (
                         <InfoNotice>
                           Online booking isn't available for this doctor at {clinic.name} yet.
-                          {clinic.phone ? (
+                          {telHref(clinic.phone) ? (
                             <>
                               {" "}
                               To book, call the clinic on{" "}
                               <a
-                                href={`tel:${clinic.phone.replace(/\s+/g, "")}`}
+                                href={telHref(clinic.phone) ?? undefined}
                                 className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-2 hover:underline"
                               >
                                 <Phone className="h-3 w-3" aria-hidden />

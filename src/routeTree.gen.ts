@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AppointmentsIndexRouteImport } from './routes/appointments.index'
 import { Route as AppointmentsAppointmentIdRouteImport } from './routes/appointments.$appointmentId'
 import { Route as BookDoctorIdRouteImport } from './routes/book.$doctorId'
@@ -56,6 +57,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppointmentsIndexRoute = AppointmentsIndexRouteImport.update({
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/profile'
     | '/reset-password'
+    | '/signup'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/profile'
     | '/reset-password'
+    | '/signup'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/profile'
     | '/reset-password'
+    | '/signup'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -251,6 +263,7 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRoute
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SignupRoute: typeof SignupRoute
   AppointmentsAppointmentIdRoute: typeof AppointmentsAppointmentIdRoute
   BookDoctorIdRoute: typeof BookDoctorIdRoute
   ClinicAppointmentsRoute: typeof ClinicAppointmentsRoute
@@ -307,6 +320,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/appointments/': {
@@ -403,6 +423,7 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRoute,
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SignupRoute: SignupRoute,
   AppointmentsAppointmentIdRoute: AppointmentsAppointmentIdRoute,
   BookDoctorIdRoute: BookDoctorIdRoute,
   ClinicAppointmentsRoute: ClinicAppointmentsRoute,
