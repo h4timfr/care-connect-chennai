@@ -5,6 +5,7 @@ import { CancelAppointmentButton } from "@/components/AppointmentCard";
 import { isCancellable, isPastAppointment } from "@/lib/supabase/appointments";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
+import { CatalogNotice } from "@/components/CatalogNotice";
 import { EmptyState, ErrorState, Initials, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
@@ -97,6 +98,7 @@ function AppointmentDetails() {
         >
           <ArrowLeft className="h-4 w-4" aria-hidden /> All appointments
         </Link>
+        <CatalogNotice />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-2xl font-bold">Appointment details</h1>

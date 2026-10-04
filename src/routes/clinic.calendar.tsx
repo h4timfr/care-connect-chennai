@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
+import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { addDays, isoDate, longDate, shortDate, to12h } from "@/lib/format";
@@ -105,6 +106,7 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
 
   return (
     <div className="space-y-4">
+      <CatalogNotice />
       {doctors.length > 1 ? (
         <div
           className="flex gap-2 overflow-x-auto rounded-xl border bg-card p-3"

@@ -279,6 +279,42 @@ test.describe("Discover search input", () => {
   });
 });
 
+test.describe("When doctor and clinic details fail to load", () => {
+  test("pages say so instead of showing false empty states, and retry recovers", async ({
+    page,
+    backend,
+  }) => {
+    const patients = defaultState().patients as Record<string, unknown>[];
+    patients[0]!["saved_doctor_ids"] = [ids.doctorVerified];
+    const mock = await backend({
+      patients,
+      failTables: ["doctors"],
+      appointments: [appointmentRow()],
+    });
+    mock.state.memberships = [{ clinic_id: ids.clinicA, clinics: mock.state.clinics[0] }];
+
+    await page.goto("/profile");
+    await expect(page.getByText("We couldn't load your saved doctors")).toBeVisible();
+    await expect(page.getByText("You haven't saved any doctors yet")).toHaveCount(0);
+
+    await page.goto("/appointments");
+    await expect(page.getByText("some names may be missing")).toBeVisible();
+
+    await page.goto("/clinic/doctors");
+    await expect(page.getByText("We couldn't load doctors")).toBeVisible();
+    await expect(page.getByText("No doctors are linked")).toHaveCount(0);
+
+    await page.goto("/clinic");
+    await expect(page.getByText("some names may be missing")).toBeVisible();
+
+    mock.state.failTables = [];
+    await page.getByRole("button", { name: "Try again" }).click();
+    await expect(page.getByText("some names may be missing")).toHaveCount(0);
+    await page.goto("/profile");
+    await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
+  });
+});
+
 test.describe("Saved doctors", () => {
   test("bookmark calls the toggle RPC once per click", async ({ page, backend }) => {
     const mock = await backend();

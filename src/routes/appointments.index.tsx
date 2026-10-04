@@ -5,6 +5,7 @@ import { PatientShell } from "@/components/layout/PatientShell";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { EmptyState, ErrorState, PageLoader } from "@/components/common";
 import { MissingProfile } from "@/components/MissingProfile";
+import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApp } from "@/lib/store";
@@ -114,6 +115,7 @@ function AppointmentsList() {
             Your upcoming visits and appointment history.
           </p>
         </div>
+        <CatalogNotice />
         {body}
       </div>
     </PatientShell>

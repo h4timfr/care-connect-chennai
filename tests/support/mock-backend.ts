@@ -51,6 +51,8 @@ export interface MockState {
    * index (23505) and this row appears, as if another request had just created it.
    */
   concurrentConversation: Row | null;
+  /** Tables whose reads fail with a server error (e.g. ["doctors"]). */
+  failTables: string[];
 }
 
 export interface MockBackend {
@@ -148,6 +150,7 @@ export function defaultState(): MockState {
     doctorSearchDelayMs: 0,
     delays: {},
     concurrentConversation: null,
+    failTables: [],
   };
 }
 
@@ -301,6 +304,7 @@ export async function mockBackend(
     const table = path.replace("/rest/v1/", "");
     const delay = state.delays[table];
     if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    if (method === "GET" && state.failTables.includes(table)) return json(route, 500, serverError);
     switch (table) {
       case "clinics":
         return respond(state.clinics);

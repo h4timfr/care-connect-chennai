@@ -17,7 +17,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { patient, isLoadingPatient, patientError, refetchPatient, doctorById } = useApp();
+  const { patient, isLoadingPatient, patientError, refetchPatient, doctorById, catalog } = useApp();
   const { signOut } = useAuth();
   const { loading, user } = useProtectedRoute();
   const navigate = useNavigate();
@@ -81,7 +81,15 @@ function ProfilePage() {
           <h2 id="saved-heading" className="font-medium">
             Saved doctors
           </h2>
-          {savedDoctors.length ? (
+          {catalog.error && patient.savedDoctorIds.length ? (
+            <ErrorState
+              title="We couldn't load your saved doctors"
+              message={describeDataError(catalog.error)}
+              onRetry={catalog.refetch}
+            />
+          ) : catalog.isLoading && patient.savedDoctorIds.length ? (
+            <p className="text-sm text-muted-foreground">Loading saved doctors…</p>
+          ) : savedDoctors.length ? (
             <ul className="divide-y">
               {savedDoctors.map((d) => (
                 <li key={d.id} className="flex items-center justify-between gap-3 py-2.5">

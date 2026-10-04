@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { EmptyState, ErrorState, Initials, PageLoader } from "@/components/common";
 import { MissingProfile } from "@/components/MissingProfile";
+import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { describeDataError } from "@/lib/supabase/errors";
@@ -56,7 +57,14 @@ function MessagesView() {
     body = <Inbox conversations={mine} />;
   }
 
-  return <PatientShell>{body}</PatientShell>;
+  return (
+    <PatientShell>
+      <div className="space-y-4">
+        <CatalogNotice />
+        {body}
+      </div>
+    </PatientShell>
+  );
 }
 
 function Inbox({ conversations }: { conversations: Conversation[] }) {

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { useApp } from "@/lib/store";
-import { Initials } from "@/components/common";
+import { ErrorState, Initials, PageLoader } from "@/components/common";
+import { describeDataError } from "@/lib/supabase/errors";
 import { inr, pluralize, specialtyName } from "@/lib/format";
 
 export const Route = createFileRoute("/clinic/doctors")({
@@ -9,9 +10,24 @@ export const Route = createFileRoute("/clinic/doctors")({
 });
 
 function ClinicDoctors() {
-  const { doctors, activeClinic } = useApp();
+  const { doctors, activeClinic, catalog } = useApp();
 
   if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
+  if (catalog.isLoading || catalog.error) {
+    return (
+      <ClinicShell title="Doctors" description="Doctors practising at your clinic">
+        {catalog.error ? (
+          <ErrorState
+            title="We couldn't load doctors"
+            message={describeDataError(catalog.error)}
+            onRetry={catalog.refetch}
+          />
+        ) : (
+          <PageLoader label="Loading doctors…" />
+        )}
+      </ClinicShell>
+    );
+  }
 
   const clinicDoctors = doctors.filter((d) => d.clinicIds?.includes(activeClinic.id));
 

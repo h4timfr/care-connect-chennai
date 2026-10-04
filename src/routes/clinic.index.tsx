@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
+import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { inr, isoDate, shortDate, to12h } from "@/lib/format";
@@ -45,7 +46,8 @@ function ClinicDashboard() {
 }
 
 function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
-  const { clinicAppointments, doctorsOfClinic, doctorById, setAppointmentStatus } = useApp();
+  const { clinicAppointments, doctorsOfClinic, doctorById, setAppointmentStatus, catalog } =
+    useApp();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const appointments = clinicAppointments.filter((a) => a.clinicId === clinicId);
@@ -74,13 +76,14 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
 
   return (
     <div className="space-y-6">
+      <CatalogNotice />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label="Today's visits" value={String(todays.length)} icon={CalendarDays} />
         <Stat label="Awaiting confirmation" value={String(pending.length)} icon={Users} />
         <Stat label="Fees for today's confirmed visits" value={inr(expectedFees)} icon={Banknote} />
         <Stat
           label="Doctors at this clinic"
-          value={String(doctorsOfClinic(clinicId).length)}
+          value={catalog.error ? "—" : String(doctorsOfClinic(clinicId).length)}
           icon={Stethoscope}
         />
       </div>
