@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import type {
   Appointment,
@@ -32,6 +32,7 @@ const NO_DOCTORS: Doctor[] = [];
 const NO_CLINICS: Clinic[] = [];
 const NO_APPOINTMENTS: Appointment[] = [];
 const NO_CONVERSATIONS: Conversation[] = [];
+const ACTIVE_CLINIC_KEY = "careconnect.activeClinic";
 
 interface QueryStatus {
   isLoading: boolean;
@@ -51,6 +52,10 @@ interface AppState {
   /** Status of the doctor + clinic listings shared across the app. */
   catalog: QueryStatus;
   activeClinic: Clinic | undefined;
+  /** Every clinic the signed-in user is an active member of (from clinic_memberships). */
+  memberClinics: Clinic[];
+  /** Switches the clinic portal to another of the user's member clinics. */
+  setActiveClinicId: (clinicId: string) => void;
   /** True until clinic memberships for the signed-in user are known. */
   isLoadingClinicAccess: boolean;
   /** Set when the membership lookup itself failed (distinct from "no membership"). */
@@ -149,7 +154,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const conversations = conversationsQuery.data ?? NO_CONVERSATIONS;
 
   // The clinic portal supports a single active clinic; RLS guarantees the membership is real.
-  const activeClinic = authorizedClinics?.[0];
+  // Staff can belong to several clinics. The choice only selects among memberships the server
+  // returned (RLS still decides what each query can read); it is remembered for the tab session.
+  const [selectedClinicId, setSelectedClinicId] = useState<string | null>(() => {
+    try {
+      return typeof window === "undefined" ? null : sessionStorage.getItem(ACTIVE_CLINIC_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const memberClinics = authorizedClinics ?? NO_CLINICS;
+  const activeClinic = memberClinics.find((c) => c.id === selectedClinicId) ?? memberClinics[0];
+  const setActiveClinicId = useCallback((clinicId: string) => {
+    setSelectedClinicId(clinicId);
+    try {
+      sessionStorage.setItem(ACTIVE_CLINIC_KEY, clinicId);
+    } catch {
+      // Storage may be unavailable (private mode); the choice then lasts until reload.
+    }
+  }, []);
 
   const {
     isPending: appointmentsPending,
@@ -272,6 +295,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refetch: refetchCatalog,
       },
       activeClinic,
+      memberClinics,
+      setActiveClinicId,
       isLoadingClinicAccess: auth.loading || (isLoggedIn && clinicAccessPending),
       clinicAccessError,
       refetchClinicAccess: () => void refetchClinicAccessQuery(),
@@ -323,6 +348,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       doctorsQuery.error,
       refetchCatalog,
       activeClinic,
+      memberClinics,
+      setActiveClinicId,
       clinicAccessPending,
       clinicAccessError,
       refetchClinicAccessQuery,

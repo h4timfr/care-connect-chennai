@@ -668,6 +668,58 @@ test.describe("Clinic portal", () => {
     });
   });
 
+  test("staff in two clinics can switch between them", async ({ page, backend }) => {
+    const mock = await backend({
+      appointments: [
+        appointmentRow({
+          id: "appt-a",
+          clinic_id: ids.clinicA,
+          patients: { full_name: "Patient At A" },
+        }),
+        appointmentRow({
+          id: "appt-b",
+          clinic_id: ids.clinicB,
+          doctor_id: ids.doctorPending,
+          patients: { full_name: "Patient At B" },
+        }),
+      ],
+    });
+    mock.state.memberships = [
+      { clinic_id: ids.clinicA, clinics: mock.state.clinics[0] },
+      { clinic_id: ids.clinicB, clinics: mock.state.clinics[1] },
+    ];
+    await page.goto("/clinic/appointments");
+    const picker = page.locator("#clinic-picker-sidebar");
+    await expect(picker).toHaveValue(ids.clinicA);
+    await expect(page.getByRole("cell", { name: "Patient At A" })).toBeVisible();
+    await expect(page.getByText("Patient At B")).toHaveCount(0);
+
+    await picker.selectOption(ids.clinicB);
+    await expect(page.getByRole("cell", { name: "Patient At B" })).toBeVisible();
+    await expect(page.getByText("Patient At A")).toHaveCount(0);
+
+    await page.goto("/clinic/doctors");
+    await expect(page.getByText("Dr. Pending Tester")).toBeVisible();
+    await expect(page.getByText("Dr. Verified Tester")).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator("#clinic-picker-sidebar")).toHaveValue(ids.clinicB);
+  });
+
+  test("a stored clinic choice the user isn't a member of falls back safely", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    mock.state.memberships = [{ clinic_id: ids.clinicA, clinics: mock.state.clinics[0] }];
+    await page.addInitScript((clinicId) => {
+      sessionStorage.setItem("careconnect.activeClinic", clinicId);
+    }, ids.clinicB);
+    await page.goto("/clinic/doctors");
+    await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
+    await expect(page.getByText("Dr. Pending Tester")).toHaveCount(0);
+    await expect(page.locator("#clinic-picker-sidebar")).toHaveCount(0);
+  });
+
   test("calendar shows evening appointments", async ({ page, backend }) => {
     const mock = await backend({
       appointments: [appointmentRow({ date: todayInIndia(), status: "confirmed" })],

@@ -40,7 +40,14 @@ export function ClinicShell({
   children: ReactNode;
 }) {
   const { loading, user } = useProtectedRoute();
-  const { activeClinic, isLoadingClinicAccess, clinicAccessError, refetchClinicAccess } = useApp();
+  const {
+    activeClinic,
+    memberClinics,
+    setActiveClinicId,
+    isLoadingClinicAccess,
+    clinicAccessError,
+    refetchClinicAccess,
+  } = useApp();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   if (loading || !user || isLoadingClinicAccess) {
@@ -120,7 +127,16 @@ export function ClinicShell({
             ))}
           </nav>
           <div className="mt-4 rounded-xl border bg-card p-3">
-            <p className="truncate text-sm font-semibold">{activeClinic.name}</p>
+            {memberClinics.length > 1 ? (
+              <ClinicPicker
+                id="clinic-picker-sidebar"
+                clinics={memberClinics}
+                value={activeClinic.id}
+                onChange={setActiveClinicId}
+              />
+            ) : (
+              <p className="truncate text-sm font-semibold">{activeClinic.name}</p>
+            )}
             <p className="truncate text-xs text-muted-foreground">
               {[activeClinic.area, "Chennai"].filter(Boolean).join(", ")}
             </p>
@@ -135,6 +151,16 @@ export function ClinicShell({
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
               <div className="min-w-0">
                 <h1 className="truncate font-display text-lg font-bold sm:text-xl">{title}</h1>
+                {memberClinics.length > 1 ? (
+                  <div className="mt-1 max-w-xs lg:hidden">
+                    <ClinicPicker
+                      id="clinic-picker-header"
+                      clinics={memberClinics}
+                      value={activeClinic.id}
+                      onChange={setActiveClinicId}
+                    />
+                  </div>
+                ) : null}
                 {description ? (
                   <p className="truncate text-sm text-muted-foreground">{description}</p>
                 ) : null}
@@ -176,6 +202,38 @@ export function ClinicShell({
           <main className="px-4 py-6 sm:px-6">{children}</main>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ClinicPicker({
+  id,
+  clinics,
+  value,
+  onChange,
+}: {
+  id: string;
+  clinics: { id: string; name: string }[];
+  value: string;
+  onChange: (clinicId: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="text-xs text-muted-foreground">
+        Clinic
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-0.5 h-8 w-full truncate rounded-md border bg-background px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {clinics.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
