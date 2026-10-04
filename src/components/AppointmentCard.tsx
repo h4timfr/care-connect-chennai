@@ -11,6 +11,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Initials, StatusBadge } from "@/components/common";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
@@ -116,33 +117,33 @@ export function CancelAppointmentButton({
   };
 
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={className ?? "text-destructive hover:bg-destructive/10 hover:text-destructive"}
-        onClick={() => setOpen(true)}
-      >
-        Cancel appointment
-      </Button>
-      <AlertDialog open={open} onOpenChange={(next) => !cancelling && setOpen(next)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel this appointment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {doctor?.name ?? "Your appointment"} · {longDate(appointment.date)} at{" "}
-              {to12h(appointment.time)} IST. This can't be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Keep appointment</AlertDialogCancel>
-            <Button variant="destructive" onClick={confirm} disabled={cancelling}>
-              {cancelling ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Cancel appointment
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    <AlertDialog open={open} onOpenChange={(next) => !cancelling && setOpen(next)}>
+      {/* A real trigger lets Radix return focus to this button when the dialog closes. */}
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={className ?? "text-destructive hover:bg-destructive/10 hover:text-destructive"}
+        >
+          Cancel appointment
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel this appointment?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {doctor?.name ?? "Your appointment"} · {longDate(appointment.date)} at{" "}
+            {to12h(appointment.time)} IST. This can't be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={cancelling}>Keep appointment</AlertDialogCancel>
+          <Button variant="destructive" onClick={confirm} disabled={cancelling}>
+            {cancelling ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+            Cancel appointment
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

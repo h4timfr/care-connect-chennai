@@ -52,6 +52,8 @@ test("each route requests only what it shows, once", async ({ page }) => {
     Object.entries(EXPECTED).map(([route, calls]) => [route, [...calls].sort()]),
   );
   expect(actual).toEqual(expected);
+  // A valid stored session is used as-is: no auth-server round trips on page loads.
+  expect(mock.calls.filter((c) => c.path.startsWith("/auth/v1/"))).toEqual([]);
 });
 
 test("public listings request explicit columns only", async ({ page }) => {

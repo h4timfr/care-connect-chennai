@@ -111,6 +111,20 @@ test("the skip link is the first stop and moves focus to the main content", asyn
   await expect(page.locator("#discover-search")).toBeFocused();
 });
 
+test("the cancel dialog works by keyboard and returns focus", async ({ page }) => {
+  await mockBackend(page, { state: { appointments: [appointmentRow()] } });
+  await page.goto("/appointments");
+  const trigger = page.getByRole("button", { name: "Cancel appointment" });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Keep appointment" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+});
+
 test("pages reachable while signed out also pass", async ({ page }) => {
   await mockBackend(page, { signedIn: false });
   for (const path of ["/login", "/login?signup=true", "/reset-password", "/does-not-exist"]) {
