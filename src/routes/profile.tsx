@@ -5,7 +5,7 @@ import { ErrorState, Initials, PageLoader } from "@/components/common";
 import { MissingProfile } from "@/components/MissingProfile";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
-import { longDate, specialtyName } from "@/lib/format";
+import { fullDate, specialtyName } from "@/lib/format";
 import { useAuth } from "@/lib/supabase/auth";
 import { describeDataError } from "@/lib/supabase/errors";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
@@ -64,7 +64,7 @@ function ProfilePage() {
     { label: "Email", value: patient.email },
     { label: "Phone", value: patient.phone },
     { label: "Area", value: patient.area },
-    { label: "Date of birth", value: patient.dateOfBirth ? longDate(patient.dateOfBirth) : "" },
+    { label: "Date of birth", value: fullDate(patient.dateOfBirth) },
     { label: "Gender", value: patient.gender ? GENDER_LABEL[patient.gender] : "" },
     { label: "Preferred language", value: patient.preferredLanguage },
   ];

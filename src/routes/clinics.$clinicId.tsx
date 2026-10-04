@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { inr, specialtyName } from "@/lib/format";
 import { describeDataError } from "@/lib/supabase/errors";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/clinics/$clinicId")({
   head: () => ({ meta: [{ title: "Clinic — CareConnect" }] }),
@@ -72,7 +71,6 @@ function ClinicProfile() {
         </Link>
 
         <section className="surface-card overflow-hidden">
-          <div className={cn("h-28 bg-gradient-to-br sm:h-40", clinic.photoTone)} aria-hidden />
           <div className="flex flex-col justify-between gap-5 p-5 sm:flex-row sm:items-start sm:p-8">
             <div className="min-w-0">
               <h1 className="font-display text-3xl font-bold">{clinic.name}</h1>

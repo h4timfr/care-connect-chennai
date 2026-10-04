@@ -135,6 +135,11 @@ export function specialtiesMatching(word: string): string[] {
   ).map((s) => s.id);
 }
 
+/** The year is shown only when it differs from the current year in India. */
+function needsYear(iso: string) {
+  return iso.slice(0, 4) !== isoDate(new Date()).slice(0, 4);
+}
+
 export function longDate(iso: string) {
   if (!iso) return "Not set";
   const d = new Date(`${iso}T12:00:00Z`); // use noon UTC to avoid any timezone shifts
@@ -143,6 +148,20 @@ export function longDate(iso: string) {
     weekday: "long",
     day: "numeric",
     month: "long",
+    ...(needsYear(iso) ? { year: "numeric" } : {}),
+    timeZone: "UTC",
+  });
+}
+
+/** A calendar date without weekday, always with the year (e.g. dates of birth). */
+export function fullDate(iso: string) {
+  if (!iso) return "";
+  const d = new Date(`${iso}T12:00:00Z`);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
     timeZone: "UTC",
   });
 }
@@ -152,6 +171,7 @@ export function shortDate(iso: string) {
   return d.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
+    ...(needsYear(iso) ? { year: "numeric" } : {}),
     timeZone: "UTC",
   });
 }

@@ -48,7 +48,6 @@ export interface Clinic {
   feeRange: [number, number];
   rating: number;
   reviewCount: number;
-  photoTone: string;
   /** Mirrors `clinics.is_demo`: the record is sample content, not a real provider. */
   isSample: boolean;
 }

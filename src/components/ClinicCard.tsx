@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Rating, SampleBadge } from "@/components/common";
 import { useApp } from "@/lib/store";
 import { inr, specialtyName } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import type { Clinic } from "@/lib/types";
 
 export function ClinicCard({ clinic }: { clinic: Clinic }) {
@@ -14,7 +13,6 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
 
   return (
     <article className="surface-card flex flex-col overflow-hidden transition-shadow hover:shadow-pop">
-      <div className={cn("h-20 bg-gradient-to-r", clinic.photoTone)} aria-hidden />
       <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">

@@ -35,7 +35,6 @@ function mapClinic(c: ClinicRow): Clinic {
     feeRange: [Number(c.fee_range?.[0] ?? 0), Number(c.fee_range?.[1] ?? 0)],
     rating: Number(c.rating) || 0,
     reviewCount: c.review_count ?? 0,
-    photoTone: c.photo_tone || "from-primary-soft to-accent",
     isSample: c.is_demo,
   };
 }
