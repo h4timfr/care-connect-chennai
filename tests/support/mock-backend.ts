@@ -137,7 +137,7 @@ function base64Url(value: object) {
 }
 
 /** A syntactically valid, unsigned JWT. The mock never verifies it; production would reject it. */
-function fakeAccessToken() {
+export function fakeAccessToken() {
   const exp = Math.floor(Date.now() / 1000) + 3600;
   return `${base64Url({ alg: "HS256", typ: "JWT" })}.${base64Url({
     sub: ids.user,
@@ -245,6 +245,7 @@ export async function mockBackend(
     if (path === "/auth/v1/user") return json(route, 200, sessionPayload().user);
     if (path === "/auth/v1/token") return json(route, 200, sessionPayload());
     if (path === "/auth/v1/logout") return route.fulfill({ status: 204, headers: corsHeaders() });
+    if (path === "/auth/v1/recover") return json(route, 200, {});
 
     // ---- RPC
     if (path === "/rest/v1/rpc/get_doctor_slots") return json(route, 200, state.slots);

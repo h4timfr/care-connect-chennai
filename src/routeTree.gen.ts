@@ -14,6 +14,7 @@ import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AppointmentsIndexRouteImport } from './routes/appointments.index'
 import { Route as AppointmentsAppointmentIdRouteImport } from './routes/appointments.$appointmentId'
 import { Route as BookDoctorIdRouteImport } from './routes/book.$doctorId'
@@ -50,6 +51,11 @@ const MessagesRoute = MessagesRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppointmentsIndexRoute = AppointmentsIndexRouteImport.update({
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/messages'
     | '/profile'
+    | '/reset-password'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/messages'
     | '/profile'
+    | '/reset-password'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/messages'
     | '/profile'
+    | '/reset-password'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRoute
   ProfileRoute: typeof ProfileRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   AppointmentsAppointmentIdRoute: typeof AppointmentsAppointmentIdRoute
   BookDoctorIdRoute: typeof BookDoctorIdRoute
   ClinicAppointmentsRoute: typeof ClinicAppointmentsRoute
@@ -287,6 +300,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/appointments/': {
@@ -382,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MessagesRoute: MessagesRoute,
   ProfileRoute: ProfileRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   AppointmentsAppointmentIdRoute: AppointmentsAppointmentIdRoute,
   BookDoctorIdRoute: BookDoctorIdRoute,
   ClinicAppointmentsRoute: ClinicAppointmentsRoute,

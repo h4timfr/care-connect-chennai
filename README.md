@@ -102,6 +102,13 @@ project, plus `X-Frame-Options: DENY`, `nosniff`, HSTS and a strict referrer pol
 `'unsafe-inline'` is still required for scripts (TanStack Start emits per-request inline hydration
 data) and styles (Radix UI positions popovers with inline styles); removing it needs nonce support.
 
+## Auth redirect URLs
+
+Confirmation emails return to `/login` and password-reset emails to `/reset-password` on the site
+that sent them. Add both URLs for every deployed origin (and `http://localhost:8080` for local
+development) under **Authentication → URL Configuration → Redirect URLs** in Supabase; otherwise
+Supabase falls back to the project's Site URL.
+
 ## Known limitations
 
 These need backend or operational changes and are intentionally **not** worked around in the UI:

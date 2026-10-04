@@ -108,6 +108,12 @@ export function describeAuthError(error: unknown): string {
         return "Too many emails have been sent to this address. Please wait a few minutes and try again.";
       case "over_request_rate_limit":
         return "Too many attempts. Please wait a moment and try again.";
+      case "same_password":
+        return "Choose a password you haven't used for this account before.";
+      case "reauthentication_needed":
+      case "session_not_found":
+      case "refresh_token_not_found":
+        return "Your session has expired. Request a new link and try again.";
       case "validation_failed":
         return error.message || "Please check the details you entered.";
     }

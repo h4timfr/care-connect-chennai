@@ -2,6 +2,7 @@ import { test as base, expect } from "@playwright/test";
 import {
   appointmentRow,
   conversationRow,
+  fakeAccessToken,
   ids,
   mockBackend,
   TEST_EMAIL,
@@ -158,6 +159,68 @@ test.describe("Sign-in redirects", () => {
       await expect(page).toHaveURL(/localhost:\d+\/$/);
     });
   }
+});
+
+test.describe("Password reset", () => {
+  test("requests a reset link without revealing whether the account exists", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({}, { signedIn: false });
+    await page.goto("/login");
+    await page.getByRole("button", { name: "Forgot password?" }).click();
+    await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
+    await page.getByLabel("Email").fill(TEST_EMAIL);
+    await page.getByRole("button", { name: "Send reset link" }).click();
+    await expect(page.getByText(`If an account exists for ${TEST_EMAIL}`)).toBeVisible();
+    const call = mock.callsTo("POST", "/auth/v1/recover").at(-1);
+    expect(call?.body).toMatchObject({ email: TEST_EMAIL });
+    expect(decodeURIComponent(call?.search ?? "")).toContain("/reset-password");
+  });
+
+  test("a recovery link allows choosing a new password", async ({ page, backend }) => {
+    const mock = await backend({}, { signedIn: false });
+    const hash = new URLSearchParams({
+      access_token: fakeAccessToken(),
+      refresh_token: "test-refresh-token",
+      expires_in: "3600",
+      expires_at: String(Math.floor(Date.now() / 1000) + 3600),
+      token_type: "bearer",
+      type: "recovery",
+    });
+    await page.goto(`/reset-password#${hash}`);
+    await expect(page.getByRole("heading", { name: "Choose a new password" })).toBeVisible();
+
+    await page.getByLabel("New password", { exact: true }).fill("a-new-password-1");
+    await page.getByLabel("Confirm new password").fill("a-different-password");
+    await page.getByRole("button", { name: "Save new password" }).click();
+    await expect(page.getByRole("alert")).toContainText("don't match");
+    expect(mock.callsTo("PUT", "/auth/v1/user")).toEqual([]);
+
+    await page.getByLabel("Confirm new password").fill("a-new-password-1");
+    await page.getByRole("button", { name: "Save new password" }).click();
+    await expect(page.getByText("Your password has been updated.")).toBeVisible();
+    await expect(page).toHaveURL(/localhost:\d+\/$/);
+    expect(mock.callsTo("PUT", "/auth/v1/user").at(-1)?.body).toMatchObject({
+      password: "a-new-password-1",
+    });
+  });
+
+  test("an ordinary session cannot change the password here", async ({ page, backend }) => {
+    const mock = await backend();
+    await page.goto("/reset-password");
+    await expect(page.getByRole("heading", { name: "Reset link needed" })).toBeVisible();
+    await expect(page.getByLabel("New password", { exact: true })).toHaveCount(0);
+    expect(mock.callsTo("PUT", "/auth/v1/user")).toEqual([]);
+  });
+
+  test("an expired link says so", async ({ page, backend }) => {
+    await backend({}, { signedIn: false });
+    await page.goto(
+      "/reset-password#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired",
+    );
+    await expect(page.getByRole("heading", { name: "This link has expired" })).toBeVisible();
+  });
 });
 
 test.describe("Appointments", () => {
