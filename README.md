@@ -60,8 +60,9 @@ The mocked suites answer every Supabase request in the test process, so signed-i
 without accounts or data in any real project. The mock reports any request it does not recognise.
 
 `tests/security.test.ts` is a manual abuse-test script. It **creates real accounts** in whichever
-project `.env` points to, so it is excluded from the Playwright suite — only run it against a
-non-production project.
+project `.env` points to, so it is excluded from the Playwright suite and refuses to run unless
+`SECURITY_TEST_CONFIRM_HOST` is set to that project's host. Only run it against a non-production
+project.
 
 ## Project layout
 
