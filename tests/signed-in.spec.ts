@@ -89,6 +89,40 @@ test.describe("Patient account", () => {
   });
 });
 
+test.describe("Discover search input", () => {
+  test("user text never becomes PostgREST filter syntax", async ({ page, backend }) => {
+    const mock = await backend({}, { signedIn: false });
+    await page.goto("/discover");
+    await expect(page.locator('[role="tabpanel"] article').first()).toBeVisible();
+    const hostile = String.raw`adyar),id.neq.0,(name.ilike."*" ; drop:table\ %_* 'rao' <script>`;
+    await page.fill("#discover-search", hostile);
+    await expect
+      .poll(() => mock.callsTo("GET", "/rest/v1/doctors").some((c) => c.search.includes("or=")))
+      .toBe(true);
+
+    const filters = mock
+      .callsTo("GET", "/rest/v1/")
+      .flatMap((c) => new URLSearchParams(c.search).getAll("or"));
+    expect(filters.length).toBeGreaterThan(0);
+
+    // Each OR group must consist only of conditions the app itself builds:
+    //   <column>.ilike."[% ]<word>%"   (user word: letters, marks and digits only)
+    //   languages|specialty_ids.cs.{<Word>}   specialty_id.in.(<ids>)   id.in.(<uuids>)
+    const condition = new RegExp(
+      String.raw`^(?:(?:name|area|address)\.ilike\."%? ?[\p{L}\p{M}\p{N}]+%"` +
+        String.raw`|(?:languages|specialty_ids)\.cs\.\{[\p{L}\p{M}\p{N}]+\}` +
+        String.raw`|specialty_id\.in\.\([a-z,]+\)` +
+        String.raw`|id\.in\.\([0-9a-f,-]+\))$`,
+      "u",
+    );
+    for (const group of filters) {
+      expect(group.startsWith("(") && group.endsWith(")")).toBe(true);
+      const parts = group.slice(1, -1).match(/(?:[^,"(]+|"[^"]*"|\([^)]*\))+/g) ?? [];
+      for (const part of parts) expect(part).toMatch(condition);
+    }
+  });
+});
+
 test.describe("Saved doctors", () => {
   test("bookmark calls the toggle RPC once per click", async ({ page, backend }) => {
     const mock = await backend();

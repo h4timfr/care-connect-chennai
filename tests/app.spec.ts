@@ -49,6 +49,23 @@ test.describe("Public Routes", () => {
     await expect(page.getByRole("tab", { name: /Doctors \(\d+\)/ })).toBeVisible();
   });
 
+  test("hostile search input is handled safely by the real API", async ({ page }) => {
+    await page.goto("/discover");
+    await expect(page.locator('[role="tabpanel"] article').first()).toBeVisible();
+    for (const input of [
+      `rao"),id.neq.(`,
+      String.raw`a,b.c:d(e)f*g%h_i\j`,
+      "சென்னை மருத்துவர்",
+      "x".repeat(150),
+    ]) {
+      await page.fill("#discover-search", input);
+      await expect(page.getByText(/Doctors \(\d+\)/)).toBeVisible();
+      await expect(page.getByText("We couldn't load doctors")).toHaveCount(0);
+    }
+    // The input caps length; the URL never carries more than the cap.
+    expect(new URL(page.url()).searchParams.get("q")?.length ?? 0).toBeLessThanOrEqual(100);
+  });
+
   test("discover distinguishes a failed load from an empty result", async ({ page }) => {
     await page.route("**/*.supabase.co/**", (route) => route.abort("internetdisconnected"));
     await page.goto("/discover");

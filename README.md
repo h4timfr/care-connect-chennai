@@ -41,8 +41,26 @@ npm run dev            # http://localhost:8080
 | `npx tsc --noEmit`    | Type check                                                     |
 | `npx playwright test` | Browser tests in `tests/*.spec.ts` (builds and serves the app) |
 
+`npm install` uses `package-lock.json`, which is the maintained lockfile. `bun.lock` dates from the
+original Lovable template and is out of date (see [Known limitations](#known-limitations)).
+
+## Tests
+
+`npx playwright test` builds the app for Node and serves the production build on port 4173.
+Set `PLAYWRIGHT_BASE_URL=http://localhost:8080` to run against `npm run dev` instead.
+
+| File                       | Backend                                     | Covers                                                |
+| -------------------------- | ------------------------------------------- | ----------------------------------------------------- |
+| `tests/app.spec.ts`        | the project in `.env` — **read-only** calls | public pages, search, sign-in errors, headers, CSP    |
+| `tests/signed-in.spec.ts`  | fully mocked (`tests/support/mock-backend`) | profile, booking, cancelling, messages, clinic portal |
+| `tests/responsive.spec.ts` | fully mocked                                | every page at 375 / 390 / 768 / 1280 px               |
+| `tests/redirect.spec.ts`   | none                                        | open-redirect validation                              |
+
+The mocked suites answer every Supabase request in the test process, so signed-in flows are tested
+without accounts or data in any real project. The mock reports any request it does not recognise.
+
 `tests/security.test.ts` is a manual abuse-test script. It **creates real accounts** in whichever
-project `.env` points to, so it is not part of the Playwright suite — only run it against a
+project `.env` points to, so it is excluded from the Playwright suite — only run it against a
 non-production project.
 
 ## Project layout
@@ -75,3 +93,28 @@ docs/                  architecture, authorization and security notes
 
 See [docs/](docs/) for details. This repository is connected to Lovable; see
 [AGENTS.md](AGENTS.md) before rewriting git history.
+
+## Security headers
+
+The production server (Nitro, `nitro.config.ts`) sends a Content-Security-Policy that limits
+scripts, styles and connections to the app itself, Google Fonts and the configured Supabase
+project, plus `X-Frame-Options: DENY`, `nosniff`, HSTS and a strict referrer policy.
+`'unsafe-inline'` is still required for scripts (TanStack Start emits per-request inline hydration
+data) and styles (Radix UI positions popovers with inline styles); removing it needs nonce support.
+
+## Known limitations
+
+These need backend or operational changes and are intentionally **not** worked around in the UI:
+
+- **No doctor–clinic link is verified yet** (`clinic_doctors.verification_state = 'pending'`), so
+  online booking is unavailable for every doctor until a platform admin verifies them.
+- **All current clinics and doctors are sample records** (`is_demo = true`). They are labelled
+  "Sample listing" and their seeded ratings are hidden.
+- **Unread message counts are not maintained** by any trigger or RPC, so the UI does not show
+  unread badges.
+- The conversations query loads every message of every conversation; it should be paginated
+  before message volume grows.
+- `src/lib/database.types.ts` was updated by hand for the clinic-aware `get_doctor_slots`
+  overload (migration 00047); regenerate it with `supabase gen types` when CLI access is available.
+- `bun.lock` does not match `package.json`. Regenerate it with Bun, or remove it if the Lovable
+  pipeline does not need it.

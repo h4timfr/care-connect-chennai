@@ -210,7 +210,7 @@ function BookingForm({
         time,
         reason: reason.trim(),
       });
-      toast.success("Appointment requested. The clinic will confirm it shortly.");
+      toast.success("Appointment requested. The clinic will review your request.");
       navigate({
         to: "/appointments/$appointmentId",
         params: { appointmentId: appointment.id },
