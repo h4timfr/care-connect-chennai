@@ -94,7 +94,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const patientQuery = usePatient(auth.user?.id, auth.user?.email, { enabled: isLoggedIn });
   const patient = patientQuery.data ?? undefined;
   const { refetch: refetchPatientQuery } = patientQuery;
-  const patientAppointmentsQuery = usePatientAppointments(patient?.id, { enabled: isLoggedIn });
+  // Private data is fetched only on the pages that show it.
+  const onPatientAppointmentsPage = pathname === "/" || pathname.startsWith("/appointments");
+  const onClinicPortal = pathname === "/clinic" || pathname.startsWith("/clinic/");
+  const patientAppointmentsQuery = usePatientAppointments(patient?.id, {
+    enabled: isLoggedIn && onPatientAppointmentsPage,
+  });
 
   const clinicsQuery = useClinics({ enabled: !isAuthPage });
   const doctorsQuery = useDoctors({ enabled: !isAuthPage });
@@ -106,7 +111,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [authorizedClinics],
   );
   const clinicAppointmentsQuery = useClinicAppointments(authorizedClinicIds, {
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && onClinicPortal,
   });
 
   // Conversations (with every message) are only loaded, and subscribed to, where they're shown.
@@ -139,6 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const {
     isPending: appointmentsPending,
+    isEnabled: appointmentsEnabled,
     error: appointmentsError,
     refetch: refetchAppointments,
   } = patientAppointmentsQuery;
@@ -266,7 +272,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       patientAppointments,
       patientAppointmentsStatus: {
-        isLoading: !!patient && appointmentsPending,
+        isLoading: appointmentsEnabled && appointmentsPending,
         error: appointmentsError,
         refetch: () => void refetchAppointments(),
       },
@@ -311,6 +317,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refetchClinicAccessQuery,
       patientAppointments,
       appointmentsPending,
+      appointmentsEnabled,
       appointmentsError,
       refetchAppointments,
       clinicAppointments,
