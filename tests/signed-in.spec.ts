@@ -234,6 +234,17 @@ test.describe("Appointments", () => {
     await expect(page.getByText("No upcoming appointments")).toBeVisible();
   });
 
+  test("past requests can't be cancelled and say they weren't confirmed", async ({
+    page,
+    backend,
+  }) => {
+    await backend({ appointments: [appointmentRow({ date: "2020-01-06", status: "pending" })] });
+    await page.goto(`/appointments/${ids.appointment}`);
+    await expect(page.getByText("didn't confirm this request before its date")).toBeVisible();
+    await expect(page.getByText("6 January 2020")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancel appointment" })).toHaveCount(0);
+  });
+
   test("cancelling waits for the backend and reports failures", async ({ page, backend }) => {
     const mock = await backend({ appointments: [appointmentRow()], failStatusUpdate: true });
     await page.goto("/appointments");

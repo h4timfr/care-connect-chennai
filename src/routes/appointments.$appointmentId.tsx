@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, CalendarDays, Clock, MapPin, SearchX } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { CancelAppointmentButton } from "@/components/AppointmentCard";
-import { isCancellable } from "@/lib/supabase/appointments";
+import { isCancellable, isPastAppointment } from "@/lib/supabase/appointments";
+import type { Appointment, AppointmentStatus } from "@/lib/types";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { EmptyState, ErrorState, Initials, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -16,13 +17,23 @@ export const Route = createFileRoute("/appointments/$appointmentId")({
   component: AppointmentDetails,
 });
 
-const STATUS_HELP: Record<string, string> = {
-  pending: "Your request has been sent. The clinic will confirm it.",
+const STATUS_HELP: Record<AppointmentStatus, string> = {
+  pending: "Your request has been sent. The clinic will review it.",
   confirmed: "The clinic has confirmed this appointment.",
   arrived: "The clinic has checked you in.",
   completed: "This appointment is complete.",
   cancelled: "This appointment was cancelled.",
 };
+
+function statusHelp(appointment: Appointment) {
+  if (isPastAppointment(appointment)) {
+    if (appointment.status === "pending") {
+      return "The clinic didn't confirm this request before its date.";
+    }
+    if (appointment.status === "confirmed") return "This appointment's date has passed.";
+  }
+  return STATUS_HELP[appointment.status];
+}
 
 function AppointmentDetails() {
   const { appointmentId } = Route.useParams();
@@ -91,7 +102,7 @@ function AppointmentDetails() {
           <h1 className="font-display text-2xl font-bold">Appointment details</h1>
           <StatusBadge status={appointment.status} />
         </div>
-        <p className="text-sm text-muted-foreground">{STATUS_HELP[appointment.status]}</p>
+        <p className="text-sm text-muted-foreground">{statusHelp(appointment)}</p>
 
         <div className="surface-card space-y-6 p-5 sm:p-6">
           <div className="flex items-start gap-4 border-b pb-6">

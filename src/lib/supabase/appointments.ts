@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import { codeOf, describeDataError, isNetworkError, messageOf } from "./errors";
 import type { Database } from "@/lib/database.types";
+import { isoDate } from "@/lib/format";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 
 type AppointmentRow = Database["public"]["Tables"]["appointments"]["Row"];
@@ -120,9 +121,20 @@ export function useBookAppointment() {
   });
 }
 
-/** Patients may cancel until the visit starts (mirrors the check_appointment_update trigger). */
+/** True once the appointment's date (in India) is before today. */
+export function isPastAppointment(appointment: Appointment) {
+  return appointment.date < isoDate(new Date());
+}
+
+/**
+ * Patients may cancel pending or confirmed visits (as the check_appointment_update trigger
+ * allows), but only while the visit is still ahead of them.
+ */
 export function isCancellable(appointment: Appointment) {
-  return appointment.status === "pending" || appointment.status === "confirmed";
+  return (
+    (appointment.status === "pending" || appointment.status === "confirmed") &&
+    !isPastAppointment(appointment)
+  );
 }
 
 export function describeCancelError(error: unknown): string {
