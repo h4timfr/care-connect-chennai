@@ -13,9 +13,34 @@ const CATALOG_STALE_TIME = 5 * 60 * 1000;
 /** Upper bound on rows returned by one search request. */
 export const SEARCH_RESULT_LIMIT = 100;
 
-const DOCTOR_SELECT = "*, clinic_doctors(clinic_id, active, verification_state)";
+// Only the columns the UI shows. In particular doctors.user_id (an auth account id) and other
+// internal columns are never requested by these public listings.
+const CLINIC_COLUMNS =
+  "id, name, address, area, phone, email, about, specialty_ids, services, facilities, languages, opening_hours, fee_range, rating, review_count, is_demo";
+const DOCTOR_SELECT =
+  "id, name, gender, experience_years, consultation_fee, about, specialty_id, qualifications, languages, services, rating, review_count, registration_note, is_demo, clinic_doctors(clinic_id, active, verification_state)";
 
-function mapClinic(c: ClinicRow): Clinic {
+type ClinicListRow = Pick<
+  ClinicRow,
+  | "id"
+  | "name"
+  | "address"
+  | "area"
+  | "phone"
+  | "email"
+  | "about"
+  | "specialty_ids"
+  | "services"
+  | "facilities"
+  | "languages"
+  | "opening_hours"
+  | "fee_range"
+  | "rating"
+  | "review_count"
+  | "is_demo"
+>;
+
+function mapClinic(c: ClinicListRow): Clinic {
   const openingHours = Array.isArray(c.opening_hours)
     ? (c.opening_hours as Clinic["openingHours"])
     : [];
@@ -39,7 +64,7 @@ function mapClinic(c: ClinicRow): Clinic {
   };
 }
 
-type DoctorWithLinks = DoctorRow & {
+type DoctorWithLinks = Omit<DoctorRow, "user_id" | "created_at"> & {
   clinic_doctors: Pick<ClinicDoctorRow, "clinic_id" | "active" | "verification_state">[] | null;
 };
 
@@ -56,7 +81,8 @@ function mapDoctor(d: DoctorWithLinks): Doctor {
     experienceYears: d.experience_years,
     consultationFee: Number(d.consultation_fee),
     about: d.about ?? "",
-    specialtyId: d.specialty_id || "general",
+    // No specialty recorded stays empty; it is never presented as General Medicine.
+    specialtyId: d.specialty_id ?? "",
     qualifications: d.qualifications ?? [],
     languages: d.languages ?? [],
     services: d.services ?? [],
@@ -80,7 +106,7 @@ export function useClinics(options?: { enabled?: boolean }) {
     enabled: options?.enabled ?? true,
     staleTime: CATALOG_STALE_TIME,
     queryFn: async () => {
-      const { data, error } = await supabase.from("clinics").select("*").order("name");
+      const { data, error } = await supabase.from("clinics").select(CLINIC_COLUMNS).order("name");
       if (error) throw error;
       return data.map(mapClinic);
     },
@@ -318,7 +344,7 @@ export function useClinicSearch(filters: ClinicFilters, placeholder: Clinic[] | 
     placeholderData: (previous: Clinic[] | undefined) => previous ?? placeholder,
     staleTime: 60 * 1000,
     queryFn: async () => {
-      let query = supabase.from("clinics").select("*");
+      let query = supabase.from("clinics").select(CLINIC_COLUMNS);
       for (const w of searchWords(filters.text)) {
         const conditions = [
           ...wordPrefixConditions("name", w),
@@ -388,7 +414,7 @@ export function useAuthorizedClinics(userId?: string, options?: { enabled?: bool
       if (!userId) return [];
       const { data, error } = await supabase
         .from("clinic_memberships")
-        .select("clinic_id, clinics!inner(*)")
+        .select(`clinic_id, clinics!inner(${CLINIC_COLUMNS})` as const)
         .eq("user_id", userId)
         .eq("active", true);
 

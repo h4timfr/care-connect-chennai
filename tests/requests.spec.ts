@@ -53,3 +53,19 @@ test("each route requests only what it shows, once", async ({ page }) => {
   );
   expect(actual).toEqual(expected);
 });
+
+test("public listings request explicit columns only", async ({ page }) => {
+  const mock = await mockBackend(page, { signedIn: false });
+  await page.goto("/discover");
+  await page.waitForLoadState("networkidle");
+  await page.fill("#discover-search", "adyar");
+  await expect.poll(() => mock.callsTo("GET", "/rest/v1/doctors").length).toBe(2);
+  for (const call of [
+    ...mock.callsTo("GET", "/rest/v1/doctors"),
+    ...mock.callsTo("GET", "/rest/v1/clinics"),
+  ]) {
+    const select = new URLSearchParams(call.search).get("select") ?? "";
+    expect(select).not.toMatch(/(^|,)\*($|,)/);
+    expect(select).not.toContain("user_id");
+  }
+});
