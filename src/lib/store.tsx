@@ -36,6 +36,8 @@ const ACTIVE_CLINIC_KEY = "careconnect.activeClinic";
 
 interface QueryStatus {
   isLoading: boolean;
+  /** True while any request (initial or background refetch) is in flight. */
+  isFetching?: boolean;
   error: Error | null;
   refetch: () => void;
 }
@@ -176,6 +178,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const {
     isPending: appointmentsPending,
+    isFetching: appointmentsFetching,
     isEnabled: appointmentsEnabled,
     error: appointmentsError,
     refetch: refetchAppointments,
@@ -307,6 +310,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       patientAppointments,
       patientAppointmentsStatus: {
         isLoading: appointmentsEnabled && appointmentsPending,
+        isFetching: appointmentsFetching,
         error: appointmentsError,
         refetch: () => void refetchAppointments(),
       },
@@ -355,6 +359,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refetchClinicAccessQuery,
       patientAppointments,
       appointmentsPending,
+      appointmentsFetching,
       appointmentsEnabled,
       appointmentsError,
       refetchAppointments,

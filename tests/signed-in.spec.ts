@@ -568,6 +568,33 @@ test.describe("Booking", () => {
     expect(mock.callsTo("POST", "/rest/v1/appointments")).toEqual([]);
   });
 
+  test("after booking, the new appointment page never flashes 'not found'", async ({
+    page,
+    backend,
+  }) => {
+    const seen: string[] = [];
+    await backend({ delays: { appointments: 800 } });
+    await page.exposeFunction("recordText", (text: string) => seen.push(text));
+    await page.addInitScript(() => {
+      new MutationObserver(() => {
+        if (document.body?.innerText.includes("Appointment not found")) {
+          (window as unknown as { recordText: (t: string) => void }).recordText("not found");
+        }
+      }).observe(document, { childList: true, subtree: true, characterData: true });
+    });
+    // Visit the list first so the appointments are already cached (without the new one).
+    await page.goto("/appointments");
+    await expect(page.getByText("No upcoming appointments")).toBeVisible();
+    await page.getByRole("link", { name: "Find doctors" }).first().click();
+    await page.getByRole("link", { name: "Dr. Verified Tester" }).click();
+    await page.getByRole("link", { name: "Book appointment" }).click();
+    await page.getByRole("button", { name: "6:30 PM" }).click();
+    await page.getByRole("button", { name: "Request appointment" }).click();
+    await expect(page).toHaveURL(new RegExp(`/appointments/${ids.appointment}$`));
+    await expect(page.getByText("Awaiting confirmation").first()).toBeVisible();
+    expect(seen).toEqual([]);
+  });
+
   test("a taken slot shows the RPC's reason and asks for another time", async ({
     page,
     backend,

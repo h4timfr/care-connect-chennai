@@ -113,6 +113,15 @@ export function useBookAppointment() {
       if (error) throw error;
       return mapAppointment(data, "You");
     },
+    onSuccess: (appointment) => {
+      // Add the row the RPC returned to a cached list right away, so the appointment page we
+      // navigate to doesn't report it missing while the list revalidates.
+      queryClient.setQueryData<Appointment[]>(
+        ["appointments", "patient", appointment.patientId],
+        (previous) =>
+          previous ? [appointment, ...previous.filter((a) => a.id !== appointment.id)] : previous,
+      );
+    },
     onSettled: (_data, _error, request) => {
       // Success or failure, the slot grid for this doctor/date may be stale now.
       queryClient.invalidateQueries({ queryKey: ["availability", request.doctorId] });
@@ -198,8 +207,11 @@ export function useUpdateAppointmentStatus() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      // Declining or cancelling frees the slot; confirming changes nothing for others, but the
+      // slot grid reflects every active status, so refresh it either way.
+      queryClient.invalidateQueries({ queryKey: ["availability", data.doctor_id] });
     },
   });
 }

@@ -49,7 +49,15 @@ function AppointmentDetails() {
 
   const appointment = patientAppointments.find((a) => a.id === appointmentId);
 
-  if (loading || !user || isLoadingPatient || status.isLoading) {
+  // Also wait while a refetch is in flight if the appointment isn't in the cached list yet:
+  // it may simply be newer than the cache (e.g. just booked, or created in another tab).
+  if (
+    loading ||
+    !user ||
+    isLoadingPatient ||
+    status.isLoading ||
+    (!appointment && status.isFetching)
+  ) {
     return (
       <PatientShell>
         <PageLoader label="Loading appointment…" />
