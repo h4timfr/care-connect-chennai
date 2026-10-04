@@ -495,6 +495,56 @@ test.describe("Messages", () => {
   });
 });
 
+const PROTECTED_ROUTES = [
+  "/appointments",
+  "/appointments?tab=past",
+  `/appointments/${ids.appointment}`,
+  "/messages",
+  `/messages?c=${ids.conversation}`,
+  "/profile",
+  `/book/${ids.doctorVerified}`,
+  `/book/${ids.doctorVerified}?date=2099-01-01&time=10:00`,
+  "/clinic",
+  "/clinic/appointments",
+  "/clinic/calendar",
+  "/clinic/patients",
+  "/clinic/doctors",
+  "/clinic/messages",
+  "/clinic/profile",
+];
+
+test.describe("Route protection (regression for the redirect loop)", () => {
+  for (const path of PROTECTED_ROUTES) {
+    test(`signed out: ${path} redirects to login exactly once`, async ({ page, backend }) => {
+      await backend({}, { signedIn: false });
+      const navigations: string[] = [];
+      page.on("framenavigated", (frame) => {
+        if (frame === page.mainFrame()) navigations.push(frame.url());
+      });
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/login\?redirect=/);
+      await page.waitForTimeout(1500);
+      const url = new URL(page.url());
+      expect(url.pathname).toBe("/login");
+      expect(decodeURIComponent(url.searchParams.get("redirect") ?? "")).toBe(path);
+      expect(navigations.filter((u) => u.includes("/login")).length).toBeLessThanOrEqual(1);
+    });
+  }
+
+  for (const path of PROTECTED_ROUTES.filter((p) => p.startsWith("/clinic"))) {
+    test(`signed-in non-member: ${path} shows 'No clinic access' and stays put`, async ({
+      page,
+      backend,
+    }) => {
+      await backend({ memberships: [] });
+      await page.goto(path);
+      await expect(page.getByRole("heading", { name: "No clinic access" })).toBeVisible();
+      await page.waitForTimeout(1000);
+      expect(new URL(page.url()).pathname).toBe(path.split("?")[0]);
+    });
+  }
+});
+
 test.describe("Clinic portal", () => {
   const membership = { clinic_id: ids.clinicA, clinics: {} as Record<string, unknown> };
 
