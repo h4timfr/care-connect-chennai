@@ -15,7 +15,10 @@ import {
 // in this file reaches a real Supabase project.
 
 const test = base.extend<{
-  backend: (state?: Partial<MockState>, options?: { signedIn?: boolean }) => Promise<MockBackend>;
+  backend: (
+    state?: Partial<MockState>,
+    options?: { signedIn?: boolean; expiredSession?: boolean },
+  ) => Promise<MockBackend>;
   consoleErrors: string[];
 }>({
   consoleErrors: [
@@ -37,7 +40,11 @@ const test = base.extend<{
   backend: async ({ page }, provide) => {
     let installed: MockBackend | undefined;
     await provide(async (state = {}, options = {}) => {
-      installed = await mockBackend(page, { state, signedIn: options.signedIn ?? true });
+      installed = await mockBackend(page, {
+        state,
+        signedIn: options.signedIn ?? true,
+        expiredSession: options.expiredSession ?? false,
+      });
       return installed;
     });
     // Every request must have been understood by the mock.
@@ -159,6 +166,81 @@ test.describe("Sign-in redirects", () => {
       await expect(page).toHaveURL(/localhost:\d+\/$/);
     });
   }
+});
+
+test.describe("Auth edge cases", () => {
+  test("empty or malformed input never reaches the auth server", async ({ page, backend }) => {
+    const mock = await backend({}, { signedIn: false });
+    await page.goto("/login");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await page.getByLabel("Email").fill("not-an-email");
+    await page.getByLabel("Password").fill("whatever-123");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await page.waitForTimeout(300);
+    expect(mock.callsTo("POST", "/auth/v1/token")).toEqual([]);
+  });
+
+  test("sign-in rate limiting is explained", async ({ page, backend }) => {
+    await backend(
+      {
+        tokenResponse: {
+          status: 429,
+          body: {
+            code: 429,
+            error_code: "over_request_rate_limit",
+            msg: "Request rate limit reached",
+          },
+        },
+      },
+      { signedIn: false },
+    );
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(TEST_EMAIL);
+    await page.getByLabel("Password").fill("test-password");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("Too many attempts");
+  });
+
+  test("a weak password rejected by the server shows its rule", async ({ page, backend }) => {
+    await backend(
+      {
+        signupResponse: {
+          status: 422,
+          body: {
+            code: 422,
+            error_code: "weak_password",
+            msg: "Password is known to be weak and easy to guess, please choose a different one.",
+            weak_password: { reasons: ["pwned"] },
+          },
+        },
+      },
+      { signedIn: false },
+    );
+    await page.goto("/login?signup=true");
+    await page.getByLabel("Full name").fill(TEST_NAME);
+    await page.getByLabel("Email").fill(TEST_EMAIL);
+    await page.getByLabel("Password").fill("password123");
+    await page.getByRole("button", { name: "Create account" }).click();
+    await expect(page.getByRole("alert")).toContainText("weak and easy to guess");
+  });
+
+  test("an expired session that can't be refreshed signs the user out", async ({
+    page,
+    backend,
+  }) => {
+    await backend(
+      {
+        tokenResponse: {
+          status: 400,
+          body: { code: 400, error_code: "refresh_token_not_found", msg: "Invalid Refresh Token" },
+        },
+      },
+      { expiredSession: true },
+    );
+    await page.goto("/appointments");
+    await expect(page).toHaveURL(/\/login\?redirect=%2Fappointments$/);
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+  });
 });
 
 test.describe("Password reset", () => {

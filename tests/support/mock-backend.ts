@@ -38,6 +38,9 @@ export interface MockState {
   bookResult: { status: number; body: unknown } | null;
   failMessageInsert: boolean;
   failStatusUpdate: boolean;
+  /** Overrides /auth/v1/token (sign-in and refresh) and /auth/v1/signup responses. */
+  tokenResponse: { status: number; body: unknown } | null;
+  signupResponse: { status: number; body: unknown } | null;
 }
 
 export interface MockBackend {
@@ -129,6 +132,8 @@ export function defaultState(): MockState {
     bookResult: null,
     failMessageInsert: false,
     failStatusUpdate: false,
+    tokenResponse: null,
+    signupResponse: null,
   };
 }
 
@@ -148,8 +153,8 @@ export function fakeAccessToken() {
   })}.test-signature`;
 }
 
-function sessionPayload() {
-  const expiresAt = Math.floor(Date.now() / 1000) + 3600;
+function sessionPayload(expired = false) {
+  const expiresAt = Math.floor(Date.now() / 1000) + (expired ? -3600 : 3600);
   return {
     access_token: fakeAccessToken(),
     token_type: "bearer",
@@ -188,8 +193,9 @@ export async function mockBackend(
   page: Page,
   {
     signedIn = true,
+    expiredSession = false,
     state: overrides = {},
-  }: { signedIn?: boolean; state?: Partial<MockState> } = {},
+  }: { signedIn?: boolean; expiredSession?: boolean; state?: Partial<MockState> } = {},
 ): Promise<MockBackend> {
   const state: MockState = { ...defaultState(), ...overrides };
   const backend: MockBackend = {
@@ -201,7 +207,7 @@ export async function mockBackend(
   };
 
   if (signedIn) {
-    const session = sessionPayload();
+    const session = sessionPayload(expiredSession);
     await page.addInitScript(
       ([key, value]) => {
         // Only seed once per test, so a sign-out inside the test is not undone on reload.
@@ -243,7 +249,15 @@ export async function mockBackend(
 
     // ---- Auth
     if (path === "/auth/v1/user") return json(route, 200, sessionPayload().user);
-    if (path === "/auth/v1/token") return json(route, 200, sessionPayload());
+    if (path === "/auth/v1/token") {
+      if (state.tokenResponse) {
+        return json(route, state.tokenResponse.status, state.tokenResponse.body);
+      }
+      return json(route, 200, sessionPayload());
+    }
+    if (path === "/auth/v1/signup" && state.signupResponse) {
+      return json(route, state.signupResponse.status, state.signupResponse.body);
+    }
     if (path === "/auth/v1/logout") return route.fulfill({ status: 204, headers: corsHeaders() });
     if (path === "/auth/v1/recover") return json(route, 200, {});
 
