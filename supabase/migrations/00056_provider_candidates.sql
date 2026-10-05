@@ -200,8 +200,12 @@ BEGIN
     IF NEW.review_status <> 'candidate' OR NEW.permission_status <> 'unknown' THEN
         RAISE EXCEPTION 'Validation Failed: new candidates start as candidate with unknown permission.' USING ERRCODE = 'P0001';
     END IF;
-    IF TG_TABLE_NAME = 'candidate_doctors' AND NEW.registration_status = 'verified' THEN
-        RAISE EXCEPTION 'Validation Failed: registration can only be verified by CareConnect after import.' USING ERRCODE = 'P0001';
+    -- Nested on purpose: PL/pgSQL resolves NEW.registration_status while planning the whole
+    -- condition, and candidate_facilities has no such column.
+    IF TG_TABLE_NAME = 'candidate_doctors' THEN
+        IF NEW.registration_status = 'verified' THEN
+            RAISE EXCEPTION 'Validation Failed: registration can only be verified by CareConnect after import.' USING ERRCODE = 'P0001';
+        END IF;
     END IF;
     RETURN NEW;
 END;
