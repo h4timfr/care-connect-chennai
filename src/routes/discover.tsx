@@ -508,8 +508,8 @@ function Discover() {
                   </TabsTrigger>
                 </TabsList>
                 {tab === "doctors" ? (
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="sort" className="text-xs text-muted-foreground">
+                  <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                    <label htmlFor="sort" className="shrink-0 text-xs text-muted-foreground">
                       {t("discover.sortBy")}
                     </label>
                     <select
@@ -519,7 +519,7 @@ function Discover() {
                         const next = SORT_VALUES.find((v) => v === e.target.value);
                         if (next) setSort(next);
                       }}
-                      className="rounded-lg border bg-card px-2.5 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="min-w-0 flex-1 truncate rounded-lg border bg-card px-2.5 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
                     >
                       {SORT_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>

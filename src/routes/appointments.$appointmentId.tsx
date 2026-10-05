@@ -153,7 +153,9 @@ function AppointmentDetails() {
             {appointment.reason ? (
               <div className="space-y-2 sm:col-span-2">
                 <dt className="font-medium">{t("appointmentDetails.reason")}</dt>
-                <dd className="text-muted-foreground">{appointment.reason}</dd>
+                <dd className="text-muted-foreground" dir="auto">
+                  {appointment.reason}
+                </dd>
               </div>
             ) : null}
             <div className="space-y-2 sm:col-span-2">

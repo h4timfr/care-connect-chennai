@@ -101,8 +101,12 @@ const LANGUAGE_NAME_CODES: Record<string, string> = {
   french: "fr",
 };
 
+/** Left-to-right isolate, so "7:30 PM" or "₹400" isn't reordered inside right-to-left text. */
+const ltr = (s: string) => `\u2066${s}\u2069`;
+
 function createFormatters(info: LanguageInfo, t: Translate) {
   const { locale, code } = info;
+  const iso = info.dir === "rtl" ? ltr : (s: string) => s;
   const languageNames =
     code === "en" ? null : new Intl.DisplayNames([locale], { type: "language", fallback: "none" });
   const hourFormat = new Intl.DateTimeFormat(code === "en" ? "en-US" : locale, {
@@ -111,9 +115,9 @@ function createFormatters(info: LanguageInfo, t: Translate) {
   });
   return {
     number: (n: number) => n.toLocaleString(locale),
-    inr: (n: number) => inr(n, locale),
-    time: (hhmm: string) => to12h(hhmm, locale),
-    timeIst: (hhmm: string) => t("common.timeIst", { time: to12h(hhmm, locale) }),
+    inr: (n: number) => iso(inr(n, locale)),
+    time: (hhmm: string) => iso(to12h(hhmm, locale)),
+    timeIst: (hhmm: string) => t("common.timeIst", { time: iso(to12h(hhmm, locale)) }),
     longDate: (iso: string) => longDate(iso, locale) || t("common.notSet"),
     fullDate: (iso: string) => fullDate(iso, locale),
     shortDate: (iso: string) => shortDate(iso, locale),
@@ -122,7 +126,7 @@ function createFormatters(info: LanguageInfo, t: Translate) {
       if (iso === isoDate(addDays(new Date(), 1))) return t("common.tomorrow");
       return shortDate(iso, locale);
     },
-    clockTime: (isoDateTime: string) => clockTime(isoDateTime, locale),
+    clockTime: (isoDateTime: string) => iso(clockTime(isoDateTime, locale)),
     /** "9 AM" style label for an hour of the day (0-23). */
     hour: (h: number) => hourFormat.format(new Date(Date.UTC(2000, 0, 1, h))),
     specialty: (id: string) => {

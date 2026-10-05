@@ -170,7 +170,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                         </span>
                       ) : null}
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
+                    <span className="block truncate text-xs text-muted-foreground" dir="auto">
                       {last
                         ? last.sender === "patient"
                           ? t("common.youPrefix", { text: last.body })
@@ -230,7 +230,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                     >
                       <div
                         className={cn(
-                          "whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm",
+                          "whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-start text-sm",
                           isMe
                             ? "rounded-se-sm bg-primary text-primary-foreground"
                             : "rounded-ss-sm bg-muted text-foreground",
@@ -239,7 +239,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
                         <span className="sr-only">
                           {isMe ? t("messages.senderYou") : t("messages.senderClinic")}{" "}
                         </span>
-                        {m.body}
+                        <span dir="auto">{m.body}</span>
                       </div>
                       <span className="mx-1 mt-1 text-[10px] text-muted-foreground">
                         {fmt.shortDate(isoDate(new Date(m.sentAt)))}, {fmt.clockTime(m.sentAt)}

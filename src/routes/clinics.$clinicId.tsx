@@ -97,7 +97,7 @@ function ClinicProfile() {
           <div className="space-y-8">
             <section aria-labelledby="clinic-about">
               <SectionHeader id="clinic-about" title={t("clinic.about")} />
-              <p className="leading-relaxed text-muted-foreground">
+              <p className="leading-relaxed text-muted-foreground" dir="auto">
                 {clinic.about || t("doctor.noDescription")}
               </p>
               {clinic.specialtyIds.length ? (

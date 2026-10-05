@@ -143,7 +143,9 @@ function DoctorProfile() {
                 {t("doctor.about")}
               </h2>
               {doctor.about ? (
-                <p className="text-sm leading-relaxed text-muted-foreground">{doctor.about}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground" dir="auto">
+                  {doctor.about}
+                </p>
               ) : (
                 <p className="text-sm text-muted-foreground">{t("doctor.noDescription")}</p>
               )}

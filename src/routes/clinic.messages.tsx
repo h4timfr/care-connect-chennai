@@ -149,7 +149,7 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
                   <span className="block truncate text-xs text-muted-foreground">
                     {subtitleOf(c)}
                   </span>
-                  <span className="mt-1 block truncate text-xs text-muted-foreground">
+                  <span className="mt-1 block truncate text-xs text-muted-foreground" dir="auto">
                     {last
                       ? last.sender === "clinic"
                         ? t("common.youPrefix", { text: last.body })
@@ -201,7 +201,7 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
                     >
                       <div
                         className={cn(
-                          "whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm",
+                          "whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-start text-sm",
                           isMe
                             ? "rounded-se-sm bg-primary text-primary-foreground"
                             : "rounded-ss-sm bg-muted text-foreground",
@@ -210,7 +210,7 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
                         <span className="sr-only">
                           {isMe ? t("messages.senderClinic") : t("messages.senderPatient")}{" "}
                         </span>
-                        {m.body}
+                        <span dir="auto">{m.body}</span>
                       </div>
                       <span className="mx-1 mt-1 text-[10px] text-muted-foreground">
                         {sentLabel(m.sentAt)}

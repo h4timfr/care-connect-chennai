@@ -121,7 +121,7 @@ export function SectionHeader({
   return (
     <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
       <div className="min-w-0">
-        <h2 id={id} className="truncate text-lg font-semibold sm:text-xl">
+        <h2 id={id} className="text-lg font-semibold [overflow-wrap:anywhere] sm:text-xl">
           {title}
         </h2>
         {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}

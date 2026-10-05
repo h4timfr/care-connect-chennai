@@ -109,8 +109,11 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <section className="space-y-4 lg:col-span-2" aria-labelledby="schedule-heading">
-          <h2 id="schedule-heading" className="font-display text-lg font-semibold">
+        <section className="min-w-0 space-y-4 lg:col-span-2" aria-labelledby="schedule-heading">
+          <h2
+            id="schedule-heading"
+            className="font-display text-lg font-semibold [overflow-wrap:anywhere]"
+          >
             {t("clinicDashboard.schedule")}
           </h2>
           <div className="surface-card divide-y">
@@ -139,8 +142,11 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
           </div>
         </section>
 
-        <section className="space-y-4" aria-labelledby="pending-heading">
-          <h2 id="pending-heading" className="font-display text-lg font-semibold">
+        <section className="min-w-0 space-y-4" aria-labelledby="pending-heading">
+          <h2
+            id="pending-heading"
+            className="font-display text-lg font-semibold [overflow-wrap:anywhere]"
+          >
             {t("clinicDashboard.awaiting")}
           </h2>
           <div className="surface-card space-y-4 p-4">
@@ -150,10 +156,10 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
                 <p className="mb-2 text-xs text-muted-foreground">
                   {t("common.dateAtTime", { date: fmt.shortDate(a.date), time: fmt.time(a.time) })}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
-                    className="h-8 flex-1 text-xs"
+                    className="h-auto min-h-8 flex-1 whitespace-normal text-xs"
                     disabled={updatingId !== null}
                     onClick={() => update(a.id, "confirmed")}
                   >
@@ -162,7 +168,7 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 flex-1 text-xs text-destructive"
+                    className="h-auto min-h-8 flex-1 whitespace-normal text-xs text-destructive"
                     disabled={updatingId !== null}
                     onClick={() => update(a.id, "cancelled")}
                   >
@@ -190,9 +196,11 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
 
 function Stat({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
   return (
-    <div className="surface-card p-5">
+    <div className="surface-card min-w-0 p-4 sm:p-5">
       <div className="mb-2 flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="min-w-0 text-sm font-medium text-muted-foreground [overflow-wrap:anywhere]">
+          {label}
+        </p>
         <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
       </div>
       <p className="font-display text-3xl font-bold">{value}</p>

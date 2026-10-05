@@ -128,6 +128,42 @@ test.describe("Language selection", () => {
   });
 });
 
+test.describe("Long translations fit small screens", () => {
+  // Tamil and Malayalam have the longest words; these pages overflowed before (sort select,
+  // appointment tabs, dashboard stat labels and request buttons).
+  for (const lang of ["ta", "ml"]) {
+    for (const width of [390, 1024]) {
+      test(`${lang} at ${width}px: no horizontal page scroll`, async ({ page, backend }) => {
+        const mock = await backend({ appointments: [appointmentRow()] });
+        mock.state.memberships = [
+          { clinic_id: ids.clinicA, role: "clinic_admin", clinics: mock.state.clinics[0] },
+        ];
+        await setLanguageCookie(page, lang);
+        await page.setViewportSize({ width, height: 900 });
+        for (const path of ["/", "/discover", "/appointments", "/profile", "/clinic"]) {
+          await page.goto(path);
+          await page.waitForLoadState("networkidle");
+          const overflow = await page.evaluate(
+            () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          );
+          expect(overflow, `${lang} ${width} ${path}`).toBeLessThanOrEqual(1);
+        }
+      });
+    }
+  }
+
+  test("Urdu keeps Latin times in reading order inside right-to-left text", async ({
+    page,
+    backend,
+  }) => {
+    await backend({ appointments: [appointmentRow()] });
+    await setLanguageCookie(page, "ur");
+    await page.goto("/appointments");
+    // The time is wrapped in a left-to-right isolate (U+2066…U+2069), so it reads "7:30 PM".
+    await expect(page.getByText(/⁦7:30 PM⁩/).first()).toBeVisible();
+  });
+});
+
 test.describe("Every page in every language", () => {
   const PAGES = [
     "/",
