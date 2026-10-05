@@ -141,7 +141,7 @@ RESET role;
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000007a1", "role": "authenticated"}';
 SET LOCAL role authenticated;
 SELECT extensions.is((SELECT count(*)::int FROM public.candidate_facilities WHERE research_id = 'CLINIC-901'), 1, 'a platform admin reads candidates');
-SELECT extensions.is((SELECT count(*)::int FROM public.candidate_sources), 1, 'a platform admin reads research sources');
+SELECT extensions.is((SELECT count(*)::int FROM public.candidate_sources WHERE facility_candidate_id = '00000000-0000-0000-0000-0000000007f1'), 1, 'a platform admin reads research sources');
 SELECT extensions.results_eq(
     $$ WITH u AS (UPDATE public.candidate_facilities SET review_status = 'under_review', notes = 'Started review' WHERE research_id = 'CLINIC-901' RETURNING 1) SELECT count(*)::int FROM u $$,
     $$ VALUES (1) $$, 'a platform admin can move a candidate through review'

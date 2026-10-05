@@ -1,6 +1,2400 @@
 {
-  "catalogue": "chennai-provider-candidates (awaiting the research data — see research/README.md)",
-  "facilities": [],
-  "doctors": [],
-  "relationships": []
+  "catalogue": "chennai-provider-candidates",
+  "facilities": [
+    {
+      "research_id": "CLINIC-001",
+      "name": "Apollo Clinic T. Nagar",
+      "facility_type": "Multispecialty clinic",
+      "address": "Door No. 11/4, Sivaprakasam St, Parthasarathi Puram, T. Nagar, Chennai",
+      "locality": "T. Nagar",
+      "website": "https://www.apolloclinic.com/clinic-locator/india/tamil-nadu/chennai/t-nagar?utm_source=chatgpt.com",
+      "specialties": [
+        "Internal medicine",
+        "OBGYN",
+        "surgery",
+        "gastro",
+        "pulmonology",
+        "orthopedics",
+        "pediatrics",
+        "ENT",
+        "ophthalmology",
+        "neurology",
+        "dermatology",
+        "cardiology",
+        "psychiatry"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Provider participation in CareConnect not established"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apolloclinic.com/clinic-locator/india/tamil-nadu/chennai/t-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-002",
+      "name": "Apollo Clinic Velachery",
+      "facility_type": "Multispecialty clinic",
+      "address": "Plot 46, 7th St, near Vijayanagar bus stand, Tansi Nagar, Velachery",
+      "locality": "Velachery",
+      "website": "https://www.apolloclinic.com/clinic-locator/india/tamil-nadu/chennai/velachery/forms?utm_source=chatgpt.com",
+      "specialties": [
+        "General/internal medicine",
+        "surgery",
+        "OBGYN",
+        "pulmonology",
+        "neurology",
+        "gastro",
+        "pediatrics",
+        "orthopedics",
+        "ENT",
+        "dermatology",
+        "ophthalmology",
+        "cardiology",
+        "psychiatry"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apolloclinic.com/clinic-locator/india/tamil-nadu/chennai/velachery/forms?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-003",
+      "name": "Apollo Clinic Phoenix Mall Velachery",
+      "facility_type": "Clinic",
+      "address": "27/17 Velachery Main Rd, opposite Phoenix Mall, Nagendra Nagar, Chennai 600042",
+      "locality": "Velachery",
+      "website": "https://www.apolloclinic.com/clinic-locator/india/tamil-nadu/chennai/apollo-clinic-phoenix-mall-velachery?utm_source=chatgpt.com",
+      "specialties": [
+        "OBGYN/fertility explicitly surfaced"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Full specialty roster not extracted"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apolloclinic.com/clinic-locator/india/tamil-nadu/chennai/apollo-clinic-phoenix-mall-velachery?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-004",
+      "name": "Apollo Medical Centre Anna Nagar East",
+      "facility_type": "Multispecialty medical centre",
+      "address": "#30, F Block, 2nd Avenue, Anna Nagar East, Chennai",
+      "locality": "Anna Nagar East",
+      "website": "https://www.apolloclinic.com/clinic-locator/india/tamil-nadu/chennai/?utm_source=chatgpt.com",
+      "specialties": [
+        "Multispecialty outpatient care"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Detailed specialty roster not extracted"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apolloclinic.com/clinic-locator/india/tamil-nadu/chennai/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-005",
+      "name": "Apollo Dental Clinic Anna Nagar",
+      "facility_type": "Dental clinic",
+      "address": "1st Floor, 2nd Ave, opposite KFC, AF Block, Anna Nagar, Chennai 600040",
+      "locality": "Anna Nagar",
+      "website": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+      "specialties": [
+        "General dentistry",
+        "oral surgery",
+        "orthodontics",
+        "endodontics",
+        "implants",
+        "periodontics",
+        "prosthodontics"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Branch naming/address variants exist; see conflicts section"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-006",
+      "name": "Apollo Fertility Anna Nagar",
+      "facility_type": "Fertility centre",
+      "address": "75, 6th Avenue, Old No. 7, S Block, Anna Nagar, Chennai 600040",
+      "locality": "Anna Nagar",
+      "website": "https://www.apollofertility.com/chennai/anna-nagar/our-hospitals/best-ivf-centre-in-anna-nagar-chennai?utm_source=chatgpt.com",
+      "specialties": [
+        "IVF",
+        "IUI",
+        "reproductive medicine",
+        "gynecology"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/anna-nagar/our-hospitals/best-ivf-centre-in-anna-nagar-chennai?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-007",
+      "name": "Apollo Fertility Karapakkam",
+      "facility_type": "Fertility centre",
+      "address": "2/319, OMR Service Rd, landmark Aravind Theatre, Chennai 600097",
+      "locality": "Karapakkam / OMR",
+      "website": "https://www.apollofertility.com/chennai/karapakkam/our-hospitals/best-ivf-centre-in-karapakkam-chennai?utm_source=chatgpt.com",
+      "specialties": [
+        "IVF",
+        "fertility treatment",
+        "reproductive medicine"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/karapakkam/our-hospitals/best-ivf-centre-in-karapakkam-chennai?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-008",
+      "name": "Dr. Humayun Speciality Hospital",
+      "facility_type": "Specialty/multispecialty hospital",
+      "address": "New 10, Chevalier Sivaji Ganesan Rd, South Boag Rd, T. Nagar, Chennai 600017",
+      "locality": "T. Nagar",
+      "website": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+      "specialties": [
+        "OBGYN",
+        "fertility",
+        "pediatrics",
+        "orthopedics",
+        "ENT",
+        "cardiology",
+        "gastro sciences",
+        "oncology"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-009",
+      "name": "Rainbow Children's Hospital & BirthRight Anna Nagar",
+      "facility_type": "Women & children's hospital",
+      "address": "Pillaiyar Koil St, near VR Mall, Thirumangalam, Anna Nagar, Chennai 600040",
+      "locality": "Anna Nagar",
+      "website": "https://www.rainbowhospitals.in/our-centre/chennai/annanagar?utm_source=chatgpt.com",
+      "specialties": [
+        "Pediatrics",
+        "neonatology",
+        "pediatric subspecialties",
+        "maternity"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.rainbowhospitals.in/our-centre/chennai/annanagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-010",
+      "name": "Rainbow Children's Hospital Guindy",
+      "facility_type": "Women & children's hospital",
+      "address": "157 Anna Salai, near Little Mount Metro, Guindy, Chennai 600015",
+      "locality": "Guindy",
+      "website": "https://www.rainbowhospitals.in/our-centre-detail/Chennai?utm_source=chatgpt.com",
+      "specialties": [
+        "Pediatric specialties and women's care"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.rainbowhospitals.in/our-centre-detail/Chennai?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-011",
+      "name": "Rainbow Children's Hospital Sholinganallur",
+      "facility_type": "Women & children's hospital",
+      "address": "493 OMR-ECR Link Rd, Kalaignar Karunanidhi Salai, Sholinganallur",
+      "locality": "Sholinganallur",
+      "website": "https://www.rainbowhospitals.in/our-centre-detail/Chennai?utm_source=chatgpt.com",
+      "specialties": [
+        "Pediatrics",
+        "pediatric intensive care",
+        "pediatric ENT",
+        "dermatology and other child-care specialties"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "PIN not surfaced in retrieved page"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.rainbowhospitals.in/our-centre-detail/Chennai?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-012",
+      "name": "Dr. Mehta's Hospital Chetpet",
+      "facility_type": "Multispecialty hospital",
+      "address": "2/1, 2, 3 McNichols Rd, 3rd Lane, Chetpet, Chennai 600031",
+      "locality": "Chetpet",
+      "website": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+      "specialties": [
+        "Pediatrics",
+        "internal medicine",
+        "surgery",
+        "gastro",
+        "cardiology",
+        "neurology",
+        "nephrology",
+        "ENT",
+        "pulmonology",
+        "dermatology etc."
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Very large roster; selected subset only"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-013",
+      "name": "Apollo Speciality Hospitals Vanagaram",
+      "facility_type": "Multispecialty hospital",
+      "address": "Plot 64, Vanagaram-Ambattur Rd, Ayanambakkam, Chennai 600095",
+      "locality": "Ayanambakkam/Vanagaram",
+      "website": "https://www.apollohospitals.com/hospitals/apollo-speciality-hospitals-vanagaram?utm_source=chatgpt.com",
+      "specialties": [
+        "Cardiology",
+        "orthopedics",
+        "neurology",
+        "urology",
+        "pulmonology",
+        "nephrology",
+        "surgery and others"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Vanagaram/Ayanambakkam is western Chennai metropolitan area"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollohospitals.com/hospitals/apollo-speciality-hospitals-vanagaram?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-014",
+      "name": "Physkraft Super Speciality Physiotherapy Clinic",
+      "facility_type": "Physiotherapy centre",
+      "address": "11, Dhandeeswaram 7th Main Rd, Velachery, Chennai 42",
+      "locality": "Velachery",
+      "website": "https://physkraft.com/?utm_source=chatgpt.com",
+      "specialties": [
+        "Sports/musculoskeletal physiotherapy",
+        "rehabilitation"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Clinic-site registration claim is not equivalent to NMC verification"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://physkraft.com/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-015",
+      "name": "Optimal Minds Brain Wellness Clinic — Nungambakkam",
+      "facility_type": "Psychiatry/psychology clinic",
+      "address": "79/70, Ground Floor, 3rd Street, Kamdar Nagar, Chennai 600034",
+      "locality": "Nungambakkam",
+      "website": "https://optimalminds.in/?utm_source=chatgpt.com",
+      "specialties": [
+        "Psychiatry",
+        "psychology",
+        "mental-health assessment and treatment"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Branch-specific clinician schedules should be confirmed"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://optimalminds.in/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-016",
+      "name": "Optimal Minds — Adyar",
+      "facility_type": "Psychiatry/psychology clinic",
+      "address": "Ground Floor, 70, 3rd Main Rd, Kasturba Nagar, Chennai 600020",
+      "locality": "Adyar",
+      "website": "https://optimalminds.in/?utm_source=chatgpt.com",
+      "specialties": [
+        "Psychiatry",
+        "psychology",
+        "mental-health care"
+      ],
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Branch-specific clinician schedules should be confirmed"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://optimalminds.in/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-017",
+      "name": "Bio Lotus Clinic",
+      "facility_type": "Multispecialty clinic",
+      "address": "Plot 8, Model School Rd, Sholinganallur, Chennai 600119",
+      "locality": "Sholinganallur",
+      "website": "https://biolotushealthcare.com/?utm_source=chatgpt.com",
+      "specialties": [
+        "Gynecology/obstetrics",
+        "pediatrics; public listings also identify ENT and physiotherapy"
+      ],
+      "source_confidence": "medium",
+      "unresolved_issues": [
+        "Some doctor relationships rely on directory evidence"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://biolotushealthcare.com/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-018",
+      "name": "Dr Rajinikanth's Ortho Clinic",
+      "facility_type": "Orthopedics clinic",
+      "address": "Door 3/10, Plot 51, Jaya Nagar Mosque St, Porur, Chennai",
+      "locality": "Porur",
+      "website": "https://www.practo.com/chennai/clinic/dr-rajinikanth-s-ortho-clinic-porur-1?utm_source=chatgpt.com",
+      "specialties": [
+        "Orthopedics",
+        "trauma",
+        "joint replacement",
+        "back pain"
+      ],
+      "source_confidence": "medium",
+      "unresolved_issues": [
+        "No independent official clinic site verified"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinic/dr-rajinikanth-s-ortho-clinic-porur-1?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-019",
+      "name": "Pooja Dental Clinic",
+      "facility_type": "Dental centre",
+      "address": "Patel Rd, near Bus Depot, Perambur, Chennai",
+      "locality": "Perambur",
+      "website": "https://www.practo.com/chennai/hospital/pooja-dental-clinic-ashok-nagar?utm_source=chatgpt.com",
+      "specialties": [
+        "Dentistry",
+        "orthodontics",
+        "endodontics",
+        "implantology",
+        "prosthodontics",
+        "oral surgery"
+      ],
+      "source_confidence": "medium",
+      "unresolved_issues": [
+        "Full street number/PIN not surfaced"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/hospital/pooja-dental-clinic-ashok-nagar?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "CLINIC-020",
+      "name": "Gloss Dental Multispeciality",
+      "facility_type": "Dental clinic",
+      "address": "273/114 Paper Mills Rd, near Agaram Junction, Peravallur, Chennai",
+      "locality": "Perambur/Peravallur",
+      "website": "https://www.practo.com/chennai/clinic/gloss-dental-perambur?utm_source=chatgpt.com",
+      "specialties": [
+        "Multispecialty dentistry"
+      ],
+      "source_confidence": "medium",
+      "unresolved_issues": [
+        "Directory-led verification"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinic/gloss-dental-perambur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Facility identity, public location and the listed services/specialties.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    }
+  ],
+  "doctors": [
+    {
+      "research_id": "DOCTOR-001",
+      "full_name": "Dr. Asma Humayun",
+      "specialty": "OBGYN / fertility",
+      "qualifications": "DGO, DNB, MRCOG (UK), F.MAS, F.ART, Dip AG, Dip RM",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-002",
+      "full_name": "Dr. Sarathkala P",
+      "specialty": "Neonatology",
+      "qualifications": "DCH, DNB (PED), MRCPCH, Fellowship in Neonatology",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-003",
+      "full_name": "Dr. R. Ezhilarasan",
+      "specialty": "Pediatrics / Neonatology",
+      "qualifications": "MBBS, MD, DM",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-004",
+      "full_name": "Dr. Omer Sheriff",
+      "specialty": "Orthopedics / joint replacement",
+      "qualifications": "MBBS, MS Ortho, Fellowship in Joint Replacement",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-005",
+      "full_name": "Dr. Vivekanandan B",
+      "specialty": "ENT",
+      "qualifications": "MS (ENT), DNB (ENT)",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-006",
+      "full_name": "Dr. K. Jayaraman",
+      "specialty": "Internal medicine / diabetology / geriatrics",
+      "qualifications": "MBBS, MD",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-007",
+      "full_name": "Dr. Sama Akber",
+      "specialty": "Cardiology",
+      "qualifications": "MBBS, DNB General Medicine, DM Cardiology",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-008",
+      "full_name": "Dr. Alefiya Akbari",
+      "specialty": "Emergency medicine",
+      "qualifications": "MBBS, FEM",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-009",
+      "full_name": "Dr. Gautham Kumar",
+      "specialty": "Periodontics / dental surgery",
+      "qualifications": "BDS, MDS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [
+        "Dental registration not independently verified"
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-010",
+      "full_name": "Dr. Preetham Jain",
+      "specialty": "Endodontics",
+      "qualifications": "BDS, MDS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-011",
+      "full_name": "Dr. Manimegali",
+      "specialty": "General dentistry",
+      "qualifications": "BDS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-012",
+      "full_name": "Dr. Ketaki Kamath",
+      "specialty": "Orthodontics",
+      "qualifications": "BDS, MDS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-013",
+      "full_name": "Dr. Avinash Reddy",
+      "specialty": "Oral & maxillofacial surgery",
+      "qualifications": "MDS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-014",
+      "full_name": "Dr. Neeraj Menon",
+      "specialty": "Endodontics",
+      "qualifications": "BDS, MDS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-015",
+      "full_name": "Dr. Sanketh Reddy",
+      "specialty": "Prosthodontics",
+      "qualifications": "BDS, MDS, DipClSc, MSD, FICOI, MSc",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-016",
+      "full_name": "Dr. Parisa Norouzi B",
+      "specialty": "Pedodontics",
+      "qualifications": "BDS, MDS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-017",
+      "full_name": "Dr. Brinda Narain Kalro",
+      "specialty": "Reproductive medicine / infertility",
+      "qualifications": "MBBS, MRCOG, FRCOG",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-018",
+      "full_name": "Dr. (Major) Uma Maheshwari M",
+      "specialty": "Fertility / IVF",
+      "qualifications": "MD (OBGYN), DRM Germany",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-019",
+      "full_name": "Dr. Janani Iyer",
+      "specialty": "OBGYN / fertility",
+      "qualifications": "MBBS, MD, FRCOG (UK), ATSM Fertility Medicine",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-020",
+      "full_name": "Dr. Dhivyambigai G R",
+      "specialty": "OBGYN / fertility",
+      "qualifications": "MBBS, DNB OBGYN, fertility/minimal-access fellowship",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-021",
+      "full_name": "Dr. Anjana Annal",
+      "specialty": "OBGYN / fertility",
+      "qualifications": "MBBS, MS, DNB OBGYN, MRCOG, FMAS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-022",
+      "full_name": "Dr. Keerthana Ashwin",
+      "specialty": "OBGYN / reproductive medicine",
+      "qualifications": "MBBS, MSOG, Fellowship in Reproductive Medicine",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-023",
+      "full_name": "Dr. Lakshmi Sanjay",
+      "specialty": "Psychiatry",
+      "qualifications": "MBBS, MD Psychiatry",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://optimalminds.in/about?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-024",
+      "full_name": "Dr. Arun",
+      "specialty": "Psychiatry",
+      "qualifications": "MBBS, MD Psychiatry",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://optimalminds.in/about?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-025",
+      "full_name": "Dr. Amudha Hari",
+      "specialty": "Gynecology/Obstetrics",
+      "qualifications": "Not surfaced in retrieved evidence",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/all-clinics/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-026",
+      "full_name": "Dr. Panneerselvam V. R.",
+      "specialty": "ENT",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/all-clinics/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-027",
+      "full_name": "Dr. Ravi S",
+      "specialty": "Pediatrics",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/all-clinics/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-028",
+      "full_name": "Dr. Maha",
+      "specialty": "Physiotherapy",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/all-clinics/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-029",
+      "full_name": "Dr. K. Pradeepa",
+      "specialty": "Sports/musculoskeletal physiotherapy",
+      "qualifications": "MPT Sports; CMPT; additional qualifications listed by clinic",
+      "registration_info": "Clinic publishes “909869”; authoritative council verification not established",
+      "registration_status": "public_listing_seen",
+      "source_confidence": "medium",
+      "unresolved_issues": [
+        "Clinic publishes registration 909869; authoritative council verification not established."
+      ],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://physkraft.com/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-030",
+      "full_name": "Dr. Rajinikanth",
+      "specialty": "Orthopedics",
+      "qualifications": "Not surfaced in retrieved clinic page",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinic/dr-rajinikanth-s-ortho-clinic-porur-1?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-031",
+      "full_name": "Dr. Deepak Balaji",
+      "specialty": "Dentistry / implantology",
+      "qualifications": "BDS",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/hospital/pooja-dental-clinic-ashok-nagar?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-032",
+      "full_name": "Dr. Joicy",
+      "specialty": "Dentistry",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/dental-clinics/perambur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-033",
+      "full_name": "Dr. Dinesh Raj E",
+      "specialty": "Dentistry",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinic/gloss-dental-perambur/faq?specialization=Dental+Surgeon&utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-034",
+      "full_name": "Dr. Aishwarya",
+      "specialty": "Dentistry",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "medium",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinic/gloss-dental-perambur/faq?specialization=Dental+Surgeon&utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-035",
+      "full_name": "Dr. Santosh Mohan Rao K",
+      "specialty": "Neurosurgery",
+      "qualifications": "Qualifications not surfaced in retrieved centre page",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-036",
+      "full_name": "Dr. Swathi Padmanaban",
+      "specialty": "Pediatric endocrinology / diabetology",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-037",
+      "full_name": "Dr. V V Vivekanand",
+      "specialty": "Pediatric pulmonology/allergies",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-038",
+      "full_name": "Dr. Rajesh Kumar R",
+      "specialty": "Pediatric interventional cardiology",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-039",
+      "full_name": "Dr. Keerthivasan S",
+      "specialty": "Pediatric gastroenterology/hepatology",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-040",
+      "full_name": "Dr. Suchitra Gopinath",
+      "specialty": "Pediatric orthopedics",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-041",
+      "full_name": "Dr. Ramachandran R",
+      "specialty": "Dermatology",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-042",
+      "full_name": "Dr. Somashekara H R",
+      "specialty": "Pediatric hepatology / liver transplant",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-043",
+      "full_name": "Dr. Subashini Partheeban",
+      "specialty": "Pediatric ENT",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-044",
+      "full_name": "Dr. Bharath Periasamy",
+      "specialty": "Pediatrics / pediatric intensive care",
+      "qualifications": null,
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://www.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-045",
+      "full_name": "Dr. Loga Priya G",
+      "specialty": "Family medicine",
+      "qualifications": "MBBS, PGDFM",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-046",
+      "full_name": "Dr. Lakshmi Priya V",
+      "specialty": "Dermatology",
+      "qualifications": "MBBS, MD Dermatology/Venereology/Leprosy",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-047",
+      "full_name": "Dr. Deepika Ramachandran",
+      "specialty": "Pulmonology",
+      "qualifications": "MD Pulmonology, DNB, EDRM",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-048",
+      "full_name": "Dr. Edwin Fernando M",
+      "specialty": "Nephrology",
+      "qualifications": "MBBS, MD General Medicine, DM Nephrology",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-049",
+      "full_name": "Dr. Ilavarasi Lakshmanan",
+      "specialty": "Medical gastroenterology",
+      "qualifications": "MBBS, MD Internal Medicine, DM Gastroenterology",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "research_id": "DOCTOR-050",
+      "full_name": "Dr. Annamalai R N",
+      "specialty": "Cardiology",
+      "qualifications": "MBBS, MD, DM Cardiology",
+      "registration_info": null,
+      "registration_status": "not_verified",
+      "source_confidence": "high",
+      "unresolved_issues": [],
+      "researched_on": "2026-10-05",
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Doctor identity, specialty/qualifications and public facility association as shown by the cited source.",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "doctor": "DOCTOR-001",
+      "facility": "CLINIC-008",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Named directly on Humayun's official doctors page [humayunhospital.com](https://humayunhospital.com/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-002",
+      "facility": "CLINIC-008",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Named directly on Humayun's official doctors page [humayunhospital.com](https://humayunhospital.com/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-003",
+      "facility": "CLINIC-008",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Named directly on Humayun's official doctors page [humayunhospital.com](https://humayunhospital.com/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-004",
+      "facility": "CLINIC-008",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Named directly on Humayun's official doctors page [humayunhospital.com](https://humayunhospital.com/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-005",
+      "facility": "CLINIC-008",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Named directly on Humayun's official doctors page [humayunhospital.com](https://humayunhospital.com/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-006",
+      "facility": "CLINIC-008",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Named directly on Humayun's official doctors page [humayunhospital.com](https://humayunhospital.com/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-007",
+      "facility": "CLINIC-008",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Named directly on Humayun's official doctors page [humayunhospital.com](https://humayunhospital.com/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-008",
+      "facility": "CLINIC-008",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://humayunhospital.com/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Named directly on Humayun's official doctors page [humayunhospital.com](https://humayunhospital.com/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-009",
+      "facility": "CLINIC-005",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Anna Nagar location appears directly on Apollo Dental's official doctor roster [Apollo Dental](https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-010",
+      "facility": "CLINIC-005",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Anna Nagar location appears directly on Apollo Dental's official doctor roster [Apollo Dental](https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-011",
+      "facility": "CLINIC-005",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Anna Nagar location appears directly on Apollo Dental's official doctor roster [Apollo Dental](https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-012",
+      "facility": "CLINIC-005",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Anna Nagar location appears directly on Apollo Dental's official doctor roster [Apollo Dental](https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-013",
+      "facility": "CLINIC-005",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Anna Nagar location appears directly on Apollo Dental's official doctor roster [Apollo Dental](https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-014",
+      "facility": "CLINIC-005",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Anna Nagar location appears directly on Apollo Dental's official doctor roster [Apollo Dental](https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-015",
+      "facility": "CLINIC-005",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Anna Nagar location appears directly on Apollo Dental's official doctor roster [Apollo Dental](https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-016",
+      "facility": "CLINIC-005",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Anna Nagar location appears directly on Apollo Dental's official doctor roster [Apollo Dental](https://www.apollodental.in/chennai/anna-nagar/our-clinics/apollo-dental-clinic-in-anna-nagar?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-017",
+      "facility": "CLINIC-006",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Apollo Fertility official Chennai doctor listing places them at Anna Nagar [apollofertility.com](https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-018",
+      "facility": "CLINIC-006",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Apollo Fertility official Chennai doctor listing places them at Anna Nagar [apollofertility.com](https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-019",
+      "facility": "CLINIC-007",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Apollo Fertility pages identify Karapakkam association [apollofertility.com](https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-020",
+      "facility": "CLINIC-007",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Apollo Fertility pages identify Karapakkam association [apollofertility.com](https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-021",
+      "facility": "CLINIC-007",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Apollo Fertility pages identify Karapakkam association [apollofertility.com](https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-022",
+      "facility": "CLINIC-007",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Apollo Fertility pages identify Karapakkam association [apollofertility.com](https://www.apollofertility.com/chennai/doctors?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-023",
+      "facility": "CLINIC-015",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [
+        "Exact branch schedules need verification"
+      ],
+      "sources": [
+        {
+          "url": "https://optimalminds.in/about?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Optimal Minds team/contact pages identify these psychiatrists and clinic locations [Optimal Minds Clinic](https://optimalminds.in/about?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-024",
+      "facility": "CLINIC-015",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [
+        "Exact branch schedules need verification"
+      ],
+      "sources": [
+        {
+          "url": "https://optimalminds.in/about?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Optimal Minds team/contact pages identify these psychiatrists and clinic locations [Optimal Minds Clinic](https://optimalminds.in/about?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-025",
+      "facility": "CLINIC-017",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Relationship requires human confirmation"
+      ],
+      "sources": [
+        {
+          "url": "https://biolotushealthcare.com/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Bio Lotus page names core doctors but branch/role detail is stronger on Practo [biolotushealthcare.com](https://biolotushealthcare.com/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-027",
+      "facility": "CLINIC-017",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Relationship requires human confirmation"
+      ],
+      "sources": [
+        {
+          "url": "https://biolotushealthcare.com/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Bio Lotus page names core doctors but branch/role detail is stronger on Practo [biolotushealthcare.com](https://biolotushealthcare.com/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-026",
+      "facility": "CLINIC-017",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Relationship requires human confirmation"
+      ],
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/all-clinics/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Association primarily from Practo clinic listing [Practo](https://www.practo.com/chennai/clinics/all-clinics/sholinganallur?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-028",
+      "facility": "CLINIC-017",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Relationship requires human confirmation"
+      ],
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/all-clinics/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Association primarily from Practo clinic listing [Practo](https://www.practo.com/chennai/clinics/all-clinics/sholinganallur?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-029",
+      "facility": "CLINIC-014",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://physkraft.com/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Founder/doctor named directly on official Physkraft site [physkraft.com](https://physkraft.com/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-030",
+      "facility": "CLINIC-018",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Independent official corroboration desirable"
+      ],
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinic/dr-rajinikanth-s-ortho-clinic-porur-1?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Practo claimed clinic explicitly says the clinic is visited by Dr. Rajinikanth [Practo](https://www.practo.com/chennai/clinic/dr-rajinikanth-s-ortho-clinic-porur-1?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-031",
+      "facility": "CLINIC-019",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Relationship requires human confirmation"
+      ],
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/dental-clinics/perambur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Practo lists both doctors at Pooja Dental Clinic [Practo](https://www.practo.com/chennai/clinics/dental-clinics/perambur?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-032",
+      "facility": "CLINIC-019",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Relationship requires human confirmation"
+      ],
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinics/dental-clinics/perambur?utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Practo lists both doctors at Pooja Dental Clinic [Practo](https://www.practo.com/chennai/clinics/dental-clinics/perambur?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-033",
+      "facility": "CLINIC-020",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Relationship requires human confirmation"
+      ],
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinic/gloss-dental-perambur/faq?specialization=Dental+Surgeon&utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Practo explicitly names both at Gloss Dental [Practo](https://www.practo.com/chennai/clinic/gloss-dental-perambur/faq?specialization=Dental+Surgeon\\&utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-034",
+      "facility": "CLINIC-020",
+      "research_status": "POSSIBLE_NEEDS_CONFIRMATION",
+      "confidence": "medium",
+      "unresolved_issues": [
+        "Relationship requires human confirmation"
+      ],
+      "sources": [
+        {
+          "url": "https://www.practo.com/chennai/clinic/gloss-dental-perambur/faq?specialization=Dental+Surgeon&utm_source=chatgpt.com",
+          "source_type": "directory",
+          "supports": "Practo explicitly names both at Gloss Dental [Practo](https://www.practo.com/chennai/clinic/gloss-dental-perambur/faq?specialization=Dental+Surgeon\\&utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-035",
+      "facility": "CLINIC-010",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Guindy page explicitly lists these doctors at Guindy [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-036",
+      "facility": "CLINIC-010",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Guindy page explicitly lists these doctors at Guindy [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-037",
+      "facility": "CLINIC-010",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Guindy page explicitly lists these doctors at Guindy [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-038",
+      "facility": "CLINIC-010",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Guindy page explicitly lists these doctors at Guindy [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-039",
+      "facility": "CLINIC-010",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Guindy page explicitly lists these doctors at Guindy [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-040",
+      "facility": "CLINIC-010",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Guindy page explicitly lists these doctors at Guindy [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/guindy?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-041",
+      "facility": "CLINIC-011",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Sholinganallur roster explicitly lists them there [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-042",
+      "facility": "CLINIC-011",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Sholinganallur roster explicitly lists them there [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-043",
+      "facility": "CLINIC-011",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Sholinganallur roster explicitly lists them there [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-044",
+      "facility": "CLINIC-011",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Rainbow's official Sholinganallur roster explicitly lists them there [Rainbow Hospitals](https://cdn1.rainbowhospitals.in/our-centre/chennai/sholinganallur?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-045",
+      "facility": "CLINIC-012",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Chetpet doctor roster identifies each physician and specialty [mehtahospital.com](https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-046",
+      "facility": "CLINIC-012",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Chetpet doctor roster identifies each physician and specialty [mehtahospital.com](https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-047",
+      "facility": "CLINIC-012",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Chetpet doctor roster identifies each physician and specialty [mehtahospital.com](https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-048",
+      "facility": "CLINIC-012",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Chetpet doctor roster identifies each physician and specialty [mehtahospital.com](https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-049",
+      "facility": "CLINIC-012",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Chetpet doctor roster identifies each physician and specialty [mehtahospital.com](https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "doctor": "DOCTOR-050",
+      "facility": "CLINIC-012",
+      "research_status": "CONFIRMED_PUBLIC",
+      "confidence": "high",
+      "unresolved_issues": [],
+      "sources": [
+        {
+          "url": "https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com",
+          "source_type": "official_facility",
+          "supports": "Official Chetpet doctor roster identifies each physician and specialty [mehtahospital.com](https://mehtahospital.com/chetpet-doctors/?utm_source=chatgpt.com)",
+          "researched_on": "2026-10-05",
+          "confidence": "high"
+        }
+      ]
+    }
+  ]
 }
