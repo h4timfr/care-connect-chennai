@@ -40,10 +40,13 @@ INSERT INTO public.doctors (id, name, consultation_fee, is_demo) VALUES
 ('00000000-0000-0000-0000-0000000005d1', 'Dr Verified', 500, false),
 ('00000000-0000-0000-0000-0000000005d2', 'Dr Pending', 500, false),
 ('00000000-0000-0000-0000-0000000005d3', 'Dr Elsewhere', 700, false);
+-- Only a platform admin may set verification (check_clinic_doctor_update downgrades anyone else).
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000005a1", "role": "authenticated"}';
 INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005d1', true, 'verified'),
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005d2', true, 'pending'),
 ('00000000-0000-0000-0000-0000000005c2', '00000000-0000-0000-0000-0000000005d3', true, 'verified');
+RESET request.jwt.claims;
 INSERT INTO public.clinic_memberships (clinic_id, user_id, role) VALUES
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005a2', 'clinic_admin'),
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005a3', 'clinic_staff');
