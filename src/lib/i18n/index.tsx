@@ -113,6 +113,7 @@ function createFormatters(info: LanguageInfo, t: Translate) {
     hour: "numeric",
     timeZone: "UTC",
   });
+  const weekdayFormat = new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" });
   return {
     number: (n: number) => n.toLocaleString(locale),
     inr: (n: number) => iso(inr(n, locale)),
@@ -127,6 +128,8 @@ function createFormatters(info: LanguageInfo, t: Translate) {
       return shortDate(iso, locale);
     },
     clockTime: (isoDateTime: string) => iso(clockTime(isoDateTime, locale)),
+    /** Weekday name for 0 (Sunday) … 6 (Saturday), as stored in doctor_schedules.day_of_week. */
+    weekday: (dow: number) => weekdayFormat.format(new Date(Date.UTC(2024, 0, 7 + dow))),
     /** "9 AM" style label for an hour of the day (0-23). */
     hour: (h: number) => hourFormat.format(new Date(Date.UTC(2000, 0, 1, h))),
     specialty: (id: string) => {

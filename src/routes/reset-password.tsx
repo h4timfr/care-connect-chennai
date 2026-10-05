@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { AuthCard, FormAlert } from "@/components/AuthCard";
 import { PageLoader } from "@/components/common";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/PasswordInput";
 import { MIN_PASSWORD_LENGTH } from "@/lib/passwords";
 import { useAuth } from "@/lib/supabase/auth";
 import { supabase } from "@/lib/supabase/client";
@@ -104,11 +104,22 @@ function NewPasswordForm({ email }: { email: string }) {
       subtitle={email ? t("reset.forEmail", { email }) : t("reset.forAccount")}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Lets password managers file the new password under the right account. */}
+        {email ? (
+          <input
+            type="email"
+            name="username"
+            autoComplete="username"
+            value={email}
+            readOnly
+            hidden
+          />
+        ) : null}
         <div className="space-y-1.5">
           <Label htmlFor="new-password">{t("reset.newPassword")}</Label>
-          <Input
+          <PasswordInput
             id="new-password"
-            type="password"
+            name="new-password"
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -122,9 +133,9 @@ function NewPasswordForm({ email }: { email: string }) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="confirm-password">{t("reset.confirmPassword")}</Label>
-          <Input
+          <PasswordInput
             id="confirm-password"
-            type="password"
+            name="confirm-password"
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}

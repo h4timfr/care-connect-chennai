@@ -106,7 +106,23 @@ function ProfilePage() {
               <Link to="/clinic">{t("profile.openClinicPortal")}</Link>
             </Button>
           </section>
-        ) : null}
+        ) : (
+          <section className="surface-card space-y-3 p-6" aria-labelledby="provider-heading">
+            <h2 id="provider-heading" className="flex items-center gap-2 font-medium">
+              <Building2 className="h-4 w-4 text-primary" aria-hidden />{" "}
+              {t("profile.providerTitle")}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t("profile.providerBody")}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/providers">{t("profile.providerLearn")}</Link>
+              </Button>
+              <Button asChild variant="soft" size="sm">
+                <Link to="/providers/apply">{t("providers.apply")}</Link>
+              </Button>
+            </div>
+          </section>
+        )}
 
         <section className="surface-card space-y-3 p-6" aria-labelledby="saved-heading">
           <h2 id="saved-heading" className="font-medium">

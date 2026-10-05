@@ -66,6 +66,11 @@ const PAIRS: Record<"light" | "dark", [string, string, string, number][]> = {
     ["confirmed badge", "success", "success", 0.15],
     ["arrived badge", "info", "info", 0.15],
     ["cancelled badge", "destructive", "destructive", 0.12],
+    ["highlight call to action", "highlight-foreground", "highlight", 1],
+    ["active nav item / verified badge", "highlight", "highlight-soft", 1],
+    ["select option text", "popover-foreground", "popover", 1],
+    ["form control text", "foreground", "card", 1],
+    ["link text on card", "primary", "card", 1],
   ],
   dark: [
     ["body text", "foreground", "background", 1],
@@ -80,6 +85,11 @@ const PAIRS: Record<"light" | "dark", [string, string, string, number][]> = {
     ["confirmed badge", "success", "success", 0.15],
     ["arrived badge", "info", "info", 0.15],
     ["cancelled badge", "destructive", "destructive", 0.12],
+    ["highlight call to action", "highlight-foreground", "highlight", 1],
+    ["active nav item / verified badge", "highlight", "highlight-soft", 1],
+    ["select option text", "popover-foreground", "popover", 1],
+    ["form control text", "foreground", "card", 1],
+    ["link text on card", "primary", "card", 1],
   ],
 };
 

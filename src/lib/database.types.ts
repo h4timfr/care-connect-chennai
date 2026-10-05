@@ -567,6 +567,60 @@ export type Database = {
           },
         ];
       };
+      // Added by migration 00054 (local, not yet deployed). Applicants may insert only the content
+      // columns; status, owner and review fields come from defaults and the review functions.
+      provider_applications: {
+        Row: {
+          address: string;
+          applicant_id: string;
+          area: string;
+          clinic_id: string | null;
+          clinic_name: string;
+          contact_email: string;
+          contact_name: string;
+          contact_phone: string;
+          contact_role: "owner" | "administrator" | "doctor" | "manager" | "other";
+          created_at: string;
+          doctor_count: number | null;
+          id: string;
+          message: string | null;
+          registration_details: string;
+          review_note: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: "submitted" | "approved" | "rejected" | "withdrawn";
+          updated_at: string;
+        };
+        Insert: {
+          address: string;
+          area: string;
+          clinic_name: string;
+          contact_email: string;
+          contact_name: string;
+          contact_phone: string;
+          contact_role: "owner" | "administrator" | "doctor" | "manager" | "other";
+          doctor_count?: number | null;
+          message?: string | null;
+          registration_details: string;
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "provider_applications_applicant_id_fkey";
+            columns: ["applicant_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "provider_applications_clinic_id_fkey";
+            columns: ["clinic_id"];
+            isOneToOne: false;
+            referencedRelation: "clinics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_roles: {
         Row: {
           created_at: string;
@@ -689,6 +743,31 @@ export type Database = {
               slot_time: string;
             }[];
           };
+      // Onboarding functions from migration 00054 (local, not yet deployed).
+      admin_add_clinic_member: {
+        Args: { p_clinic_id: string; p_email: string; p_role: string };
+        Returns: string;
+      };
+      admin_review_provider_application: {
+        Args: { p_application_id: string; p_approve: boolean; p_note: string | null };
+        Returns: string | null;
+      };
+      clinic_propose_doctor: {
+        Args: {
+          p_about: string | null;
+          p_clinic_id: string;
+          p_consultation_fee: number;
+          p_experience_years: number;
+          p_gender: string | null;
+          p_languages: string[];
+          p_name: string;
+          p_qualifications: string[];
+          p_registration_note: string;
+          p_specialty_id: string;
+        };
+        Returns: string;
+      };
+      withdraw_provider_application: { Args: { p_application_id: string }; Returns: undefined };
       toggle_saved_clinic: { Args: { p_clinic_id: string }; Returns: string[] };
       toggle_saved_doctor: { Args: { p_doctor_id: string }; Returns: string[] };
     };

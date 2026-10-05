@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Loader2, MailCheck } from "lucide-react";
+import { Building2, Loader2, MailCheck, UserRound } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabaseConfigMessage } from "@/lib/supabase/client";
 import { describeAuthError } from "@/lib/supabase/errors";
 import { useAuth } from "@/lib/supabase/auth";
@@ -8,6 +8,7 @@ import { AuthCard, FormAlert } from "@/components/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/PasswordInput";
 import { safeRedirect } from "@/lib/redirect";
 import { MIN_PASSWORD_LENGTH } from "@/lib/passwords";
 import { Trans, useI18n, type MessageKey } from "@/lib/i18n";
@@ -15,15 +16,18 @@ import { Trans, useI18n, type MessageKey } from "@/lib/i18n";
 interface LoginSearch {
   redirect?: string | undefined;
   signup?: boolean | undefined;
+  /** "clinic": the clinic & provider entrance. Same account system; access comes from membership. */
+  portal?: "clinic" | undefined;
 }
 
 export const Route = createFileRoute("/login")({
   // TanStack Router merges validated values over the raw URL search, so a key left out here would
   // keep its raw, unvalidated value. Every key is therefore returned, as undefined when invalid.
-  validateSearch: ({ redirect, signup }: Record<string, unknown>): LoginSearch => ({
+  validateSearch: ({ redirect, signup, portal }: Record<string, unknown>): LoginSearch => ({
     // Still checked by safeRedirect() before use.
     redirect: typeof redirect === "string" ? redirect : undefined,
     signup: signup === true || signup === "true" ? true : undefined,
+    portal: portal === "clinic" ? "clinic" : undefined,
   }),
   head: () => ({
     meta: [{ title: "Sign in — CareConnect" }],
@@ -41,12 +45,16 @@ function LoginPage() {
   const { user, loading: authLoading } = useAuth();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const redirectTo = safeRedirect(search.redirect);
+  const isClinicPortal = search.portal === "clinic";
+  // The clinic portal itself checks membership (RLS) and shows "No clinic access" otherwise.
+  const redirectTo =
+    search.redirect === undefined && isClinicPortal ? "/clinic" : safeRedirect(search.redirect);
 
   const [mode, setMode] = useState<Mode>(search.signup ? "signup" : "signin");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useI18n();
@@ -63,6 +71,7 @@ function LoginPage() {
 
   const changeMode = (next: Mode) => {
     setMode(next);
+    setPasswordVisible(false);
     setError(null);
     setNotice(null);
   };
@@ -126,7 +135,48 @@ function LoginPage() {
   }
 
   return (
-    <AuthCard title={t(copyKey(mode, "title"))} subtitle={t(copyKey(mode, "subtitle"))}>
+    <AuthCard
+      title={
+        isClinicPortal && mode === "signin" ? t("auth.clinic.title") : t(copyKey(mode, "title"))
+      }
+      subtitle={
+        isClinicPortal && mode === "signin"
+          ? t("auth.clinic.subtitle")
+          : t(copyKey(mode, "subtitle"))
+      }
+    >
+      {mode !== "reset" && !notice ? (
+        <nav
+          aria-label={t("auth.portal.label")}
+          className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1"
+        >
+          {(
+            [
+              { clinic: false, label: "auth.portal.patient", icon: UserRound },
+              { clinic: true, label: "auth.portal.clinic", icon: Building2 },
+            ] as const
+          ).map((option) => {
+            const current = option.clinic === isClinicPortal;
+            return (
+              <Link
+                key={option.label}
+                to="/login"
+                search={{ ...search, portal: option.clinic ? "clinic" : undefined }}
+                replace
+                aria-current={current ? "page" : undefined}
+                className={
+                  current
+                    ? "flex min-w-0 items-center justify-center gap-1.5 rounded-lg bg-card px-2 py-2 text-xs font-semibold text-highlight shadow-sm sm:text-sm"
+                    : "flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
+                }
+              >
+                <option.icon className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="truncate">{t(option.label)}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      ) : null}
       {!isSupabaseConfigured ? (
         <div className="mb-4">
           <FormAlert>{supabaseConfigMessage}</FormAlert>
@@ -170,6 +220,7 @@ function LoginPage() {
             <Label htmlFor="email">{t("auth.email")}</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               autoComplete="email"
               inputMode="email"
@@ -194,9 +245,11 @@ function LoginPage() {
                   </button>
                 ) : null}
               </div>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
+                name="password"
+                revealed={passwordVisible}
+                onRevealedChange={setPasswordVisible}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -215,7 +268,7 @@ function LoginPage() {
           {error ? <FormAlert>{error}</FormAlert> : null}
 
           <div className="flex flex-col gap-2 pt-1">
-            <Button type="submit" disabled={submitting || !isSupabaseConfigured}>
+            <Button type="submit" size="lg" disabled={submitting || !isSupabaseConfigured}>
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               {submitting ? t(copyKey(mode, "busy")) : t(copyKey(mode, "submit"))}
             </Button>
@@ -231,6 +284,17 @@ function LoginPage() {
                   ? t("auth.toSignIn")
                   : t("auth.backToSignIn")}
             </Button>
+            {isClinicPortal ? (
+              <p className="pt-2 text-center text-xs text-muted-foreground">
+                {t("auth.clinic.newClinic")}{" "}
+                <Link
+                  to="/providers"
+                  className="font-semibold text-primary underline-offset-2 hover:underline"
+                >
+                  {t("auth.clinic.apply")}
+                </Link>
+              </p>
+            ) : null}
           </div>
         </form>
       )}

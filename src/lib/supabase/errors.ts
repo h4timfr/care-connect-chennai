@@ -53,6 +53,15 @@ export function isNetworkError(error: unknown) {
   return NETWORK_PATTERNS.some((pattern) => message.includes(pattern));
 }
 
+/**
+ * True when the backend does not have a feature's table or function yet (a migration that is not
+ * deployed), or — for user_roles before migration 00052 — still fails its read policy with 42P17.
+ * Callers show an honest "not available yet" state and grant no access.
+ */
+export function isNotDeployed(error: unknown) {
+  return ["42P01", "42883", "PGRST202", "PGRST205", "42P17"].includes(codeOf(error));
+}
+
 /** Message for failures of data queries and mutations (PostgREST / RPC / Storage). */
 export function describeDataError(error: unknown): MessageKey {
   if (isConfigError(error)) return "error.unavailable";

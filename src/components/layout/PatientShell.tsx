@@ -70,7 +70,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
       >
         {t("nav.skipToContent")}
       </a>
-      <header className="sticky top-0 z-40 border-b bg-card/90 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b bg-card/85 shadow-xs backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-6">
             <Link
@@ -78,7 +78,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
               className="flex shrink-0 items-center gap-2"
               aria-label={t("nav.homeLink")}
             >
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-highlight text-primary-foreground shadow-sm">
                 <Stethoscope className="h-4.5 w-4.5" aria-hidden />
               </span>
               <span className="hidden font-display text-lg font-bold tracking-tight min-[360px]:inline">
@@ -96,7 +96,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
                     className={cn(
                       "whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       active
-                        ? "bg-primary-soft text-primary"
+                        ? "bg-highlight-soft text-highlight"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
@@ -134,6 +134,9 @@ export function PatientShell({ children }: { children: ReactNode }) {
               </Link>
             ) : (
               <div className="flex gap-2">
+                <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex">
+                  <Link to="/providers">{t("nav.forClinics")}</Link>
+                </Button>
                 <Button asChild variant="ghost" size="sm">
                   <Link to="/login">{t("nav.signIn")}</Link>
                 </Button>
@@ -160,6 +163,12 @@ export function PatientShell({ children }: { children: ReactNode }) {
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>{t("footer.copyright", { year: new Date().getFullYear() })}</p>
+          <Link
+            to="/providers"
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            {t("nav.forClinics")}
+          </Link>
           <p>{t("footer.emergency")}</p>
         </div>
       </footer>
@@ -178,7 +187,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex flex-col items-center gap-1 px-0.5 py-2.5 text-[11px] font-medium leading-tight transition-colors",
-                    active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                    active ? "text-highlight" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <item.icon className="h-5 w-5 shrink-0" aria-hidden />

@@ -20,6 +20,7 @@ import { useApp } from "@/lib/store";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { MemberClinic } from "@/lib/supabase/queries";
 
 const NAV: {
@@ -125,7 +126,7 @@ export function ClinicShell({
       <div className="mx-auto flex max-w-[1500px]">
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e bg-sidebar px-4 py-5 lg:flex">
           <Link to="/clinic" className="mb-6 flex items-center gap-2 px-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-highlight text-primary-foreground shadow-sm">
               <Stethoscope className="h-4.5 w-4.5" aria-hidden />
             </span>
             <span className="min-w-0">
@@ -144,7 +145,7 @@ export function ClinicShell({
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive(item.to, item.exact)
-                    ? "bg-primary-soft text-primary"
+                    ? "bg-highlight-soft text-highlight"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
@@ -217,7 +218,7 @@ export function ClinicShell({
                   className={cn(
                     "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                     isActive(item.to, item.exact)
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-highlight text-highlight-foreground"
                       : "bg-muted text-muted-foreground",
                   )}
                 >
@@ -263,18 +264,19 @@ function ClinicPicker({
       <label htmlFor={id} className="text-xs text-muted-foreground">
         {t("clinicShell.clinic")}
       </label>
-      <select
+      <NativeSelect
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-0.5 h-8 w-full truncate rounded-md border bg-background px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-0.5"
+        selectClassName="h-9 font-semibold md:text-sm"
       >
         {clinics.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
           </option>
         ))}
-      </select>
+      </NativeSelect>
     </div>
   );
 }

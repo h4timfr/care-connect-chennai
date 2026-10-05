@@ -29,6 +29,10 @@ const PAGES = [
   "/clinic/doctors",
   `/clinic/messages?c=${ids.conversation}`,
   "/clinic/profile",
+  "/providers",
+  "/providers/apply",
+  "/admin",
+  "/login?portal=clinic",
 ];
 
 for (const viewport of VIEWPORTS) {

@@ -61,13 +61,21 @@ function Home() {
   return (
     <PatientShell>
       <div className="space-y-10">
-        <section aria-labelledby="home-heading">
-          <h1 id="home-heading" className="font-display text-2xl font-bold sm:text-3xl">
+        <section
+          aria-labelledby="home-heading"
+          className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary-soft via-card to-highlight-soft px-5 py-7 sm:px-8 sm:py-10"
+        >
+          <h1
+            id="home-heading"
+            className="font-display text-2xl font-bold [overflow-wrap:anywhere] sm:text-4xl"
+          >
             {patient?.name && period
               ? t(`home.greeting.${period}`, { name: patient.name })
               : t("home.title")}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("home.subtitle")}</p>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            {t("home.subtitle")}
+          </p>
 
           <form
             className="mt-5"
@@ -81,7 +89,7 @@ function Home() {
             <label htmlFor="home-search" className="sr-only">
               {t("home.searchLabel")}
             </label>
-            <div className="surface-card flex items-center gap-2 p-2 pl-4 focus-within:ring-2 focus-within:ring-ring">
+            <div className="surface-raised flex max-w-3xl items-center gap-2 p-2 ps-4 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/25">
               <Search className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
               <input
                 id="home-search"
@@ -91,7 +99,7 @@ function Home() {
                 placeholder={t("home.searchPlaceholder")}
                 className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
               />
-              <Button type="submit" size="sm" className="shrink-0">
+              <Button type="submit" variant="highlight" className="shrink-0">
                 {t("home.search")}
               </Button>
             </div>
@@ -148,9 +156,9 @@ function Home() {
                       <Link
                         to="/discover"
                         search={{ specialty: s.id }}
-                        className="surface-card flex h-full flex-col items-center gap-2 px-2 py-4 text-center transition-colors hover:border-primary/40 hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="surface-card group flex h-full flex-col items-center gap-2 px-2 py-4 text-center transition-[border-color,box-shadow] hover:border-highlight/40 hover:shadow-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        <span className="grid h-10 w-10 place-items-center rounded-full bg-primary-soft text-primary">
+                        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary-soft text-primary transition-colors group-hover:bg-highlight-soft group-hover:text-highlight">
                           <SpecialtyIcon icon={s.icon} />
                         </span>
                         <span className="text-xs font-medium leading-tight">

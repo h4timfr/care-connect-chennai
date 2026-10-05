@@ -6,6 +6,7 @@ import { DoctorCard } from "@/components/DoctorCard";
 import { ClinicCard } from "@/components/ClinicCard";
 import { CardGridSkeleton, EmptyState, ErrorState } from "@/components/common";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { SPECIALTIES, specialtyInfo } from "@/lib/format";
@@ -512,21 +513,22 @@ function Discover() {
                     <label htmlFor="sort" className="shrink-0 text-xs text-muted-foreground">
                       {t("discover.sortBy")}
                     </label>
-                    <select
+                    <NativeSelect
                       id="sort"
                       value={sort}
                       onChange={(e) => {
                         const next = SORT_VALUES.find((v) => v === e.target.value);
                         if (next) setSort(next);
                       }}
-                      className="min-w-0 flex-1 truncate rounded-lg border bg-card px-2.5 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
+                      className="min-w-0 flex-1 sm:flex-none"
+                      selectClassName="h-9 text-sm md:text-xs"
                     >
                       {SORT_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
                           {t(o.label)}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                 ) : null}
               </div>

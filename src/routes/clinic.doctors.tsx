@@ -1,89 +1,553 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CalendarClock, Loader2, Plus, Trash2, UserPlus } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { ClinicShell } from "@/components/layout/ClinicShell";
+import { FormAlert } from "@/components/AuthCard";
+import { EmptyState, ErrorState, InfoNotice, Initials, PageLoader } from "@/components/common";
+import { VerificationPill } from "@/components/ProviderStatus";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import { useApp } from "@/lib/store";
-import { ErrorState, Initials, PageLoader } from "@/components/common";
-import { describeDataError } from "@/lib/supabase/errors";
+import { SPECIALTIES } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { codeOf, describeDataError, isNotDeployed, messageOf } from "@/lib/supabase/errors";
+import {
+  useClinicDoctorLinks,
+  useClinicSchedules,
+  useDeleteSchedule,
+  useProposeDoctor,
+  useSaveSchedule,
+  type DoctorLink,
+  type Schedule,
+} from "@/lib/supabase/providers";
 
 export const Route = createFileRoute("/clinic/doctors")({
   component: ClinicDoctors,
 });
 
 function ClinicDoctors() {
-  const { doctors, activeClinic, catalog } = useApp();
-  const { t, fmt } = useI18n();
+  const { doctors, activeClinic } = useApp();
+  const { t } = useI18n();
   const title = t("clinicDoctors.title");
   const subtitle = t("clinicDoctors.subtitle");
+  const links = useClinicDoctorLinks(activeClinic?.id);
+  const schedules = useClinicSchedules(activeClinic?.id);
+  const [proposing, setProposing] = useState(false);
 
   // ClinicShell shows the loading / no-access states until a clinic is active.
   if (!activeClinic) return <ClinicShell title={title}>{null}</ClinicShell>;
-  if (catalog.isLoading || catalog.error) {
-    return (
-      <ClinicShell title={title} description={subtitle}>
-        {catalog.error ? (
-          <ErrorState
-            title={t("clinicDoctors.loadError")}
-            message={t(describeDataError(catalog.error))}
-            onRetry={catalog.refetch}
+  const isAdmin = activeClinic.memberRole === "clinic_admin";
+
+  let content;
+  if (links.isLoading) {
+    content = <PageLoader label={t("clinicDoctors.loading")} />;
+  } else if (links.error) {
+    content = (
+      <ErrorState
+        title={t("clinicDoctors.loadError")}
+        message={t(describeDataError(links.error))}
+        onRetry={links.refetch}
+      />
+    );
+  } else {
+    const list = links.data ?? [];
+    content = (
+      <div className="space-y-6">
+        <InfoNotice className="text-sm">{t("clinicDoctors.verificationNote")}</InfoNotice>
+        {list.length === 0 ? (
+          <EmptyState
+            icon={UserPlus}
+            title={t("clinicDoctors.none")}
+            {...(isAdmin ? { description: t("clinicDoctors.noneAdmin") } : {})}
           />
         ) : (
-          <PageLoader label={t("clinicDoctors.loading")} />
+          <ul className="grid gap-4 lg:grid-cols-2">
+            {list.map((link) => (
+              <DoctorLinkCard
+                key={link.doctorId}
+                link={link}
+                fee={doctors.find((d) => d.id === link.doctorId)?.consultationFee}
+                clinicId={activeClinic.id}
+                schedules={(schedules.data ?? []).filter((s) => s.doctorId === link.doctorId)}
+                schedulesError={schedules.error}
+              />
+            ))}
+          </ul>
         )}
-      </ClinicShell>
+        {isAdmin ? (
+          proposing ? (
+            <ProposeDoctorForm clinicId={activeClinic.id} onDone={() => setProposing(false)} />
+          ) : (
+            <Button variant="highlight" onClick={() => setProposing(true)}>
+              <UserPlus aria-hidden />
+              {t("clinicDoctors.propose")}
+            </Button>
+          )
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("clinicDoctors.adminOnly")}</p>
+        )}
+      </div>
     );
   }
 
-  const clinicDoctors = doctors.filter((d) => d.clinicIds?.includes(activeClinic.id));
-
   return (
     <ClinicShell title={title} description={subtitle}>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {clinicDoctors.map((d) => {
-          const link = d.clinicLinks.find((l) => l.clinicId === activeClinic.id);
-          return (
-            <div key={d.id} className="surface-card space-y-4 p-5">
-              <div className="flex gap-3">
-                <Initials name={d.name} className="h-12 w-12" />
-                <div className="min-w-0">
-                  <h3 className="font-display font-semibold">{d.name}</h3>
-                  <p className="text-sm text-primary">{fmt.specialty(d.specialtyId)}</p>
-                </div>
-              </div>
-              <dl className="space-y-1 text-sm text-muted-foreground">
-                <div className="flex gap-1.5">
-                  <dt className="font-semibold text-foreground">{t("clinicDoctors.fee")}:</dt>
-                  <dd>{fmt.inr(d.consultationFee)}</dd>
-                </div>
-                <div className="flex gap-1.5">
-                  <dt className="font-semibold text-foreground">
-                    {t("clinicDoctors.experience")}:
-                  </dt>
-                  <dd>{t.plural("common.years", d.experienceYears)}</dd>
-                </div>
-                <div className="flex min-w-0 gap-1.5">
-                  <dt className="shrink-0 font-semibold text-foreground">
-                    {t("clinicDoctors.languages")}:
-                  </dt>
-                  <dd className="truncate">{d.languages.map(fmt.languageName).join(", ")}</dd>
-                </div>
-                <div className="flex flex-wrap gap-x-1.5">
-                  <dt className="font-semibold text-foreground">
-                    {t("clinicDoctors.onlineBooking")}:
-                  </dt>
-                  <dd>
-                    {link?.active && link.verified
-                      ? t("clinicDoctors.enabled")
-                      : t("clinicDoctors.pending")}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          );
-        })}
-        {clinicDoctors.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("clinicDoctors.none")}</p>
-        ) : null}
-      </div>
+      {content}
     </ClinicShell>
+  );
+}
+
+function DoctorLinkCard({
+  link,
+  fee,
+  clinicId,
+  schedules,
+  schedulesError,
+}: {
+  link: DoctorLink;
+  fee: number | undefined;
+  clinicId: string;
+  schedules: Schedule[];
+  schedulesError: unknown;
+}) {
+  const { t, fmt } = useI18n();
+  const [editingHours, setEditingHours] = useState(false);
+  const bookable = link.active && link.state === "verified";
+
+  return (
+    <li className="surface-card p-5">
+      <div className="flex gap-3">
+        <Initials name={link.doctorName} className="h-12 w-12" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h3 className="font-display font-semibold [overflow-wrap:anywhere]" dir="auto">
+              {link.doctorName}
+            </h3>
+            <VerificationPill state={link.state} />
+          </div>
+          <p className="text-sm text-primary">{fmt.specialty(link.specialtyId)}</p>
+          {fee !== undefined ? (
+            <p className="text-sm text-muted-foreground">
+              {t("common.consultationFee", { fee: fmt.inr(fee) })}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <p className="mt-3 text-sm">
+        <span className="font-semibold">{t("clinicDoctors.onlineBooking")}: </span>
+        {bookable
+          ? t("clinicDoctors.enabled")
+          : link.state === "rejected"
+            ? t("clinicDoctors.rejectedNote")
+            : t("clinicDoctors.pending")}
+      </p>
+
+      {bookable ? (
+        <div className="mt-4 border-t pt-4">
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="flex items-center gap-1.5 text-sm font-semibold">
+              <CalendarClock className="h-4 w-4 text-primary" aria-hidden />
+              {t("schedule.title")}
+            </h4>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditingHours((v) => !v)}
+              aria-expanded={editingHours}
+            >
+              {editingHours ? t("schedule.done") : t("schedule.edit")}
+            </Button>
+          </div>
+          {schedulesError ? (
+            <p className="mt-2 text-sm text-destructive">{t(describeDataError(schedulesError))}</p>
+          ) : schedules.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">{t("schedule.none")}</p>
+          ) : (
+            <ul className="mt-2 space-y-1 text-sm">
+              {schedules.map((s) => (
+                <ScheduleRow key={s.id} schedule={s} clinicId={clinicId} editable={editingHours} />
+              ))}
+            </ul>
+          )}
+          {editingHours ? (
+            <ScheduleForm clinicId={clinicId} doctorId={link.doctorId} existing={schedules} />
+          ) : null}
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+function ScheduleRow({
+  schedule: s,
+  clinicId,
+  editable,
+}: {
+  schedule: Schedule;
+  clinicId: string;
+  editable: boolean;
+}) {
+  const { t, fmt } = useI18n();
+  const remove = useDeleteSchedule();
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2">
+      <span>
+        <span className="font-medium">{fmt.weekday(s.dayOfWeek)}</span>{" "}
+        <span dir="ltr">
+          {fmt.time(s.startTime)} – {fmt.time(s.endTime)}
+        </span>{" "}
+        <span className="text-muted-foreground">
+          · {t("schedule.slotLength", { minutes: fmt.number(s.slotMinutes) })}
+        </span>
+      </span>
+      {editable ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label={t("schedule.remove", { day: fmt.weekday(s.dayOfWeek) })}
+          disabled={remove.isPending}
+          onClick={async () => {
+            try {
+              await remove.mutateAsync({ id: s.id, clinicId, doctorId: s.doctorId });
+              toast.success(t("schedule.removed"));
+            } catch (err) {
+              toast.error(t(describeDataError(err)));
+            }
+          }}
+        >
+          <Trash2 aria-hidden />
+        </Button>
+      ) : null}
+    </li>
+  );
+}
+
+const SLOT_CHOICES = [10, 15, 20, 30, 45, 60];
+
+function ScheduleForm({
+  clinicId,
+  doctorId,
+  existing,
+}: {
+  clinicId: string;
+  doctorId: string;
+  existing: Schedule[];
+}) {
+  const { t, fmt } = useI18n();
+  const save = useSaveSchedule();
+  const [day, setDay] = useState(1);
+  const current = existing.find((s) => s.dayOfWeek === day);
+  const [start, setStart] = useState("09:00");
+  const [end, setEnd] = useState("13:00");
+  const [slot, setSlot] = useState(30);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!start || !end || start >= end) {
+      setError(t("schedule.invalidWindow"));
+      return;
+    }
+    setError(null);
+    try {
+      await save.mutateAsync({
+        clinicId,
+        doctorId,
+        dayOfWeek: day,
+        startTime: start,
+        endTime: end,
+        slotMinutes: slot,
+      });
+      toast.success(t("schedule.saved", { day: fmt.weekday(day) }));
+    } catch (err) {
+      setError(codeOf(err) === "42501" ? t("schedule.notAllowed") : t(describeDataError(err)));
+    }
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      noValidate
+      className="mt-3 space-y-3 rounded-xl border border-dashed p-3"
+    >
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="col-span-2 space-y-1.5 sm:col-span-1">
+          <Label htmlFor={`day-${doctorId}`}>{t("schedule.day")}</Label>
+          <NativeSelect
+            id={`day-${doctorId}`}
+            value={day}
+            onChange={(e) => setDay(Number(e.target.value))}
+          >
+            {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+              <option key={d} value={d}>
+                {fmt.weekday(d)}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`start-${doctorId}`}>{t("schedule.start")}</Label>
+          <Input
+            id={`start-${doctorId}`}
+            type="time"
+            step={300}
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            dir="ltr"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`end-${doctorId}`}>{t("schedule.end")}</Label>
+          <Input
+            id={`end-${doctorId}`}
+            type="time"
+            step={300}
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            dir="ltr"
+          />
+        </div>
+        <div className="col-span-2 space-y-1.5 sm:col-span-1">
+          <Label htmlFor={`slot-${doctorId}`}>{t("schedule.slot")}</Label>
+          <NativeSelect
+            id={`slot-${doctorId}`}
+            value={slot}
+            onChange={(e) => setSlot(Number(e.target.value))}
+          >
+            {SLOT_CHOICES.map((m) => (
+              <option key={m} value={m}>
+                {t("schedule.minutes", { minutes: fmt.number(m) })}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+      </div>
+      {current ? (
+        <p className="text-xs text-muted-foreground">
+          {t("schedule.replaces", { day: fmt.weekday(day) })}
+        </p>
+      ) : null}
+      {error ? <FormAlert>{error}</FormAlert> : null}
+      <Button type="submit" size="sm" disabled={save.isPending}>
+        {save.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Plus aria-hidden />}
+        {t("schedule.save")}
+      </Button>
+    </form>
+  );
+}
+
+function ProposeDoctorForm({ clinicId, onDone }: { clinicId: string; onDone: () => void }) {
+  const { t, fmt } = useI18n();
+  const propose = useProposeDoctor();
+  const [name, setName] = useState("");
+  const [specialtyId, setSpecialtyId] = useState("general");
+  const [gender, setGender] = useState<"" | "male" | "female" | "other">("");
+  const [experience, setExperience] = useState("");
+  const [fee, setFee] = useState("");
+  const [qualifications, setQualifications] = useState("");
+  const [languages, setLanguages] = useState("");
+  const [registration, setRegistration] = useState("");
+  const [about, setAbout] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const list = (s: string) =>
+    s
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .slice(0, 10);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const years = Number(experience);
+    const amount = Number(fee);
+    if (name.trim().length < 3) return setError(t("propose.error.name"));
+    if (!experience || !Number.isInteger(years) || years < 0 || years > 70)
+      return setError(t("propose.error.experience"));
+    if (!fee || !(amount >= 0 && amount <= 100000)) return setError(t("propose.error.fee"));
+    if (registration.trim().length < 5) return setError(t("propose.error.registration"));
+    setError(null);
+    try {
+      await propose.mutateAsync({
+        clinicId,
+        name,
+        specialtyId,
+        gender: gender || null,
+        experienceYears: years,
+        consultationFee: amount,
+        qualifications: list(qualifications),
+        languages: list(languages),
+        registrationNote: registration,
+        about,
+      });
+      toast.success(t("propose.sent"));
+      onDone();
+    } catch (err) {
+      setError(
+        isNotDeployed(err)
+          ? t("propose.notDeployed")
+          : codeOf(err) === "P0001" && /Rate Limit/i.test(messageOf(err))
+            ? t("propose.limit")
+            : t(describeDataError(err)),
+      );
+    }
+  };
+
+  const required = (
+    <span className="text-destructive" aria-hidden>
+      {" "}
+      *
+    </span>
+  );
+  return (
+    <form
+      onSubmit={submit}
+      noValidate
+      className="surface-card space-y-4 p-5"
+      aria-labelledby="propose-title"
+    >
+      <div>
+        <h2 id="propose-title" className="font-semibold">
+          {t("propose.title")}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("propose.help")}</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="p-name">
+            {t("propose.name")}
+            {required}
+          </Label>
+          <Input
+            id="p-name"
+            maxLength={120}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("propose.namePlaceholder")}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="p-specialty">
+            {t("propose.specialty")}
+            {required}
+          </Label>
+          <NativeSelect
+            id="p-specialty"
+            value={specialtyId}
+            onChange={(e) => setSpecialtyId(e.target.value)}
+          >
+            {SPECIALTIES.map((s) => (
+              <option key={s.id} value={s.id}>
+                {fmt.specialty(s.id)}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="p-gender">{t("details.gender")}</Label>
+          <NativeSelect
+            id="p-gender"
+            value={gender}
+            onChange={(e) => {
+              const v = e.target.value;
+              setGender(v === "male" || v === "female" || v === "other" ? v : "");
+            }}
+          >
+            <option value="">{t("details.preferNotToSay")}</option>
+            <option value="female">{t("common.female")}</option>
+            <option value="male">{t("common.male")}</option>
+            <option value="other">{t("common.other")}</option>
+          </NativeSelect>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="p-exp">
+            {t("propose.experience")}
+            {required}
+          </Label>
+          <Input
+            id="p-exp"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={70}
+            value={experience}
+            onChange={(e) => setExperience(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="p-fee">
+            {t("propose.fee")}
+            {required}
+          </Label>
+          <Input
+            id="p-fee"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={100000}
+            value={fee}
+            onChange={(e) => setFee(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="p-reg">
+            {t("propose.registration")}
+            {required}
+          </Label>
+          <Input
+            id="p-reg"
+            maxLength={300}
+            value={registration}
+            onChange={(e) => setRegistration(e.target.value)}
+            aria-describedby="p-reg-hint"
+          />
+          <p id="p-reg-hint" className="text-xs text-muted-foreground">
+            {t("propose.registrationHint")}
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="p-qual">{t("propose.qualifications")}</Label>
+          <Input
+            id="p-qual"
+            value={qualifications}
+            onChange={(e) => setQualifications(e.target.value)}
+            placeholder="MBBS, MD"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="p-lang">{t("propose.languages")}</Label>
+          <Input
+            id="p-lang"
+            value={languages}
+            onChange={(e) => setLanguages(e.target.value)}
+            placeholder="Tamil, English"
+          />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="p-about">{t("propose.about")}</Label>
+          <Textarea
+            id="p-about"
+            maxLength={1000}
+            rows={3}
+            value={about}
+            onChange={(e) => setAbout(e.target.value)}
+          />
+        </div>
+      </div>
+      {error ? <FormAlert>{error}</FormAlert> : null}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" variant="highlight" disabled={propose.isPending}>
+          {propose.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+          {t("propose.submit")}
+        </Button>
+        <Button type="button" variant="outline" onClick={onDone} disabled={propose.isPending}>
+          {t("common.cancel")}
+        </Button>
+      </div>
+    </form>
   );
 }

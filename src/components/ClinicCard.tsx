@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Rating, SampleBadge } from "@/components/common";
+import { Rating, SampleBadge, VerifiedBadge } from "@/components/common";
 import { useApp } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
 import type { Clinic } from "@/lib/types";
@@ -13,7 +13,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
   const { t, fmt } = useI18n();
 
   return (
-    <article className="surface-card flex flex-col overflow-hidden transition-shadow hover:shadow-pop">
+    <article className="surface-card flex flex-col overflow-hidden transition-[box-shadow,border-color] hover:border-primary/30 hover:shadow-raised">
       <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">
@@ -71,7 +71,11 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
         </dl>
 
         <p className="truncate text-sm text-muted-foreground">{clinic.address}</p>
-        {clinic.isSample ? <SampleBadge className="self-start" /> : null}
+        {clinic.isSample ? (
+          <SampleBadge className="self-start" />
+        ) : (
+          <VerifiedBadge className="self-start" />
+        )}
 
         <Button asChild className="mt-auto w-full" size="sm">
           <Link to="/clinics/$clinicId" params={{ clinicId: clinic.id }}>

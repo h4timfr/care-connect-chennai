@@ -150,11 +150,18 @@ These need backend or operational changes and are intentionally **not** worked a
   production, for anonymous callers, signed-in users and platform admins alike: the admin read
   policies from migration 00006 query `user_roles` from inside a `user_roles` policy. No rows are
   exposed: anon holds no privilege on either table (Postgres expands RLS policies before it checks
-  table privileges, so the recursion error surfaces first), and the app never queries these tables.
-  Migration `00052_user_roles_audit_logs_rls_fix.sql` (tested by `supabase/tests/008_*` and `010_*`)
-  fixes it but **has not been deployed**.
+  table privileges, so the recursion error surfaces first). Only the `/admin` role check reads
+  `user_roles`, and it fails closed (no access) on this error. Migration
+  `00052_user_roles_audit_logs_rls_fix.sql` (tested by `supabase/tests/008_*` and `010_*`) fixes it
+  but **has not been deployed**.
 - **Profile photos need migration `00053_avatars_storage.sql`**, which **has not been deployed**.
   Until it is, the profile page says photos aren't available yet and shows initials.
+- **Provider onboarding needs migration `00054_provider_onboarding.sql`**, which **has not been
+  deployed** (pgTAP `011_*` written, not yet run). It covers clinic applications, the `/admin`
+  console and doctor proposals. Until it is deployed those screens say so and grant nothing.
+  00054 also closes the release-audit finding that clinic staff can attach any doctor to their
+  clinic and edit that doctor's profile and fee. **Until it is deployed, give clinic memberships
+  only to fully trusted people.** See [docs/provider-onboarding.md](docs/provider-onboarding.md).
 - **Page titles** (`<title>`) are in English; page content follows the chosen language.
 - The clinic conversation list embeds `patients.user_id` to tell patient messages from clinic
   replies. Clinic staff can already read that column under RLS; hiding it needs a backend change

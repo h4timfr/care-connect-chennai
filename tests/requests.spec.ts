@@ -22,7 +22,7 @@ const EXPECTED: Record<string, string[]> = {
   "/clinic/appointments": [...SHARED, "appointments"],
   "/clinic/calendar": [...SHARED, "appointments"],
   "/clinic/patients": [...SHARED, "appointments"],
-  "/clinic/doctors": SHARED,
+  "/clinic/doctors": [...SHARED, "clinic_doctors", "doctor_schedules"],
   "/clinic/messages": [...SHARED, "conversations"],
   "/clinic/profile": SHARED,
 };

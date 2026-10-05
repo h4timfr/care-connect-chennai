@@ -63,6 +63,16 @@ export interface MockState {
   failAvatarUpload: boolean;
   /** Content types of avatar uploads received, in order. */
   avatarUploads: string[];
+  /**
+   * Provider onboarding (migration 00054). "notDeployed" answers like a backend without the
+   * migration: missing table/functions (PGRST205/PGRST202) and, for user_roles, 42P17.
+   */
+  platformAdmin: boolean | "notDeployed";
+  applications: Row[] | "notDeployed";
+  proposeDeployed: boolean;
+  schedules: Row[];
+  /** Emails of existing accounts, for admin_add_clinic_member. */
+  knownEmails: string[];
 }
 
 export interface MockBackend {
@@ -164,6 +174,11 @@ export function defaultState(): MockState {
     avatar: "none",
     failAvatarUpload: false,
     avatarUploads: [],
+    platformAdmin: false,
+    applications: [],
+    proposeDeployed: true,
+    schedules: [],
+    knownEmails: [TEST_EMAIL, "staff@test.invalid"],
   };
 }
 
@@ -375,6 +390,73 @@ export async function mockBackend(
     }
     if (path.startsWith("/rest/v1/rpc/toggle_saved_")) return json(route, 200, []);
 
+    // ---- Provider onboarding RPCs (rules mirror migration 00054)
+    const args = (body ?? {}) as Row;
+    const pgError = (status: number, code: string, message: string) =>
+      json(route, status, { code, message, details: "", hint: "" });
+    const notFoundFn = () => pgError(404, "PGRST202", "Could not find the function");
+    if (path === "/rest/v1/rpc/withdraw_provider_application") {
+      if (state.applications === "notDeployed") return notFoundFn();
+      const app = state.applications.find((a) => a["id"] === args["p_application_id"]);
+      if (!app || app["status"] !== "submitted") {
+        return pgError(400, "P0001", "Validation Failed: that application cannot be withdrawn.");
+      }
+      app["status"] = "withdrawn";
+      return route.fulfill({ status: 204, headers: corsHeaders() });
+    }
+    if (path === "/rest/v1/rpc/admin_review_provider_application") {
+      if (state.applications === "notDeployed") return notFoundFn();
+      if (state.platformAdmin !== true) {
+        return pgError(403, "42501", "Unauthorized: platform admins only.");
+      }
+      const app = state.applications.find((a) => a["id"] === args["p_application_id"]);
+      if (!app || app["status"] !== "submitted") {
+        return pgError(400, "P0001", "Validation Failed: that application is not awaiting review.");
+      }
+      const approve = args["p_approve"] === true;
+      app["status"] = approve ? "approved" : "rejected";
+      app["review_note"] = args["p_note"] ?? null;
+      app["clinic_id"] = approve ? "00000000-0000-4000-8000-0000000000a9" : null;
+      return json(route, 200, app["clinic_id"]);
+    }
+    if (path === "/rest/v1/rpc/admin_add_clinic_member") {
+      if (state.platformAdmin !== true) {
+        return pgError(403, "42501", "Unauthorized: platform admins only.");
+      }
+      const email = String(args["p_email"] ?? "").toLowerCase();
+      if (!state.knownEmails.includes(email)) {
+        return pgError(
+          400,
+          "P0001",
+          "Validation Failed: no CareConnect account uses that email address.",
+        );
+      }
+      if (Array.isArray(state.memberships)) {
+        const clinic = state.clinics.find((c) => c["id"] === args["p_clinic_id"]);
+        state.memberships.push({
+          id: "mem-" + (state.memberships.length + 1),
+          clinic_id: args["p_clinic_id"],
+          role: args["p_role"],
+          active: true,
+          user: { email },
+          clinic: { name: clinic?.["name"] ?? "" },
+          clinics: clinic,
+        });
+      }
+      return json(route, 200, "mem-new");
+    }
+    if (path === "/rest/v1/rpc/clinic_propose_doctor") {
+      if (!state.proposeDeployed) return notFoundFn();
+      const id = "00000000-0000-4000-8000-0000000000f" + state.doctors.length;
+      state.doctors.push({
+        ...doctor(id, String(args["p_name"]), String(args["p_clinic_id"]), false),
+        specialty_id: args["p_specialty_id"],
+        registration_note: args["p_registration_note"],
+        is_demo: false,
+      });
+      return json(route, 200, id);
+    }
+
     // ---- Tables
     const table = path.replace("/rest/v1/", "");
     const delay = state.delays[table];
@@ -395,8 +477,148 @@ export async function mockBackend(
         }
         return respond(state.doctors);
       }
-      case "clinic_doctors":
-        return respond([]);
+      case "clinic_doctors": {
+        // Built from the doctors' embedded links, embedding doctors and clinics like PostgREST.
+        if (method === "GET" && state.failTables.includes("doctors")) {
+          return json(route, 500, serverError);
+        }
+        const filter = (key: string) => url.searchParams.get(key)?.replace(/^eq\./, "");
+        if (method === "PATCH") {
+          if (state.platformAdmin !== true) return json(route, 406, { code: "PGRST116" });
+          const doc = state.doctors.find((d) => d["id"] === filter("doctor_id"));
+          const link = (doc?.["clinic_doctors"] as Row[] | undefined)?.find(
+            (l) => l["clinic_id"] === filter("clinic_id"),
+          );
+          if (!link) return json(route, 406, { code: "PGRST116" });
+          Object.assign(link, body as Row);
+          return respond([{ doctor_id: doc?.["id"] }]);
+        }
+        const rows = state.doctors.flatMap((d) =>
+          ((d["clinic_doctors"] as Row[] | undefined) ?? []).map((l) => ({
+            clinic_id: l["clinic_id"],
+            doctor_id: d["id"],
+            active: l["active"],
+            verification_state: l["verification_state"],
+            doctors: {
+              name: d["name"],
+              specialty_id: d["specialty_id"],
+              registration_note: d["registration_note"],
+              qualifications: d["qualifications"],
+              is_demo: d["is_demo"],
+            },
+            clinics: {
+              name: state.clinics.find((c) => c["id"] === l["clinic_id"])?.["name"] ?? "",
+            },
+          })),
+        );
+        return respond(
+          rows.filter(
+            (r) =>
+              (!filter("clinic_id") || r.clinic_id === filter("clinic_id")) &&
+              (!filter("verification_state") ||
+                r.verification_state === filter("verification_state")),
+          ),
+        );
+      }
+      case "user_roles":
+        if (state.platformAdmin === "notDeployed") {
+          return json(route, 500, {
+            code: "42P17",
+            message: "infinite recursion detected in policy for relation user_roles",
+            details: "",
+            hint: "",
+          });
+        }
+        return respond(state.platformAdmin ? [{ role: "platform_admin" }] : []);
+      case "provider_applications": {
+        if (state.applications === "notDeployed") {
+          return json(route, 404, {
+            code: "PGRST205",
+            message: "Could not find the table",
+            details: "",
+            hint: "",
+          });
+        }
+        if (method === "POST") {
+          const input = body as Row;
+          // Column-level INSERT grant: status and owner can't be supplied.
+          if ("status" in input || "applicant_id" in input) {
+            return json(route, 403, {
+              code: "42501",
+              message: "permission denied for table provider_applications",
+              details: "",
+              hint: "",
+            });
+          }
+          if (state.applications.filter((a) => a["status"] === "submitted").length >= 3) {
+            return json(route, 400, {
+              code: "P0001",
+              message: "Rate Limit Exceeded: at most 3 open provider applications per account.",
+              details: "",
+              hint: "",
+            });
+          }
+          const created: Row = {
+            id: "app-" + (state.applications.length + 1),
+            applicant_id: ids.user,
+            status: "submitted",
+            review_note: null,
+            reviewed_at: null,
+            reviewed_by: null,
+            clinic_id: null,
+            doctor_count: null,
+            message: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            ...input,
+          };
+          state.applications.unshift(created);
+          return respond([created]);
+        }
+        return respond(state.applications);
+      }
+      case "doctor_schedules": {
+        const filter = (key: string) => url.searchParams.get(key)?.replace(/^eq\./, "");
+        if (method === "POST") {
+          const row = body as Row;
+          const doc = state.doctors.find((d) => d["id"] === row["doctor_id"]);
+          const verified = ((doc?.["clinic_doctors"] as Row[] | undefined) ?? []).some(
+            (l) =>
+              l["clinic_id"] === row["clinic_id"] &&
+              l["verification_state"] === "verified" &&
+              l["active"],
+          );
+          if (!verified) {
+            return json(route, 403, {
+              code: "42501",
+              message: "new row violates row-level security policy",
+              details: "",
+              hint: "",
+            });
+          }
+          state.schedules = state.schedules.filter(
+            (x) =>
+              !(
+                x["doctor_id"] === row["doctor_id"] &&
+                x["clinic_id"] === row["clinic_id"] &&
+                x["day_of_week"] === row["day_of_week"]
+              ),
+          );
+          const created = { id: "sch-" + (state.schedules.length + 1), ...row };
+          state.schedules.push(created);
+          return respond([created]);
+        }
+        if (method === "DELETE") {
+          const removed = state.schedules.filter((x) => x["id"] === filter("id"));
+          state.schedules = state.schedules.filter((x) => x["id"] !== filter("id"));
+          return respond(removed);
+        }
+        return respond(
+          state.schedules.filter(
+            (x) => !filter("clinic_id") || x["clinic_id"] === filter("clinic_id"),
+          ),
+        );
+      }
       case "patients": {
         if (method === "PATCH" && Array.isArray(state.patients)) {
           const row = state.patients[0];
@@ -405,8 +627,16 @@ export async function mockBackend(
         }
         return respond(state.patients);
       }
-      case "clinic_memberships":
+      case "clinic_memberships": {
+        if (method === "PATCH" && Array.isArray(state.memberships)) {
+          const id = url.searchParams.get("id")?.replace(/^eq\./, "");
+          const row = state.memberships.find((m) => m["id"] === id);
+          if (!row || state.platformAdmin !== true) return json(route, 406, { code: "PGRST116" });
+          Object.assign(row, body as Row);
+          return respond([row]);
+        }
         return respond(state.memberships);
+      }
       case "appointments": {
         if (method === "PATCH") {
           if (state.failStatusUpdate || !Array.isArray(state.appointments)) {

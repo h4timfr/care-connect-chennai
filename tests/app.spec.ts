@@ -88,7 +88,7 @@ test.describe("Public Routes", () => {
     await page.goto("/login");
     await expect(page.getByRole("heading", { name: "Sign in to CareConnect" })).toBeVisible();
     await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /create an account/i })).toBeVisible();
   });
 
@@ -104,7 +104,7 @@ test.describe("Public Routes", () => {
   test("invalid credentials show a clear message", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill("nobody-careconnect-check@example.com");
-    await page.getByLabel("Password").fill("wrong-password-123");
+    await page.getByLabel("Password", { exact: true }).fill("wrong-password-123");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("Incorrect email or password");
   });

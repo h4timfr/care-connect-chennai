@@ -16,15 +16,15 @@ export function AuthCard({
 }) {
   const { t } = useI18n();
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-muted/30 px-4 py-16">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-soft via-background to-highlight-soft px-4 py-16">
       <div className="absolute end-4 top-4">
         <LanguageSelect />
       </div>
-      <div className="surface-card w-full max-w-sm rounded-2xl p-6 sm:p-8">
+      <div className="surface-raised w-full max-w-sm rounded-2xl p-6 sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <Link
             to="/"
-            className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground"
+            className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-primary to-highlight text-primary-foreground shadow-sm"
             aria-label={t("nav.homeLink")}
           >
             <Stethoscope className="h-6 w-6" aria-hidden />

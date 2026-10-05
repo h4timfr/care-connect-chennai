@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { FormAlert } from "@/components/AuthCard";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isoDate } from "@/lib/format";
@@ -130,14 +131,18 @@ function DetailsForm({ patient, onDone }: { patient: Patient; onDone: () => void
     }
   };
 
-  const selectClass =
-    "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
-
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
+      <p className="text-xs text-muted-foreground">{t("apply.requiredNote")}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="details-name">{t("details.fullName")}</Label>
+          <Label htmlFor="details-name">
+            {t("details.fullName")}
+            <span className="text-destructive" aria-hidden>
+              {" "}
+              *
+            </span>
+          </Label>
           <Input
             id="details-name"
             autoComplete="name"
@@ -161,20 +166,19 @@ function DetailsForm({ patient, onDone }: { patient: Patient; onDone: () => void
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="details-gender">{t("details.gender")}</Label>
-          <select
+          <NativeSelect
             id="details-gender"
             value={gender ?? ""}
             onChange={(e) => {
               const value = e.target.value;
               setGender(value === "male" || value === "female" || value === "other" ? value : null);
             }}
-            className={selectClass}
           >
             <option value="">{t("details.preferNotToSay")}</option>
             <option value="female">{t("common.female")}</option>
             <option value="male">{t("common.male")}</option>
             <option value="other">{t("common.other")}</option>
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="details-area">{t("details.area")}</Label>
@@ -188,12 +192,11 @@ function DetailsForm({ patient, onDone }: { patient: Patient; onDone: () => void
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="details-language">{t("details.preferredLanguage")}</Label>
-          <select
+          <NativeSelect
             id="details-language"
             value={language}
             onChange={(e) => setLanguageValue(e.target.value)}
             aria-describedby="details-language-note"
-            className={selectClass}
           >
             <option value="">{t("details.notChosen")}</option>
             {LANGUAGES.map((l) => (
@@ -202,7 +205,7 @@ function DetailsForm({ patient, onDone }: { patient: Patient; onDone: () => void
               </option>
             ))}
             {legacyLanguage ? <option value={legacyLanguage}>{legacyLanguage}</option> : null}
-          </select>
+          </NativeSelect>
           <p id="details-language-note" className="text-xs text-muted-foreground">
             {t("details.languageNote")}
           </p>

@@ -13,6 +13,7 @@ import {
   Sparkles,
   Star,
   Stethoscope,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -107,6 +108,26 @@ export function SampleBadge({ className }: { className?: string }) {
   );
 }
 
+/**
+ * A real provider CareConnect has checked: a clinic that is not sample content, or a doctor who is
+ * not sample content and has a verified, active clinic link (the same rule booking enforces).
+ */
+export function VerifiedBadge({ className }: { className?: string }) {
+  const { t } = useI18n();
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full bg-highlight-soft px-2 py-0.5 text-[11px] font-semibold text-highlight",
+        className,
+      )}
+      title={t("common.verifiedNote")}
+    >
+      <ShieldCheck className="h-3 w-3" aria-hidden />
+      {t("common.verified")}
+    </span>
+  );
+}
+
 export function SectionHeader({
   title,
   subtitle,
@@ -144,7 +165,7 @@ export function EmptyState({
 }) {
   return (
     <div className="surface-card flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <span className="grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary-soft text-primary">
         <Icon className="h-5 w-5" aria-hidden />
       </span>
       <div>
@@ -174,7 +195,7 @@ export function ErrorState({
       role="alert"
       className="surface-card flex flex-col items-center gap-3 border-destructive/30 px-6 py-12 text-center"
     >
-      <span className="grid h-12 w-12 place-items-center rounded-full bg-destructive/10 text-destructive">
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
         <AlertTriangle className="h-5 w-5" aria-hidden />
       </span>
       <div>

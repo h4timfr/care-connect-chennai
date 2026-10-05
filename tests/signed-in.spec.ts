@@ -294,7 +294,7 @@ test.describe("Sign-in redirects", () => {
     await page.goto("/appointments?tab=past");
     await expect(page).toHaveURL(/\/login\?redirect=/);
     await page.getByLabel("Email").fill(TEST_EMAIL);
-    await page.getByLabel("Password").fill("test-password");
+    await page.getByLabel("Password", { exact: true }).fill("test-password");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL(/\/appointments\?tab=past$/);
   });
@@ -304,7 +304,7 @@ test.describe("Sign-in redirects", () => {
       await backend({}, { signedIn: false });
       await page.goto(`/login?redirect=${encodeURIComponent(target)}`);
       await page.getByLabel("Email").fill(TEST_EMAIL);
-      await page.getByLabel("Password").fill("test-password");
+      await page.getByLabel("Password", { exact: true }).fill("test-password");
       await page.getByRole("button", { name: "Sign in", exact: true }).click();
       await expect(page).toHaveURL(/localhost:\d+\/$/);
     });
@@ -317,7 +317,7 @@ test.describe("Auth edge cases", () => {
     await page.goto("/login");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.getByLabel("Email").fill("not-an-email");
-    await page.getByLabel("Password").fill("whatever-123");
+    await page.getByLabel("Password", { exact: true }).fill("whatever-123");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.waitForTimeout(300);
     expect(mock.callsTo("POST", "/auth/v1/token")).toEqual([]);
@@ -339,7 +339,7 @@ test.describe("Auth edge cases", () => {
     );
     await page.goto("/login");
     await page.getByLabel("Email").fill(TEST_EMAIL);
-    await page.getByLabel("Password").fill("test-password");
+    await page.getByLabel("Password", { exact: true }).fill("test-password");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("Too many attempts");
   });
@@ -362,7 +362,7 @@ test.describe("Auth edge cases", () => {
     await page.goto("/login?signup=true");
     await page.getByLabel("Full name").fill(TEST_NAME);
     await page.getByLabel("Email").fill(TEST_EMAIL);
-    await page.getByLabel("Password").fill("password123");
+    await page.getByLabel("Password", { exact: true }).fill("password123");
     await page.getByRole("button", { name: "Create account" }).click();
     // The server says why (here: found in a breach); patients get that reason in their language.
     await expect(page.getByRole("alert")).toContainText("appeared in a data breach");

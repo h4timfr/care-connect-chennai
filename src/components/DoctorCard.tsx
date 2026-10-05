@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Bookmark, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Initials, Rating, SampleBadge } from "@/components/common";
+import { Initials, Rating, SampleBadge, VerifiedBadge } from "@/components/common";
 import { useApp } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
 import { bookableClinicIds } from "@/lib/supabase/queries";
@@ -31,7 +31,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
   };
 
   return (
-    <article className="surface-card flex flex-col gap-4 p-4 transition-shadow hover:shadow-pop sm:p-5">
+    <article className="surface-card flex flex-col gap-4 p-4 transition-[box-shadow,border-color] hover:border-primary/30 hover:shadow-raised sm:p-5">
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
         <Initials name={doctor.name} className="h-12 w-12 text-base" />
         <div className="min-w-0">
@@ -77,7 +77,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
         <span className="font-medium text-foreground">{fmt.inr(doctor.consultationFee)}</span>
         <span>{t.plural("common.experience", doctor.experienceYears)}</span>
         <Rating value={doctor.rating} count={doctor.reviewCount} sample={doctor.isSample} />
-        {doctor.isSample ? <SampleBadge /> : null}
+        {doctor.isSample ? <SampleBadge /> : canBookOnline ? <VerifiedBadge /> : null}
       </div>
 
       {!compact && doctor.languages.length ? (
@@ -94,13 +94,13 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
           </Link>
         </Button>
         {canBookOnline ? (
-          <Button asChild size="sm">
+          <Button asChild size="sm" variant="highlight">
             <Link to="/book/$doctorId" params={{ doctorId: doctor.id }}>
               {t("doctor.book")}
             </Link>
           </Button>
         ) : (
-          <p className="flex items-center justify-center rounded-md bg-muted px-2 text-center text-xs text-muted-foreground">
+          <p className="flex items-center justify-center rounded-lg bg-muted px-2 text-center text-xs text-muted-foreground">
             {t("doctor.bookingUnavailable")}
           </p>
         )}
