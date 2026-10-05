@@ -165,6 +165,12 @@ These need backend or operational changes and are intentionally **not** worked a
 - **The doctor portal and doctor applications need migration `00055_doctor_portal.sql`**, which
   **has not been deployed** (pgTAP `012_*`). Until it is, no account is linked to a doctor, so
   `/doctor` shows "Doctor access isn't enabled" and doctor applications say they aren't open yet.
+- **Provider-candidate review needs migration `00056_provider_candidates.sql`**, which **has not
+  been deployed** (pgTAP `013_*`). Research candidates live in their own private tables, are
+  visible only to platform admins at `/admin/providers`, and are never listed or bookable. **No
+  research catalogue has been imported:** `research/chennai-provider-candidates.json` is an empty
+  placeholder until the commissioned research file is added. See
+  [research/README.md](research/README.md).
 - **Page titles** (`<title>`) are in English; page content follows the chosen language.
 - The clinic conversation list embeds `patients.user_id` to tell patient messages from clinic
   replies. Clinic staff can already read that column under RLS; hiding it needs a backend change

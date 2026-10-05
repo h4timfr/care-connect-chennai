@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { FormAlert } from "@/components/AuthCard";
+import { AdminGate } from "@/components/AdminGate";
 import { EmptyState, ErrorState, InfoNotice, PageLoader } from "@/components/common";
 import { ApplicationStatusPill, VerificationPill } from "@/components/ProviderStatus";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useI18n } from "@/lib/i18n";
 import { useClinics } from "@/lib/supabase/queries";
 import {
@@ -41,41 +41,15 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminPage() {
-  const { user, loading } = useProtectedRoute();
   const { t } = useI18n();
-  const role = usePlatformAdmin(user?.id);
-
-  let body;
-  if (loading || !user || role.isLoading) {
-    body = (
-      <PageLoader
-        label={!loading && !user ? t("common.redirectingToSignIn") : t("admin.checking")}
-      />
-    );
-  } else if (role.error) {
-    // Fail closed: a role lookup that errors grants nothing.
-    body = isNotDeployed(role.error) ? (
-      <InfoNotice>{t("admin.notDeployed")}</InfoNotice>
-    ) : (
-      <ErrorState
-        title={t("admin.checkError")}
-        message={t(describeDataError(role.error))}
-        onRetry={role.refetch}
-      />
-    );
-  } else if (!role.data) {
-    body = (
-      <div className="flex flex-col items-center py-16 text-center">
-        <ShieldAlert className="mb-4 h-12 w-12 text-muted-foreground" aria-hidden />
-        <h2 className="font-display text-xl font-bold">{t("admin.noAccessTitle")}</h2>
-        <p className="mt-2 max-w-md text-muted-foreground">{t("admin.noAccessBody")}</p>
-        <Button asChild className="mt-6">
-          <Link to="/">{t("clinicShell.goToApp")}</Link>
-        </Button>
-      </div>
-    );
-  } else {
-    body = (
+  const body = (
+    <AdminGate>
+      <Link
+        to="/admin/providers"
+        className="mb-4 inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-primary hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {t("candidates.openReview")}
+      </Link>
       <Tabs defaultValue="applications" className="mt-2">
         <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="applications">{t("admin.tab.applications")}</TabsTrigger>
@@ -96,8 +70,8 @@ function AdminPage() {
           <TeamsPanel />
         </TabsContent>
       </Tabs>
-    );
-  }
+    </AdminGate>
+  );
 
   return (
     <PatientShell>

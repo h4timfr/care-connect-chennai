@@ -117,15 +117,16 @@ memberships to anyone you do not fully trust before then.
 | Doctor applications in `/admin`                                  | **Needs 00055.** Until then the tab says the update isn't deployed.                                          |
 | `/doctor/signup` (doctor applications)                           | **Needs 00055.** Until then it says applications aren't open.                                                |
 | Doctor portal (`/doctor/*`)                                      | **Needs 00055.** Before it no account is linked to a doctor, so everyone sees "Doctor access isn't enabled". |
+| Provider-candidate review (`/admin/providers`)                   | **Needs 00056.** Until then it says the update isn't deployed. Empty until research is imported.             |
 
 ## Deploying (manual, by the database owner)
 
 Nothing here is applied automatically.
 
-1. Apply in order to a **staging** project first: `00052`, `00053`, `00054`, `00055`.
-2. Run the pgTAP suite there (`001`–`012`). In a PGlite replay of the deployed migrations plus
-   00052–00055, all 12 files passed (283 assertions), and 00055 re-applied cleanly. They have not yet
-   run on a real Supabase stack.
+1. Apply in order to a **staging** project first: `00052`, `00053`, `00054`, `00055`, `00056`.
+2. Run the pgTAP suite there (`001`–`013`). In a PGlite replay of the deployed migrations plus
+   00052–00055, all 12 files passed (283 assertions), and 00055 re-applied cleanly; `013` (00056)
+   passed 46/46 in the same harness. They have not yet run on a real Supabase stack.
 3. Apply the same migrations to production.
 4. Grant the first platform admin from the SQL editor, as the database owner:
    ```sql
@@ -133,6 +134,35 @@ Nothing here is applied automatically.
    VALUES ('<auth user id of the administrator>', 'platform_admin');
    ```
 5. Sign in as that account and open `https://careconnect.studio/admin`.
+
+## Provider-candidate research (migration 00056)
+
+Public-web research about Chennai facilities and doctors is kept **apart from real providers**:
+
+- **Separate tables:** `candidate_facilities`, `candidate_doctors`, `candidate_relationships`,
+  `candidate_sources`, `candidate_evidence` and `candidate_contacts`. Nothing in them creates
+  or changes `clinics`, `doctors`, `clinic_doctors`, schedules or appointments.
+- **Platform admins only:** RLS lets only `private.is_platform_admin()` read them. Patients, clinic
+  staff, doctors and anonymous visitors see nothing.
+- **Never bookable:** `booking_enabled` is constrained to `false`.
+- **Review workflow:** `candidate → under_review → contact_pending → contacted →
+verification_pending → verified / rejected`. Admins can change only review status, permission
+  status and notes. The database refuses:
+  - `verified` until identity evidence is recorded (facility: clinic identity, address, contact
+    details; doctor: provider identity, registration);
+  - permission `granted` until listing-permission evidence is recorded;
+  - a confirmed doctor–facility link until relationship evidence is recorded.
+- **Audit trail:** evidence and contact logs are append-only and record who added them. Every review
+  change is written to `audit_logs`.
+- **Research is not CareConnect's conclusion:** a relationship keeps its research classification
+  (`CONFIRMED_PUBLIC` / `POSSIBLE_NEEDS_CONFIRMATION`) separately from CareConnect's own decision.
+
+A verified candidate is still **not** a provider. Onboarding a real provider remains the
+application → approval → proposed doctor → verified link flow above.
+
+The import is a generated SQL file run by the database owner; see
+[research/README.md](../research/README.md). **The research catalogue has not been added to the
+repository yet**, so nothing has been imported.
 
 ## Sample listings
 

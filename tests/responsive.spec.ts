@@ -35,6 +35,7 @@ const PAGES = [
   "/doctor/login",
   "/doctor",
   "/admin",
+  "/admin/providers",
   "/clinic/login",
 ];
 

@@ -189,6 +189,7 @@ test.describe("Every page in every language", () => {
     "/doctor/signup",
     "/doctor",
     "/admin",
+    "/admin/providers",
   ];
 
   for (const lang of ["hi", "ur", "ml", "ta", "te"]) {

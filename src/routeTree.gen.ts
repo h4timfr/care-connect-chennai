@@ -17,6 +17,7 @@ import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AdminProvidersRouteImport } from './routes/admin_.providers'
 import { Route as AppointmentsIndexRouteImport } from './routes/appointments.index'
 import { Route as AppointmentsAppointmentIdRouteImport } from './routes/appointments.$appointmentId'
 import { Route as BookDoctorIdRouteImport } from './routes/book.$doctorId'
@@ -79,6 +80,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminProvidersRoute = AdminProvidersRouteImport.update({
+  id: '/admin_/providers',
+  path: '/admin/providers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppointmentsIndexRoute = AppointmentsIndexRouteImport.update({
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/admin/providers': typeof AdminProvidersRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/admin/providers': typeof AdminProvidersRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/admin_/providers': typeof AdminProvidersRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/signup'
+    | '/admin/providers'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/signup'
+    | '/admin/providers'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/reset-password'
     | '/signup'
+    | '/admin_/providers'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
@@ -409,6 +421,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  AdminProvidersRoute: typeof AdminProvidersRoute
   AppointmentsAppointmentIdRoute: typeof AppointmentsAppointmentIdRoute
   BookDoctorIdRoute: typeof BookDoctorIdRoute
   ClinicAppointmentsRoute: typeof ClinicAppointmentsRoute
@@ -490,6 +503,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/providers': {
+      id: '/admin_/providers'
+      path: '/admin/providers'
+      fullPath: '/admin/providers'
+      preLoaderRoute: typeof AdminProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/appointments/': {
@@ -665,6 +685,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  AdminProvidersRoute: AdminProvidersRoute,
   AppointmentsAppointmentIdRoute: AppointmentsAppointmentIdRoute,
   BookDoctorIdRoute: BookDoctorIdRoute,
   ClinicAppointmentsRoute: ClinicAppointmentsRoute,

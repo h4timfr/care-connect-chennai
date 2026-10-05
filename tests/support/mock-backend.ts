@@ -81,6 +81,128 @@ export interface MockState {
   doctorAppointments: Row[] | "notDeployed";
   doctorConversations: Row[] | "notDeployed";
   doctorApplications: Row[] | "notDeployed";
+  /**
+   * Private provider-candidate review (migration 00056). Visible to platform admins only;
+   * "notDeployed" answers PGRST205. Use candidateFixtures() for synthetic records.
+   */
+  candidates: CandidateState | "notDeployed";
+}
+
+export interface CandidateState {
+  facilities: Row[];
+  doctors: Row[];
+  relationships: Row[];
+  sources: Row[];
+  evidence: Row[];
+  contacts: Row[];
+}
+
+export const candidateIds = {
+  facilityA: "00000000-0000-4000-8000-00000000c0a1",
+  facilityB: "00000000-0000-4000-8000-00000000c0b1",
+  doctorA: "00000000-0000-4000-8000-00000000d0a1",
+  relationshipA: "00000000-0000-4000-8000-00000000e0a1",
+};
+
+/** Synthetic research candidates for UI tests. Not real providers; example.invalid sources. */
+export function candidateFixtures(): CandidateState {
+  const base = {
+    review_status: "candidate",
+    permission_status: "unknown",
+    booking_enabled: false,
+    notes: null,
+    researched_on: "2026-10-01",
+    created_at: "2026-10-01T00:00:00Z",
+    updated_at: "2026-10-01T00:00:00Z",
+  };
+  return {
+    facilities: [
+      {
+        ...base,
+        id: candidateIds.facilityA,
+        research_id: "CLINIC-901",
+        name: "Test Candidate Facility Adyar",
+        facility_type: "Multispecialty clinic",
+        address: "1 Test Street, Adyar",
+        locality: "Adyar",
+        website: "https://example.invalid/facility-a",
+        specialties: ["General Medicine"],
+        source_confidence: "medium",
+        unresolved_issues: ["Two address formulations found for this branch"],
+      },
+      {
+        ...base,
+        id: candidateIds.facilityB,
+        research_id: "CLINIC-902",
+        name: "Test Candidate Facility Guindy",
+        facility_type: "Hospital",
+        address: null,
+        locality: "Guindy",
+        website: null,
+        specialties: [],
+        source_confidence: "high",
+        unresolved_issues: [],
+      },
+    ],
+    doctors: [
+      {
+        ...base,
+        id: candidateIds.doctorA,
+        research_id: "DOCTOR-901",
+        full_name: "Test Candidate Doctor",
+        specialty: "General Medicine",
+        qualifications: "MBBS",
+        registration_info: null,
+        registration_status: "not_verified",
+        source_confidence: "medium",
+        unresolved_issues: [],
+      },
+    ],
+    relationships: [
+      {
+        id: candidateIds.relationshipA,
+        doctor_candidate_id: candidateIds.doctorA,
+        facility_candidate_id: candidateIds.facilityA,
+        research_status: "POSSIBLE_NEEDS_CONFIRMATION",
+        confidence: "low",
+        unresolved_issues: ["Listed only on a directory page"],
+        careconnect_status: "unverified",
+        notes: null,
+        created_at: "2026-10-01T00:00:00Z",
+        updated_at: "2026-10-01T00:00:00Z",
+      },
+    ],
+    sources: [
+      {
+        id: "src-1",
+        facility_candidate_id: candidateIds.facilityA,
+        doctor_candidate_id: null,
+        relationship_id: null,
+        url: "https://example.invalid/facility-a/about",
+        source_type: "official_facility",
+        supports: "Facility name and address",
+        researched_on: "2026-10-01",
+        confidence: "medium",
+        origin: "research",
+        created_at: "2026-10-01T00:00:00Z",
+      },
+      {
+        id: "src-2",
+        facility_candidate_id: null,
+        doctor_candidate_id: null,
+        relationship_id: candidateIds.relationshipA,
+        url: "https://example.invalid/directory/doctor",
+        source_type: "directory",
+        supports: "Doctor listed at this facility",
+        researched_on: "2026-10-01",
+        confidence: "low",
+        origin: "research",
+        created_at: "2026-10-01T00:00:00Z",
+      },
+    ],
+    evidence: [],
+    contacts: [],
+  };
 }
 
 export interface MockBackend {
@@ -190,6 +312,14 @@ export function defaultState(): MockState {
     doctorAppointments: [],
     doctorConversations: [],
     doctorApplications: [],
+    candidates: {
+      facilities: [],
+      doctors: [],
+      relationships: [],
+      sources: [],
+      evidence: [],
+      contacts: [],
+    },
   };
 }
 
@@ -644,6 +774,111 @@ export async function mockBackend(
           return respond([created]);
         }
         return respond(state.applications);
+      }
+      case "candidate_facilities":
+      case "candidate_doctors":
+      case "candidate_relationships":
+      case "candidate_sources":
+      case "candidate_evidence":
+      case "candidate_contacts": {
+        if (state.candidates === "notDeployed") {
+          return json(route, 404, {
+            code: "PGRST205",
+            message: "Could not find the table",
+            details: "",
+            hint: "",
+          });
+        }
+        const c = state.candidates;
+        const pgErr = (status: number, code: string, message: string) =>
+          json(route, status, { code, message, details: "", hint: "" });
+        // RLS: everything here is platform-admin only.
+        if (state.platformAdmin !== true) {
+          return method === "GET"
+            ? respond([])
+            : pgErr(403, "42501", "new row violates row-level security policy");
+        }
+        const key = table.replace("candidate_", "") as keyof CandidateState;
+        const rows = c[key];
+        const eqOf = (k: string) => url.searchParams.get(k)?.replace(/^eq\./, "");
+        if (method === "GET") {
+          let out = rows;
+          for (const col of ["facility_candidate_id", "doctor_candidate_id", "relationship_id"]) {
+            const v = url.searchParams.get(col);
+            if (!v) continue;
+            if (v.startsWith("in.(")) {
+              const ids = v.slice(4, -1).split(",");
+              out = out.filter((r) => ids.includes(String(r[col])));
+            } else {
+              out = out.filter((r) => r[col] === v.replace(/^eq\./, ""));
+            }
+          }
+          return respond(out);
+        }
+        if (method === "PATCH") {
+          const row = rows.find((r) => r["id"] === eqOf("id"));
+          if (!row) return json(route, 406, { code: "PGRST116" });
+          const update = body as Row;
+          const has = (col: string, type: string) =>
+            c.evidence.some((e) => e[col] === row["id"] && e["evidence_type"] === type);
+          if (key === "facilities" || key === "doctors") {
+            const col = key === "facilities" ? "facility_candidate_id" : "doctor_candidate_id";
+            const needed =
+              key === "facilities"
+                ? ["clinic_identity", "address", "contact_details"]
+                : ["provider_identity", "doctor_registration"];
+            if (
+              update["review_status"] === "verified" &&
+              row["review_status"] !== "verified" &&
+              !needed.every((n) => has(col, n))
+            ) {
+              return pgErr(
+                400,
+                "P0001",
+                "Validation Failed: verification needs evidence of " + needed.join(", ") + ".",
+              );
+            }
+            if (
+              update["permission_status"] === "granted" &&
+              row["permission_status"] !== "granted" &&
+              !has(col, "listing_permission")
+            ) {
+              return pgErr(
+                400,
+                "P0001",
+                "Validation Failed: permission can only be marked granted with listing_permission evidence.",
+              );
+            }
+          }
+          if (
+            key === "relationships" &&
+            update["careconnect_status"] === "confirmed" &&
+            !has("relationship_id", "doctor_clinic_relationship")
+          ) {
+            return pgErr(
+              400,
+              "P0001",
+              "Validation Failed: confirming a relationship needs doctor_clinic_relationship evidence.",
+            );
+          }
+          Object.assign(row, update);
+          return respond([{ id: row["id"] }]);
+        }
+        if (method === "POST" && (key === "evidence" || key === "contacts")) {
+          const input = body as Row;
+          if ("recorded_by" in input || "recorded_at" in input) {
+            return pgErr(403, "42501", "permission denied for table " + table);
+          }
+          const created = {
+            id: key + "-" + (rows.length + 1),
+            recorded_by: ids.user,
+            recorded_at: new Date().toISOString(),
+            ...input,
+          };
+          rows.push(created);
+          return respond([{ id: created.id }]);
+        }
+        return pgErr(403, "42501", "permission denied for table " + table);
       }
       case "doctor_applications": {
         if (state.doctorApplications === "notDeployed") {

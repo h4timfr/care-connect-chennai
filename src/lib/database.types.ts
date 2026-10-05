@@ -567,6 +567,192 @@ export type Database = {
           },
         ];
       };
+      // Private provider-candidate review (migration 00056, local, not yet deployed). Platform
+      // admins only. Research facts are written by the owner-run import; the UI updates review state.
+      candidate_facilities: {
+        Row: {
+          address: string | null;
+          booking_enabled: false;
+          created_at: string;
+          facility_type: string;
+          id: string;
+          locality: string;
+          name: string;
+          notes: string | null;
+          permission_status: "unknown" | "requested" | "granted" | "denied";
+          research_id: string;
+          researched_on: string;
+          review_status:
+            | "candidate"
+            | "under_review"
+            | "contact_pending"
+            | "contacted"
+            | "verification_pending"
+            | "verified"
+            | "rejected";
+          source_confidence: "high" | "medium" | "low";
+          specialties: string[];
+          unresolved_issues: string[];
+          updated_at: string;
+          website: string | null;
+        };
+        Insert: never;
+        Update: {
+          notes?: string | null;
+          permission_status?: "unknown" | "requested" | "granted" | "denied";
+          review_status?:
+            | "candidate"
+            | "under_review"
+            | "contact_pending"
+            | "contacted"
+            | "verification_pending"
+            | "verified"
+            | "rejected";
+        };
+        Relationships: [];
+      };
+      candidate_doctors: {
+        Row: {
+          booking_enabled: false;
+          created_at: string;
+          full_name: string;
+          id: string;
+          notes: string | null;
+          permission_status: "unknown" | "requested" | "granted" | "denied";
+          qualifications: string | null;
+          registration_info: string | null;
+          registration_status: "not_verified" | "public_listing_seen" | "verified";
+          research_id: string;
+          researched_on: string;
+          review_status:
+            | "candidate"
+            | "under_review"
+            | "contact_pending"
+            | "contacted"
+            | "verification_pending"
+            | "verified"
+            | "rejected";
+          source_confidence: "high" | "medium" | "low";
+          specialty: string;
+          unresolved_issues: string[];
+          updated_at: string;
+        };
+        Insert: never;
+        Update: {
+          notes?: string | null;
+          permission_status?: "unknown" | "requested" | "granted" | "denied";
+          review_status?:
+            | "candidate"
+            | "under_review"
+            | "contact_pending"
+            | "contacted"
+            | "verification_pending"
+            | "verified"
+            | "rejected";
+        };
+        Relationships: [];
+      };
+      candidate_relationships: {
+        Row: {
+          careconnect_status: "unverified" | "confirmed" | "rejected";
+          confidence: "high" | "medium" | "low";
+          created_at: string;
+          doctor_candidate_id: string;
+          facility_candidate_id: string;
+          id: string;
+          notes: string | null;
+          research_status: "CONFIRMED_PUBLIC" | "POSSIBLE_NEEDS_CONFIRMATION";
+          unresolved_issues: string[];
+          updated_at: string;
+        };
+        Insert: never;
+        Update: {
+          careconnect_status?: "unverified" | "confirmed" | "rejected";
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      candidate_sources: {
+        Row: {
+          confidence: "high" | "medium" | "low";
+          created_at: string;
+          doctor_candidate_id: string | null;
+          facility_candidate_id: string | null;
+          id: string;
+          origin: "research" | "admin";
+          relationship_id: string | null;
+          researched_on: string;
+          source_type:
+            | "official_facility"
+            | "official_institution"
+            | "government_registry"
+            | "directory"
+            | "news"
+            | "other";
+          supports: string;
+          url: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      candidate_evidence: {
+        Row: {
+          doctor_candidate_id: string | null;
+          evidence_type:
+            | "provider_identity"
+            | "clinic_identity"
+            | "doctor_registration"
+            | "doctor_clinic_relationship"
+            | "address"
+            | "contact_details"
+            | "listing_permission"
+            | "appointment_arrangement";
+          facility_candidate_id: string | null;
+          id: string;
+          recorded_at: string;
+          recorded_by: string;
+          relationship_id: string | null;
+          source: string;
+          value: string;
+        };
+        Insert: {
+          doctor_candidate_id?: string | null;
+          evidence_type: Database["public"]["Tables"]["candidate_evidence"]["Row"]["evidence_type"];
+          facility_candidate_id?: string | null;
+          relationship_id?: string | null;
+          source: string;
+          value: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      candidate_contacts: {
+        Row: {
+          contacted_on: string;
+          doctor_candidate_id: string | null;
+          facility_candidate_id: string | null;
+          id: string;
+          method: "phone" | "email" | "in_person" | "website_form" | "other";
+          notes: string | null;
+          outcome:
+            "no_response" | "reached" | "interested" | "declined" | "follow_up" | "wrong_contact";
+          permission_status: "unknown" | "requested" | "granted" | "denied";
+          recorded_at: string;
+          recorded_by: string;
+        };
+        Insert: {
+          contacted_on: string;
+          doctor_candidate_id?: string | null;
+          facility_candidate_id?: string | null;
+          method: Database["public"]["Tables"]["candidate_contacts"]["Row"]["method"];
+          notes?: string | null;
+          outcome: Database["public"]["Tables"]["candidate_contacts"]["Row"]["outcome"];
+          permission_status?: "unknown" | "requested" | "granted" | "denied";
+        };
+        Update: never;
+        Relationships: [];
+      };
       // Added by migration 00055 (local, not yet deployed). Applicants insert content columns only.
       doctor_applications: {
         Row: {
