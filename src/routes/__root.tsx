@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
@@ -43,7 +44,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   const { t } = useI18n();
@@ -92,7 +93,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       // No child route matched: the root renders the 404 page, so give it its own title.
-      { title: match.globalNotFound ? "Page not found — CareConnect" : SITE_TITLE },
+      { title: match._notFound ? "Page not found — CareConnect" : SITE_TITLE },
       { name: "description", content: SITE_DESCRIPTION },
       { name: "application-name", content: "CareConnect" },
       { name: "theme-color", content: "#047879" },
