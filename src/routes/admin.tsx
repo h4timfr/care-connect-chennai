@@ -15,6 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useI18n } from "@/lib/i18n";
 import { useClinics } from "@/lib/supabase/queries";
+import {
+  useDoctorApplicationsForReview,
+  useReviewDoctorApplication,
+  type DoctorApplication,
+} from "@/lib/supabase/doctor";
 import { describeDataError, isNotDeployed, messageOf } from "@/lib/supabase/errors";
 import {
   CONTACT_ROLE_LABEL,
@@ -74,11 +79,15 @@ function AdminPage() {
       <Tabs defaultValue="applications" className="mt-2">
         <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="applications">{t("admin.tab.applications")}</TabsTrigger>
+          <TabsTrigger value="doctor-applications">{t("admin.tab.doctorApplications")}</TabsTrigger>
           <TabsTrigger value="doctors">{t("admin.tab.doctors")}</TabsTrigger>
           <TabsTrigger value="teams">{t("admin.tab.teams")}</TabsTrigger>
         </TabsList>
         <TabsContent value="applications" className="mt-5">
           <ApplicationsPanel />
+        </TabsContent>
+        <TabsContent value="doctor-applications" className="mt-5">
+          <DoctorApplicationsPanel />
         </TabsContent>
         <TabsContent value="doctors" className="mt-5">
           <DoctorsPanel />
@@ -257,6 +266,159 @@ function ApplicationReview({ application: a }: { application: ProviderApplicatio
             <div className="flex flex-wrap gap-2">
               <Button variant="highlight" onClick={() => setConfirming("approve")}>
                 {t("admin.approve")}
+              </Button>
+              <Button variant="outline" onClick={() => setConfirming("reject")}>
+                {t("admin.reject")}
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : a.reviewNote ? (
+        <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-sm" dir="auto">
+          <span className="font-medium">{t("apply.reviewNote")}:</span> {a.reviewNote}
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
+// ---- Doctor applications
+
+function DoctorApplicationsPanel() {
+  const { t } = useI18n();
+  const query = useDoctorApplicationsForReview(true);
+  const [showAll, setShowAll] = useState(false);
+  if (query.isLoading || query.error)
+    return <PanelState query={query} errorTitle={t("admin.loadError")} />;
+  const all = query.data ?? [];
+  const open = all.filter((a) => a.status === "submitted");
+  const list = showAll ? all : open;
+  return (
+    <section aria-label={t("admin.tab.doctorApplications")} className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {t("admin.awaiting", { count: open.length })}
+        </p>
+        <Button variant="outline" size="sm" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? t("admin.showOpen") : t("admin.showAll")}
+        </Button>
+      </div>
+      <InfoNotice className="text-sm">{t("admin.doctorApplicationsHelp")}</InfoNotice>
+      {list.length === 0 ? (
+        <EmptyState icon={ShieldCheck} title={t("admin.noApplications")} />
+      ) : (
+        <ul className="space-y-4">
+          {list.map((a) => (
+            <DoctorApplicationReview key={a.id} application={a} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function DoctorApplicationReview({ application: a }: { application: DoctorApplication }) {
+  const { t, fmt } = useI18n();
+  const review = useReviewDoctorApplication();
+  const [note, setNote] = useState("");
+  const [confirming, setConfirming] = useState<"approve" | "reject" | null>(null);
+
+  const decide = async (approve: boolean) => {
+    try {
+      await review.mutateAsync({ applicationId: a.id, approve, note });
+      toast.success(approve ? t("admin.doctorApproved") : t("admin.rejected"));
+    } catch (err) {
+      toast.error(t(describeDataError(err)));
+    } finally {
+      setConfirming(null);
+    }
+  };
+
+  const rows: [string, string, boolean?][] = [
+    [t("propose.specialty"), fmt.specialty(a.specialtyId)],
+    [t("signup.doctor.qualifications"), a.qualifications],
+    [t("propose.registration"), a.registration, true],
+    [t("propose.experience"), String(a.experienceYears)],
+    [
+      t("propose.fee"),
+      a.consultationFee === null ? t("common.notProvided") : fmt.inr(a.consultationFee),
+    ],
+    [t("signup.doctor.clinic"), a.clinicName || a.clinicNote || t("signup.doctor.noClinic")],
+    [t("apply.phone"), a.contactPhone, true],
+    [t("apply.email"), a.contactEmail, true],
+    [t("apply.message"), a.message || t("common.notProvided")],
+  ];
+
+  return (
+    <li className="surface-card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="font-semibold [overflow-wrap:anywhere]" dir="auto">
+            {a.fullName}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {t("apply.submittedOn", { date: fmt.longDate(a.createdAt.slice(0, 10)) })}
+          </p>
+        </div>
+        <ApplicationStatusPill status={a.status} />
+      </div>
+      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        {rows.map(([label, value, ltr]) => (
+          <div key={label} className="min-w-0">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="font-medium [overflow-wrap:anywhere]" dir={ltr ? "ltr" : "auto"}>
+              {value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {a.status === "submitted" ? (
+        <div className="mt-4 space-y-3 border-t pt-4">
+          <div className="space-y-1.5">
+            <Label htmlFor={`doctor-note-${a.id}`}>{t("admin.note")}</Label>
+            <Textarea
+              id={`doctor-note-${a.id}`}
+              rows={2}
+              maxLength={1000}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+          <InfoNotice className="text-xs">{t("admin.doctorVerifyReminder")}</InfoNotice>
+          {confirming ? (
+            <div
+              role="alert"
+              className="flex flex-col gap-2 rounded-lg border border-highlight/40 bg-highlight-soft p-3 sm:flex-row sm:items-center"
+            >
+              <p className="flex-1 text-sm font-medium text-foreground">
+                {confirming === "approve"
+                  ? t("admin.confirmApproveDoctor", { name: a.fullName })
+                  : t("admin.confirmReject", { clinic: a.fullName })}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={confirming === "approve" ? "highlight" : "destructive"}
+                  disabled={review.isPending}
+                  onClick={() => decide(confirming === "approve")}
+                >
+                  {review.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                  {t("admin.confirm")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={review.isPending}
+                  onClick={() => setConfirming(null)}
+                >
+                  {t("common.cancel")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="highlight" onClick={() => setConfirming("approve")}>
+                {t("admin.approveDoctor")}
               </Button>
               <Button variant="outline" onClick={() => setConfirming("reject")}>
                 {t("admin.reject")}

@@ -73,6 +73,14 @@ export interface MockState {
   schedules: Row[];
   /** Emails of existing accounts, for admin_add_clinic_member. */
   knownEmails: string[];
+  /**
+   * Doctor portal (migration 00055). A doctor is a doctors row whose user_id is the signed-in
+   * account (set a row's user_id to ids.user). The RPCs return what doctor_appointments() and
+   * doctor_conversations() would for that doctor; "notDeployed" answers PGRST202.
+   */
+  doctorAppointments: Row[] | "notDeployed";
+  doctorConversations: Row[] | "notDeployed";
+  doctorApplications: Row[] | "notDeployed";
 }
 
 export interface MockBackend {
@@ -179,6 +187,9 @@ export function defaultState(): MockState {
     proposeDeployed: true,
     schedules: [],
     knownEmails: [TEST_EMAIL, "staff@test.invalid"],
+    doctorAppointments: [],
+    doctorConversations: [],
+    doctorApplications: [],
   };
 }
 
@@ -445,6 +456,31 @@ export async function mockBackend(
       }
       return json(route, 200, "mem-new");
     }
+    if (path === "/rest/v1/rpc/doctor_appointments") {
+      if (state.doctorAppointments === "notDeployed") return notFoundFn();
+      return json(route, 200, state.doctorAppointments);
+    }
+    if (path === "/rest/v1/rpc/doctor_conversations") {
+      if (state.doctorConversations === "notDeployed") return notFoundFn();
+      return json(route, 200, state.doctorConversations);
+    }
+    if (path === "/rest/v1/rpc/admin_review_doctor_application") {
+      if (state.doctorApplications === "notDeployed") return notFoundFn();
+      if (state.platformAdmin !== true) {
+        return pgError(403, "42501", "Unauthorized: platform admins only.");
+      }
+      const app = state.doctorApplications.find((a) => a["id"] === args["p_application_id"]);
+      if (!app || app["status"] !== "submitted") {
+        return pgError(400, "P0001", "Validation Failed: that application is not awaiting review.");
+      }
+      app["status"] = args["p_approve"] === true ? "approved" : "rejected";
+      app["review_note"] = args["p_note"] ?? null;
+      return json(
+        route,
+        200,
+        args["p_approve"] === true ? "00000000-0000-4000-8000-0000000000fd" : null,
+      );
+    }
     if (path === "/rest/v1/rpc/clinic_propose_doctor") {
       if (!state.proposeDeployed) return notFoundFn();
       const id = "00000000-0000-4000-8000-0000000000f" + state.doctors.length;
@@ -466,6 +502,38 @@ export async function mockBackend(
       case "clinics":
         return respond(state.clinics);
       case "doctors": {
+        const userFilter = url.searchParams.get("user_id")?.replace(/^eq\./, "");
+        if (userFilter) {
+          // RLS: only the signed-in account's own doctor row is returned for this lookup.
+          const own = state.doctors
+            .filter((d) => d["user_id"] === userFilter && userFilter === ids.user)
+            .map((d) => ({
+              ...d,
+              clinic_doctors: ((d["clinic_doctors"] as Row[] | undefined) ?? []).map((l) => ({
+                ...l,
+                clinics: {
+                  name: state.clinics.find((c) => c["id"] === l["clinic_id"])?.["name"] ?? "",
+                },
+              })),
+            }));
+          return respond(own);
+        }
+        if (method === "PATCH") {
+          const id = url.searchParams.get("id")?.replace(/^eq\./, "");
+          const row = state.doctors.find((d) => d["id"] === id && d["user_id"] === ids.user);
+          if (!row) return json(route, 406, { code: "PGRST116" });
+          const update = body as Row;
+          if ("name" in update || "registration_note" in update || "is_demo" in update) {
+            return json(route, 400, {
+              code: "P0001",
+              message: "Only CareConnect can change that",
+              details: "",
+              hint: "",
+            });
+          }
+          Object.assign(row, update);
+          return respond([{ id: row["id"] }]);
+        }
         const filtered = [...url.searchParams.keys()].some(
           (k) => !["select", "order", "limit"].includes(k),
         );
@@ -576,6 +644,55 @@ export async function mockBackend(
           return respond([created]);
         }
         return respond(state.applications);
+      }
+      case "doctor_applications": {
+        if (state.doctorApplications === "notDeployed") {
+          return json(route, 404, {
+            code: "PGRST205",
+            message: "Could not find the table",
+            details: "",
+            hint: "",
+          });
+        }
+        if (method === "POST") {
+          const input = body as Row;
+          if ("status" in input || "applicant_id" in input || "doctor_id" in input) {
+            return json(route, 403, {
+              code: "42501",
+              message: "permission denied for table doctor_applications",
+              details: "",
+              hint: "",
+            });
+          }
+          if (state.doctors.some((d) => d["user_id"] === ids.user)) {
+            return json(route, 400, {
+              code: "P0001",
+              message: "Validation Failed: this account is already linked to a doctor profile.",
+              details: "",
+              hint: "",
+            });
+          }
+          if (state.doctorApplications.filter((a) => a["status"] === "submitted").length >= 2) {
+            return json(route, 400, {
+              code: "P0001",
+              message: "Rate Limit Exceeded: at most 2 open doctor applications per account.",
+              details: "",
+              hint: "",
+            });
+          }
+          const created: Row = {
+            id: "dapp-" + (state.doctorApplications.length + 1),
+            applicant_id: ids.user,
+            status: "submitted",
+            review_note: null,
+            clinic: null,
+            created_at: new Date().toISOString(),
+            ...input,
+          };
+          state.doctorApplications.unshift(created);
+          return respond([{ id: created["id"] }]);
+        }
+        return respond(state.doctorApplications);
       }
       case "doctor_schedules": {
         const filter = (key: string) => url.searchParams.get(key)?.replace(/^eq\./, "");
@@ -696,6 +813,23 @@ export async function mockBackend(
             (c) => c["id"] === (body as Row)["conversation_id"],
           );
           (conversation?.["messages"] as Row[] | undefined)?.push(created);
+          const doctorConversation = Array.isArray(state.doctorConversations)
+            ? state.doctorConversations.find((c) => c["id"] === (body as Row)["conversation_id"])
+            : undefined;
+          if (!conversation && !doctorConversation) {
+            return json(route, 403, {
+              code: "42501",
+              message: "new row violates row-level security policy",
+              details: "",
+              hint: "",
+            });
+          }
+          (doctorConversation?.["messages"] as Row[] | undefined)?.push({
+            id: created["id"],
+            body: (body as Row)["body"],
+            created_at: created["created_at"],
+            from: "you",
+          });
           return respond([created]);
         }
         return respond([]);

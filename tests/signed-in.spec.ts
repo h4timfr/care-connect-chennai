@@ -734,7 +734,8 @@ test.describe("Route protection (regression for the redirect loop)", () => {
       await expect(page).toHaveURL(/\/login\?redirect=/);
       await page.waitForTimeout(1500);
       const url = new URL(page.url());
-      expect(url.pathname).toBe("/login");
+      // Each part of the app has its own sign-in page; the portal still checks membership after it.
+      expect(url.pathname).toBe(path.startsWith("/clinic") ? "/clinic/login" : "/login");
       expect(decodeURIComponent(url.searchParams.get("redirect") ?? "")).toBe(path);
       expect(navigations.filter((u) => u.includes("/login")).length).toBeLessThanOrEqual(1);
     });
@@ -747,7 +748,9 @@ test.describe("Route protection (regression for the redirect loop)", () => {
     }) => {
       await backend({ memberships: [] });
       await page.goto(path);
-      await expect(page.getByRole("heading", { name: "No clinic access" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Clinic access isn't enabled for this account" }),
+      ).toBeVisible();
       await page.waitForTimeout(1000);
       expect(new URL(page.url()).pathname).toBe(path.split("?")[0]);
     });
@@ -760,9 +763,13 @@ test.describe("Clinic portal", () => {
   test("a patient without membership gets 'No clinic access'", async ({ page, backend }) => {
     await backend({ memberships: [] });
     await page.goto("/clinic");
-    await expect(page.getByRole("heading", { name: "No clinic access" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Clinic access isn't enabled for this account" }),
+    ).toBeVisible();
     await page.goto("/clinic/messages");
-    await expect(page.getByRole("heading", { name: "No clinic access" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Clinic access isn't enabled for this account" }),
+    ).toBeVisible();
   });
 
   test("a failed membership lookup is not reported as 'No clinic access'", async ({

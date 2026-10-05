@@ -134,9 +134,6 @@ export function PatientShell({ children }: { children: ReactNode }) {
               </Link>
             ) : (
               <div className="flex gap-2">
-                <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex">
-                  <Link to="/providers">{t("nav.forClinics")}</Link>
-                </Button>
                 <Button asChild variant="ghost" size="sm">
                   <Link to="/login">{t("nav.signIn")}</Link>
                 </Button>

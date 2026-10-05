@@ -567,6 +567,56 @@ export type Database = {
           },
         ];
       };
+      // Added by migration 00055 (local, not yet deployed). Applicants insert content columns only.
+      doctor_applications: {
+        Row: {
+          applicant_id: string;
+          clinic_id: string | null;
+          clinic_note: string | null;
+          consultation_fee: number | null;
+          contact_email: string;
+          contact_phone: string;
+          created_at: string;
+          doctor_id: string | null;
+          experience_years: number;
+          full_name: string;
+          id: string;
+          message: string | null;
+          qualifications: string;
+          registration_council: string;
+          registration_number: string;
+          review_note: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          specialty_id: string;
+          status: "submitted" | "approved" | "rejected" | "withdrawn";
+          updated_at: string;
+        };
+        Insert: {
+          clinic_id?: string | null;
+          clinic_note?: string | null;
+          consultation_fee?: number | null;
+          contact_email: string;
+          contact_phone: string;
+          experience_years: number;
+          full_name: string;
+          message?: string | null;
+          qualifications: string;
+          registration_council: string;
+          registration_number: string;
+          specialty_id: string;
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "doctor_applications_clinic_id_fkey";
+            columns: ["clinic_id"];
+            isOneToOne: false;
+            referencedRelation: "clinics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       // Added by migration 00054 (local, not yet deployed). Applicants may insert only the content
       // columns; status, owner and review fields come from defaults and the review functions.
       provider_applications: {
@@ -743,6 +793,41 @@ export type Database = {
               slot_time: string;
             }[];
           };
+      // Doctor portal functions from migration 00055 (local, not yet deployed).
+      admin_review_doctor_application: {
+        Args: {
+          p_application_id: string;
+          p_approve: boolean;
+          p_note: string | null;
+          p_existing_doctor_id?: string | null;
+        };
+        Returns: string | null;
+      };
+      doctor_appointments: {
+        Args: Record<string, never>;
+        Returns: {
+          clinic_id: string;
+          clinic_name: string;
+          date: string;
+          id: string;
+          patient_name: string;
+          reason: string | null;
+          status: Database["public"]["Enums"]["appointment_status"];
+          time: string;
+        }[];
+      };
+      doctor_conversations: {
+        Args: Record<string, never>;
+        Returns: {
+          clinic_id: string;
+          clinic_name: string;
+          created_at: string;
+          id: string;
+          messages: Json;
+          patient_name: string;
+        }[];
+      };
+      withdraw_doctor_application: { Args: { p_application_id: string }; Returns: undefined };
       // Onboarding functions from migration 00054 (local, not yet deployed).
       admin_add_clinic_member: {
         Args: { p_clinic_id: string; p_email: string; p_role: string };

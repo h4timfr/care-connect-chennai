@@ -155,7 +155,7 @@ for (const scheme of ["light", "dark"] as const) {
     };
     await visit("/profile", () => page.getByRole("button", { name: "Edit", exact: true }).click());
     await visit("/discover");
-    await visit("/providers/apply");
+    await visit("/clinic/signup");
     await visit("/clinic/doctors", () =>
       page.getByRole("button", { name: "Edit hours" }).first().click(),
     );
@@ -164,48 +164,10 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
-test.describe("Patient and clinic sign-in entrances", () => {
-  test("the clinic entrance uses the same account and lands in the clinic portal", async ({
-    page,
-    backend,
-  }) => {
-    const mock = await backend({}, { signedIn: false });
-    mock.state.memberships = [adminMembership(mock.state.clinics[0])];
-    await page.goto("/login");
-    await page.getByRole("link", { name: "Clinic & provider" }).click();
-    await expect(page).toHaveURL(/portal=clinic/);
-    await expect(page.getByRole("heading", { name: "Clinic & provider sign in" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Clinic & provider" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    await page.getByLabel("Email").fill("staff@test.invalid");
-    await page.getByLabel("Password", { exact: true }).fill("test-password");
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL(/\/clinic$/);
-  });
+// Patient / clinic / doctor sign-in entrances are covered in tests/portals.spec.ts.
 
-  test("an explicit return path still wins over the clinic portal", async ({ page, backend }) => {
-    await backend({}, { signedIn: false });
-    await page.goto("/login?portal=clinic&redirect=%2Fprofile");
-    await page.getByLabel("Email").fill("patient@test.invalid");
-    await page.getByLabel("Password", { exact: true }).fill("test-password");
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL(/\/profile$/);
-  });
-
-  test("a signed-in patient without membership gets no clinic access", async ({
-    page,
-    backend,
-  }) => {
-    await backend();
-    await page.goto("/clinic/doctors");
-    await expect(page.getByRole("heading", { name: "No clinic access" })).toBeVisible();
-  });
-});
-
-test.describe("Provider applications", () => {
-  test("for-clinics page explains verification and links to applying and signing in", async ({
+test.describe("Clinic applications", () => {
+  test("for-clinics page explains verification and links to clinic registration", async ({
     page,
     backend,
   }) => {
@@ -214,15 +176,18 @@ test.describe("Provider applications", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Bring your clinic");
     await expect(page.getByText("About the sample listings")).toBeVisible();
     await page.getByRole("link", { name: "Apply to list your clinic" }).first().click();
-    await expect(page).toHaveURL(/\/login\?redirect=/);
+    await expect(page).toHaveURL(/\/clinic\/signup$/);
   });
 
-  test("applying validates input, submits only content fields and shows the status", async ({
-    page,
-    backend,
-  }) => {
-    const mock = await backend();
+  test("the old application address opens clinic registration", async ({ page, backend }) => {
+    await backend();
     await page.goto("/providers/apply");
+    await expect(page).toHaveURL(/\/clinic\/signup$/);
+  });
+
+  test("applying validates input and submits only content fields", async ({ page, backend }) => {
+    const mock = await backend();
+    await page.goto("/clinic/signup");
     await page.getByRole("button", { name: "Submit application" }).click();
     await expect(page.getByRole("alert")).toContainText("clinic name");
     expect(mock.callsTo("POST", "/rest/v1/provider_applications")).toEqual([]);
@@ -242,8 +207,12 @@ test.describe("Provider applications", () => {
     >;
     expect(sent).not.toHaveProperty("status");
     expect(sent).not.toHaveProperty("applicant_id");
-    expect(sent).toMatchObject({ clinic_name: "Real Health Clinic", contact_role: "owner" });
-    await expect(page.getByText("Under review")).toBeVisible();
+    // An empty official email defaults to the account's own address.
+    expect(sent).toMatchObject({
+      clinic_name: "Real Health Clinic",
+      contact_role: "owner",
+      contact_email: "patient@test.invalid",
+    });
   });
 
   test("before the onboarding migration, applying is honestly unavailable", async ({
@@ -251,8 +220,8 @@ test.describe("Provider applications", () => {
     backend,
   }) => {
     await backend({ applications: "notDeployed" });
-    await page.goto("/providers/apply");
-    await expect(page.getByText("Online clinic applications aren't open yet")).toBeVisible();
+    await page.goto("/clinic/signup");
+    await expect(page.getByText("Applications aren't open online yet")).toBeVisible();
     await expect(page.getByRole("button", { name: "Submit application" })).toHaveCount(0);
   });
 
@@ -271,7 +240,7 @@ test.describe("Provider applications", () => {
       created_at: "2026-10-01T00:00:00Z",
     });
     await backend({ applications: [open(1), open(2), open(3)] });
-    await page.goto("/providers/apply");
+    await page.goto("/clinic/signup");
     await expect(page.getByText("You already have 3 applications under review")).toBeVisible();
     await expect(page.getByRole("button", { name: "Submit application" })).toHaveCount(0);
   });
@@ -448,7 +417,7 @@ test.describe("Phones", () => {
       const overflowing: string[] = [];
       for (const path of [
         "/providers",
-        "/providers/apply",
+        "/clinic/signup",
         "/admin",
         "/clinic/doctors",
         "/profile",
@@ -472,7 +441,7 @@ test.describe("Phones", () => {
       await page.setViewportSize({ width, height: 800 });
       await backend({}, { signedIn: false });
       const overflowing: string[] = [];
-      for (const path of ["/login", "/login?signup=true", "/login?portal=clinic", "/providers"]) {
+      for (const path of ["/login", "/login?signup=true", "/clinic/login", "/providers"]) {
         await page.goto(path);
         await page.waitForLoadState("networkidle");
         const overflow = await page.evaluate(
@@ -491,12 +460,7 @@ test.describe("Phones", () => {
     await page.context().addCookies([{ name: "cc_lang", value: "ur", url: baseURL }]);
     const mock = await backend({ platformAdmin: true });
     mock.state.memberships = [adminMembership(mock.state.clinics[0])];
-    for (const path of [
-      "/providers",
-      "/providers/apply",
-      "/clinic/doctors",
-      "/login?portal=clinic",
-    ]) {
+    for (const path of ["/providers", "/clinic/signup", "/clinic/doctors", "/clinic/login"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
       await expect(page.locator("html")).toHaveAttribute("dir", "rtl");

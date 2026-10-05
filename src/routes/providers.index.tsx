@@ -59,7 +59,7 @@ function ProvidersPage() {
           <p className="mt-3 text-base opacity-90 sm:text-lg">{t("providers.subtitle")}</p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button asChild size="lg" className="bg-card text-foreground hover:bg-card/90">
-              <Link to="/providers/apply">{t("providers.apply")}</Link>
+              <Link to="/clinic/signup">{t("providers.apply")}</Link>
             </Button>
             <Button
               asChild
@@ -67,11 +67,34 @@ function ProvidersPage() {
               variant="outline"
               className="border-white/40 bg-transparent text-primary-foreground hover:border-white hover:bg-white/10 hover:text-primary-foreground"
             >
-              <Link to="/login" search={{ portal: "clinic" }}>
-                {t("providers.signIn")}
-              </Link>
+              <Link to="/clinic/login">{t("providers.signIn")}</Link>
             </Button>
           </div>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="doctor-entry-heading"
+        className="mt-4 flex flex-col gap-3 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
+            <Stethoscope className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <h2 id="doctor-entry-heading" className="font-semibold">
+              {t("providers.doctorTitle")}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t("providers.doctorBody")}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button asChild variant="soft">
+            <Link to="/doctor/signup">{t("providerEntry.doctorRegister")}</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/doctor/login">{t("providerEntry.doctorSignIn")}</Link>
+          </Button>
         </div>
       </section>
 

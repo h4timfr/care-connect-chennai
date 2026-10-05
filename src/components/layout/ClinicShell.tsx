@@ -19,6 +19,7 @@ import { describeDataError } from "@/lib/supabase/errors";
 import { useApp } from "@/lib/store";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { useAuth } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { MemberClinic } from "@/lib/supabase/queries";
@@ -63,7 +64,9 @@ export function ClinicShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const { loading, user } = useProtectedRoute();
+  // Signed-out visitors go to the clinic portal sign-in; membership is still checked below.
+  const { loading, user } = useProtectedRoute("/clinic/login");
+  const { signOut } = useAuth();
   const mainRef = useRef<HTMLElement>(null);
   const { t } = useI18n();
   const {
@@ -109,11 +112,21 @@ export function ClinicShell({
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-6 text-center">
         <Stethoscope className="mb-4 h-12 w-12 text-muted-foreground" aria-hidden />
-        <h1 className="mb-2 font-display text-2xl font-bold">{t("clinicShell.noAccessTitle")}</h1>
-        <p className="mb-6 max-w-md text-muted-foreground">{t("clinicShell.noAccessBody")}</p>
-        <Button asChild>
-          <Link to="/">{t("clinicShell.goToApp")}</Link>
-        </Button>
+        <h1 className="mb-2 font-display text-2xl font-bold">{t("portal.clinic.noAccessTitle")}</h1>
+        <p className="mb-6 max-w-md text-muted-foreground">
+          {t("portal.clinic.noAccessBody", { email: user.email ?? "" })}
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button asChild>
+            <Link to="/">{t("clinicShell.goToApp")}</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/clinic/signup">{t("portal.clinic.register")}</Link>
+          </Button>
+          <Button variant="ghost" onClick={() => void signOut()}>
+            {t("common.signOut")}
+          </Button>
+        </div>
       </div>
     );
   }

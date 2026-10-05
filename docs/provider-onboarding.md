@@ -8,21 +8,36 @@ production. The database is the security boundary throughout: the UI only decide
 There is **one** account system: Supabase Auth. Patients, clinic staff and platform administrators
 all sign in the same way. What an account may do comes only from rows the database checks:
 
-| Capability                                                      | Granted by                                              | Checked by                                                         |
-| --------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------ |
-| Patient features                                                | every account (a `patients` row is created on sign-up)  | RLS on patients, appointments, conversations, messages             |
-| Clinic portal (staff)                                           | `clinic_memberships` row, `active`, role `clinic_staff` | RLS via `private.user_clinic_ids()`                                |
-| Clinic admin (propose doctors, edit verified doctors' profiles) | membership with role `clinic_admin`                     | RLS via `private.user_admin_clinic_ids()`, `clinic_propose_doctor` |
-| Platform admin (approve clinics, verify doctors, manage teams)  | `user_roles` row `platform_admin`, assigned out of band | `private.is_platform_admin()` in RLS and every admin function      |
+| Capability                                                      | Granted by                                                                                   | Checked by                                                                   |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Patient features                                                | every account (a `patients` row is created on sign-up)                                       | RLS on patients, appointments, conversations, messages                       |
+| Clinic portal (staff)                                           | `clinic_memberships` row, `active`, role `clinic_staff`                                      | RLS via `private.user_clinic_ids()`                                          |
+| Clinic admin (propose doctors, edit verified doctors' profiles) | membership with role `clinic_admin`                                                          | RLS via `private.user_admin_clinic_ids()`, `clinic_propose_doctor`           |
+| Platform admin (approve clinics, verify doctors, manage teams)  | `user_roles` row `platform_admin`, assigned out of band                                      | `private.is_platform_admin()` in RLS and every admin function                |
+| Doctor portal (00055)                                           | `doctors.user_id` = the account, set only by a platform admin approving a doctor application | `private.my_doctor_ids()`, `doctor_appointments()`, `doctor_conversations()` |
 
-"Patient sign in" and "Clinic & provider sign in" (`/login?portal=clinic`) are the same login. The
-clinic entrance only changes the wording and lands on `/clinic`, which shows **No clinic access**
-unless the database returns an active membership. `/admin` shows **No admin access** unless the
-role check succeeds and returns `platform_admin`. If the check fails for any reason it grants nothing.
+## Three entrances, one account system
+
+| Entrance          | Sign in         | Register                         | Portal      | Opens only when                                               |
+| ----------------- | --------------- | -------------------------------- | ----------- | ------------------------------------------------------------- |
+| Patient (primary) | `/login`        | `/login?signup=true` (`/signup`) | patient app | signed in                                                     |
+| Clinic            | `/clinic/login` | `/clinic/signup`                 | `/clinic/*` | the database returns an active `clinic_memberships` row       |
+| Doctor            | `/doctor/login` | `/doctor/signup`                 | `/doctor/*` | the account is linked to a doctor profile (`doctors.user_id`) |
+
+All three use the same Supabase Auth sign-in. Signing in is authentication only: after it, the
+clinic and doctor sign-in pages ask the database for the account's membership or doctor link and
+open the portal only if it exists. Otherwise they show **Clinic/Doctor access isn't enabled for
+this account** and reveal no clinic or doctor data. Signed-out visits to `/clinic/*` and
+`/doctor/*` go to the matching sign-in page. `/admin` shows **No admin access** unless the role
+check returns `platform_admin`. Every check fails closed, and nothing the browser stores (URL,
+local storage, cookies) can grant access: the queries are scoped to `auth.uid()` in the database.
+
+Registering as a clinic or doctor creates (or uses) an ordinary account and submits an
+**application**. It never creates a trusted clinic, a membership or a doctor link by itself.
 
 ## The onboarding flow
 
-1. **Apply** (`/providers` → `/providers/apply`, signed in): the applicant gives the clinic's name,
+1. **Apply** (`/clinic/signup`, which creates the account first if needed): the applicant gives the clinic's name,
    area, address and registration details, and their own name, role, phone and email. They may
    only insert these content columns; owner and status come from defaults. Each account can have
    at most 3 open applications.
@@ -42,6 +57,31 @@ role check succeeds and returns `platform_admin`. If the check fails for any rea
    the schedule window and slot alignment on every booking.
 6. **Teams**: platform admins add members by the email of an existing account (`/admin` → Clinic
    teams), choosing staff or admin, and can deactivate or reactivate members.
+
+## Doctor onboarding and the doctor portal (migration 00055)
+
+1. **Apply** (`/doctor/signup`): name, specialty, qualifications, medical council and registration
+   number, experience, an optional fee, an optional clinic already on CareConnect (or a free-text
+   note), phone and email. Applicants insert content columns only; at most 2 open applications, and
+   none once the account is already a doctor.
+2. **Platform admin reviews** (`/admin` → Doctor applications) after confirming the registration
+   with the medical council. `admin_review_doctor_application` links the applicant's account to a new,
+   non-sample doctor profile, or to an existing **unclaimed, non-sample** profile when the admin
+   passes `p_existing_doctor_id` (not exposed in the UI yet). Any named clinic gets a **pending**
+   link. It refuses sample profiles and accounts that are already linked.
+3. **Platform admin verifies the clinic link** (`/admin` → Doctor verification), exactly as for
+   clinic-proposed doctors. Until then the doctor is unlisted and unbookable.
+4. **Doctor portal** (`/doctor`):
+   - **Dashboard:** clinic links and their status, plus upcoming appointments.
+   - **Appointments:** via `doctor_appointments()`, which returns appointment fields plus the patient's
+     **name only**. Doctors have no read access to patient records or the appointments table.
+   - **Schedule:** opening hours, only at clinics where the link is verified and active.
+   - **Messages:** read and reply in conversations about this doctor, at verified clinics only.
+   - **Profile:** the doctor edits their text, languages, qualifications, experience and their own
+     fee. Name, specialty, registration and sample status are CareConnect's.
+
+Pending links grant nothing: no hours, no messages and no listing. Appointment status changes stay
+with the clinic.
 
 ## Security fix included (migration 00054)
 
@@ -65,22 +105,27 @@ memberships to anyone you do not fully trust before then.
 
 ## What is ready and what needs the database update
 
-| Part                                                            | Status                                                                       |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Password visibility, select contrast, redesign, mobile fixes    | Frontend only. Ready.                                                        |
-| `/providers` information page, clinic sign-in entrance          | Frontend only. Ready.                                                        |
-| Clinic portal: doctor verification status, opening hours editor | Works now (existing policies); after 00054 it is limited to verified doctors |
-| `/providers/apply` applications                                 | **Needs 00054.** Until then it says applications aren't open yet.            |
-| Proposing doctors                                               | **Needs 00054.** Until then it says the update isn't deployed.               |
-| `/admin` console                                                | **Needs 00052 and 00054.** Until then it fails closed.                       |
+| Part                                                             | Status                                                                                                       |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Password visibility, select contrast, redesign, mobile fixes     | Frontend only. Ready.                                                                                        |
+| `/providers` information page, clinic sign-in entrance           | Frontend only. Ready.                                                                                        |
+| Clinic portal: doctor verification status, opening hours editor  | Works now (existing policies); after 00054 it is limited to verified doctors                                 |
+| `/clinic/signup` clinic applications                             | **Needs 00054.** Until then it says applications aren't open yet.                                            |
+| Proposing doctors                                                | **Needs 00054.** Until then it says the update isn't deployed.                                               |
+| `/admin` console                                                 | **Needs 00052 and 00054.** Until then it fails closed.                                                       |
+| `/clinic/login`, `/doctor/login`, provider entrances on `/login` | Frontend only. Ready (authorization uses existing tables).                                                   |
+| Doctor applications in `/admin`                                  | **Needs 00055.** Until then the tab says the update isn't deployed.                                          |
+| `/doctor/signup` (doctor applications)                           | **Needs 00055.** Until then it says applications aren't open.                                                |
+| Doctor portal (`/doctor/*`)                                      | **Needs 00055.** Before it no account is linked to a doctor, so everyone sees "Doctor access isn't enabled". |
 
 ## Deploying (manual, by the database owner)
 
 Nothing here is applied automatically.
 
-1. Apply in order to a **staging** project first: `00052`, `00053`, `00054`.
-2. Run the pgTAP suite there, including `008`, `009`, `010` and `011_provider_onboarding`. 011 was
-   written alongside 00054 but has **not been executed yet**: no local Supabase stack was available.
+1. Apply in order to a **staging** project first: `00052`, `00053`, `00054`, `00055`.
+2. Run the pgTAP suite there (`001`–`012`). In a PGlite replay of the deployed migrations plus
+   00052–00055, all 12 files passed (283 assertions), and 00055 re-applied cleanly. They have not yet
+   run on a real Supabase stack.
 3. Apply the same migrations to production.
 4. Grant the first platform admin from the SQL editor, as the database owner:
    ```sql

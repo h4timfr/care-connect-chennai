@@ -118,7 +118,10 @@ function ProfilePage() {
                 <Link to="/providers">{t("profile.providerLearn")}</Link>
               </Button>
               <Button asChild variant="soft" size="sm">
-                <Link to="/providers/apply">{t("providers.apply")}</Link>
+                <Link to="/clinic/signup">{t("providerEntry.clinicRegister")}</Link>
+              </Button>
+              <Button asChild variant="soft" size="sm">
+                <Link to="/doctor/signup">{t("providerEntry.doctorRegister")}</Link>
               </Button>
             </div>
           </section>

@@ -762,15 +762,7 @@ export const ta: Messages = {
   "apply.withdraw": "விண்ணப்பத்தைத் திரும்பப் பெறு",
   "apply.withdrawn": "விண்ணப்பம் திரும்பப் பெறப்பட்டது",
   "apply.yourApplications": "உங்கள் விண்ணப்பங்கள்",
-  "auth.clinic.apply": "உங்கள் கிளினிக்கைச் சேர்க்க விண்ணப்பிக்கவும்",
-  "auth.clinic.newClinic": "CareConnect-க்குப் புதியவரா?",
-  "auth.clinic.subtitle":
-    "உங்கள் கிளினிக் அமைக்கப்பட்ட கணக்கையே பயன்படுத்துங்கள். நீங்கள் எதைத் திறக்கலாம் என்பது உங்கள் கிளினிக் உறுப்பினர் நிலையைப் பொறுத்தது.",
-  "auth.clinic.title": "கிளினிக் & வழங்குநர் உள்நுழைவு",
   "auth.hidePassword": "கடவுச்சொல்லை மறை",
-  "auth.portal.clinic": "கிளினிக் & வழங்குநர்",
-  "auth.portal.label": "எப்படி உள்நுழைகிறீர்கள் என்பதைத் தேர்ந்தெடுக்கவும்",
-  "auth.portal.patient": "நோயாளி",
   "auth.showPassword": "கடவுச்சொல்லைக் காட்டு",
   "clinicDoctors.adminOnly":
     "உங்கள் கிளினிக்கின் நிர்வாகி மட்டுமே புதிய மருத்துவர்களை முன்மொழியலாம்.",
@@ -868,4 +860,147 @@ export const ta: Messages = {
   "verification.pending": "சரிபார்ப்புக்குக் காத்திருக்கிறது",
   "verification.rejected": "சரிபார்க்கப்படவில்லை",
   "verification.verified": "சரிபார்க்கப்பட்டது",
+
+  // ---- Provider portals: sign-in, registration, doctor portal
+  "admin.approveDoctor": "மருத்துவருக்கு ஒப்புதல் அளி",
+  "admin.confirmApproveDoctor":
+    "{name}-க்கு ஒப்புதல் அளிக்கவா? இது அவர்களின் கணக்கை புதிய மருத்துவர் சுயவிவரத்துடன் இணைக்கும். எந்தக் கிளினிக் இணைப்பும் முதலில் நிலுவையில் இருக்கும்.",
+  "admin.doctorApplicationsHelp":
+    "ஒப்புதல் அளிக்கும் முன் மருத்துவக் கவுன்சில் பதிவைச் சரிபார்க்கவும். ஒப்புதல் விண்ணப்பதாரருக்கு பட்டியலிடப்படாத மருத்துவர் சுயவிவரத்தை உருவாக்கும்; நீங்கள் கிளினிக் இணைப்பைச் சரிபார்த்த பிறகே அவர்கள் நோயாளிகளுக்குத் தெரிவர்.",
+  "admin.doctorApproved": "மருத்துவருக்கு ஒப்புதல் அளிக்கப்பட்டது",
+  "admin.doctorVerifyReminder":
+    "மருத்துவக் கவுன்சிலிடம் பதிவு எண்ணையும் விண்ணப்பதாரரின் அடையாளத்தையும் உறுதிசெய்த பிறகே ஒப்புதல் அளிக்கவும்.",
+  "admin.tab.doctorApplications": "மருத்துவர் விண்ணப்பங்கள்",
+  "doctorAppointments.loadError": "உங்கள் சந்திப்புகளை ஏற்ற முடியவில்லை",
+  "doctorAppointments.nonePast": "முந்தைய சந்திப்புகள் இல்லை",
+  "doctorAppointments.noneUpcoming": "வரவிருக்கும் சந்திப்புகள் இல்லை",
+  "doctorAppointments.past": "முந்தையவை மற்றும் ரத்தானவை",
+  "doctorAppointments.readOnly":
+    "உங்கள் கிளினிக் சந்திப்புகளை உறுதிசெய்து புதுப்பிக்கிறது. ஒவ்வொரு நோயாளியின் பெயரையும் வருகைக்கான காரணத்தையும் மட்டுமே நீங்கள் பார்க்கலாம்.",
+  "doctorAppointments.reason": "காரணம்",
+  "doctorAppointments.subtitle": "உங்களுடன் முன்பதிவு செய்யப்பட்ட சந்திப்புகள்",
+  "doctorAppointments.title": "சந்திப்புகள்",
+  "doctorAppointments.upcoming": "வரவிருப்பவை",
+  "doctorDashboard.clinics": "உங்கள் கிளினிக்குகள்",
+  "doctorDashboard.noClinics":
+    "நீங்கள் இன்னும் எந்தக் கிளினிக்குடனும் இணைக்கப்படவில்லை. ஒரு கிளினிக் உங்களைச் சேர்க்கும், அல்லது விண்ணப்பத்தை ஏற்கும்போது CareConnect இணைக்கும்.",
+  "doctorDashboard.pendingNote":
+    "உங்கள் சுயவிவரம் இன்னும் எந்தக் கிளினிக்கிலும் சரிபார்க்கப்படவில்லை. CareConnect கிளினிக் இணைப்பைச் சரிபார்க்கும் வரை நோயாளிகள் உங்களைக் கண்டறியவோ முன்பதிவு செய்யவோ முடியாது.",
+  "doctorDashboard.subtitle": "உங்கள் மருத்துவப் பணி ஒரே பார்வையில்",
+  "doctorDashboard.title": "டாஷ்போர்டு",
+  "doctorDashboard.upcoming": "வரவிருக்கும் சந்திப்புகள்",
+  "doctorMessages.loadError": "உங்கள் செய்திகளை ஏற்ற முடியவில்லை",
+  "doctorMessages.none": "இன்னும் உரையாடல்கள் இல்லை",
+  "doctorMessages.noneBody":
+    "நோயாளிகள் உங்கள் சுயவிவரத்திலிருந்து தொடங்கும் உரையாடல்கள், அந்தக் கிளினிக்கில் நீங்கள் சரிபார்க்கப்பட்ட பிறகு இங்கே தோன்றும்.",
+  "doctorMessages.reply": "பதில் எழுதுங்கள்",
+  "doctorMessages.send": "பதிலை அனுப்பு",
+  "doctorMessages.sendFailed": "உங்கள் பதில் அனுப்பப்படவில்லை. {reason}",
+  "doctorMessages.subtitle": "சரிபார்க்கப்பட்ட கிளினிக்குகளில் உங்களைப் பற்றிய உரையாடல்கள்",
+  "doctorMessages.title": "செய்திகள்",
+  "doctorNav.appointments": "சந்திப்புகள்",
+  "doctorNav.dashboard": "டாஷ்போர்டு",
+  "doctorNav.label": "மருத்துவர் போர்ட்டல்",
+  "doctorNav.messages": "செய்திகள்",
+  "doctorNav.mobileLabel": "மருத்துவர் போர்ட்டல் பிரிவுகள்",
+  "doctorNav.profile": "சுயவிவரம்",
+  "doctorNav.schedule": "அட்டவணை",
+  "doctorPortal.notDeployed":
+    "மருத்துவர் போர்ட்டலின் இந்தப் பகுதிக்கு இன்னும் பயன்படுத்தப்படாத பின்தள மேம்படுத்தல் தேவை.",
+  "doctorProfile.editableTitle": "மருத்துவப் பணி விவரங்கள்",
+  "doctorProfile.feeHint":
+    "நீங்கள் பணிபுரியும் அனைத்துக் கிளினிக்குகளிலும் நோயாளிகளுக்குக் காட்டப்படும்.",
+  "doctorProfile.managedBody":
+    "இவை உங்கள் சரிபார்க்கப்பட்ட பதிவிலிருந்து வருகின்றன. மாற்ற CareConnect-ஐத் தொடர்புகொள்ளுங்கள்.",
+  "doctorProfile.managedTitle": "CareConnect நிர்வகிப்பவை",
+  "doctorProfile.notAllowed":
+    "அந்த மாற்றம் அனுமதிக்கப்படவில்லை. சில விவரங்களை CareConnect மட்டுமே மாற்ற முடியும்.",
+  "doctorProfile.publicNote":
+    "சரிபார்க்கப்பட்ட பிறகு இந்த விவரங்கள் உங்கள் சுயவிவரத்தில் பொதுவாகக் காட்டப்படும்.",
+  "doctorProfile.subtitle": "நோயாளிகள் உங்களைப் பற்றிப் பார்ப்பவை",
+  "doctorProfile.title": "சுயவிவரம்",
+  "doctorSchedule.note":
+    "இந்த நேரங்களில் மட்டுமே, நீங்கள் சரிபார்க்கப்பட்ட கிளினிக்குகளில் மட்டுமே நோயாளிகள் உங்களை முன்பதிவு செய்யலாம்.",
+  "doctorSchedule.pending":
+    "CareConnect இந்தக் கிளினிக்கில் உங்களைச் சரிபார்த்த பிறகு திறப்பு நேரங்களை அமைக்கலாம்.",
+  "doctorSchedule.subtitle": "ஒவ்வொரு கிளினிக்கிலும் வாராந்திர திறப்பு நேரங்கள்",
+  "doctorSchedule.title": "அட்டவணை",
+  "doctorShell.loading": "மருத்துவர் போர்ட்டல் திறக்கப்படுகிறது…",
+  "portal.accessError": "உங்கள் அணுகலைச் சரிபார்க்க முடியவில்லை",
+  "portal.areYouPatient": "நீங்கள் நோயாளியா?",
+  "portal.backToPatientSignin": "நோயாளி உள்நுழைவுக்குத் திரும்பு",
+  "portal.backToPatientSignup": "அதற்குப் பதிலாக நோயாளி கணக்கை உருவாக்கு",
+  "portal.checkingAccess": "உங்கள் அணுகல் சரிபார்க்கப்படுகிறது…",
+  "portal.clinic.name": "கிளினிக் போர்ட்டல்",
+  "portal.clinic.new": "புதிய கிளினிக்கா?",
+  "portal.clinic.noAccessBody":
+    "நீங்கள் {email} ஆக உள்நுழைந்துள்ளீர்கள், ஆனால் இந்தக் கணக்கு எந்தக் கிளினிக்கிலும் உறுப்பினர் அல்ல. உங்களைச் சேர்க்க உங்கள் கிளினிக் நிர்வாகியிடம் கேளுங்கள், அல்லது உங்கள் கிளினிக்கைப் பதிவுசெய்யுங்கள்.",
+  "portal.clinic.noAccessTitle": "இந்தக் கணக்கிற்கு கிளினிக் அணுகல் இயக்கப்படவில்லை",
+  "portal.clinic.register": "கிளினிக்கைப் பதிவுசெய்",
+  "portal.clinic.submit": "கிளினிக் போர்ட்டலில் உள்நுழை",
+  "portal.clinic.subtitle": "உங்கள் கிளினிக்கை நிர்வகிக்க உள்நுழையுங்கள்",
+  "portal.clinic.title": "கிளினிக் போர்ட்டல்",
+  "portal.doctor.name": "மருத்துவர் போர்ட்டல்",
+  "portal.doctor.new": "CareConnect-க்குப் புதியவரா?",
+  "portal.doctor.noAccessBody":
+    "நீங்கள் {email} ஆக உள்நுழைந்துள்ளீர்கள், ஆனால் இந்தக் கணக்கு சரிபார்க்கப்பட்ட மருத்துவர் சுயவிவரத்துடன் இணைக்கப்படவில்லை. மருத்துவராகப் பதிவுசெய்யுங்கள்; CareConnect உங்கள் பதிவைச் சரிபார்க்கும்.",
+  "portal.doctor.noAccessTitle": "இந்தக் கணக்கிற்கு மருத்துவர் அணுகல் இயக்கப்படவில்லை",
+  "portal.doctor.register": "மருத்துவராகப் பதிவுசெய்",
+  "portal.doctor.submit": "மருத்துவர் போர்ட்டலில் உள்நுழை",
+  "portal.doctor.subtitle": "உங்கள் மருத்துவப் பணியை நிர்வகிக்க உள்நுழையுங்கள்",
+  "portal.doctor.title": "மருத்துவர் போர்ட்டல்",
+  "portal.toPatientApp": "நோயாளி பயன்பாட்டுக்குச் செல்",
+  "providerEntry.clinicRegister": "கிளினிக்கைப் பதிவுசெய்",
+  "providerEntry.clinicSignIn": "கிளினிக் உள்நுழைவு",
+  "providerEntry.doctorRegister": "மருத்துவராகப் பதிவுசெய்",
+  "providerEntry.doctorSignIn": "மருத்துவர் உள்நுழைவு",
+  "providerEntry.signupTitle": "சுகாதார சேவை வழங்குநராக CareConnect-இல் சேருகிறீர்களா?",
+  "providerEntry.title": "நீங்கள் சுகாதார சேவை வழங்குநரா?",
+  "providers.doctorBody":
+    "உங்கள் மருத்துவக் கவுன்சில் விவரங்களுடன் பதிவுசெய்யுங்கள். ஒரு கிளினிக்கில் சரிபார்க்கப்பட்ட பிறகு உங்கள் சந்திப்புகள், நேரங்கள், செய்திகளை நிர்வகியுங்கள்.",
+  "providers.doctorTitle": "நீங்கள் மருத்துவரா?",
+  "signup.alreadyDoctor": "இந்தக் கணக்கு ஏற்கனவே ஒரு மருத்துவர் சுயவிவரத்துடன் இணைக்கப்பட்டுள்ளது.",
+  "signup.clinic.alreadyMember": "இந்தக் கணக்கிற்கு ஏற்கனவே கிளினிக் அணுகல் உள்ளது.",
+  "signup.clinic.confirm":
+    '{email}-க்கு உறுதிப்படுத்தல் இணைப்பை அனுப்பியுள்ளோம். உறுதிசெய்த பிறகு கிளினிக் போர்ட்டலில் உள்நுழைந்து "கிளினிக்கைப் பதிவுசெய்" பக்கத்திற்குத் திரும்புங்கள். உங்கள் கிளினிக் விவரங்கள் இந்தச் சாதனத்தில் சேமிக்கப்பட்டுள்ளன.',
+  "signup.clinic.officialEmail": "கிளினிக்கின் அதிகாரப்பூர்வ மின்னஞ்சல்",
+  "signup.clinic.submitted":
+    "நன்றி. CareConnect உங்கள் கிளினிக்கின் பதிவைச் சரிபார்த்து உங்களைத் தொடர்புகொள்ளும். ஒப்புதலுக்குப் பிறகே கிளினிக் அணுகல் இயக்கப்படும்.",
+  "signup.clinic.subtitle": "CareConnect-இல் உங்கள் கிளினிக்கைச் சேர்க்க விண்ணப்பிக்கவும்",
+  "signup.clinic.title": "கிளினிக்கைப் பதிவுசெய்",
+  "signup.clinic.verification":
+    "சரிபார்க்கப்பட்ட வழங்குநராகத் தோன்றவோ முக்கியமான கிளினிக் வசதிகளை அணுகவோ முன் உங்கள் கிளினிக் சுயவிவரம் சரிபார்க்கப்பட வேண்டும்.",
+  "signup.createAndSubmit": "கணக்கை உருவாக்கிச் சமர்ப்பி",
+  "signup.doctor.clinic": "நீங்கள் பணிபுரியும் கிளினிக்",
+  "signup.doctor.clinicHint":
+    "CareConnect-இல் உள்ள கிளினிக்குகள் மட்டுமே காட்டப்படுகின்றன. கிளினிக்குடனான உங்கள் இணைப்பு தனியாகச் சரிபார்க்கப்படும்.",
+  "signup.doctor.clinicNote": "பட்டியலில் இல்லையெனில் கிளினிக்கின் பெயர்",
+  "signup.doctor.confirm":
+    '{email}-க்கு உறுதிப்படுத்தல் இணைப்பை அனுப்பியுள்ளோம். உறுதிசெய்த பிறகு மருத்துவர் போர்ட்டலில் உள்நுழைந்து "மருத்துவராகப் பதிவுசெய்" பக்கத்திற்குத் திரும்புங்கள். உங்கள் விவரங்கள் இந்தச் சாதனத்தில் சேமிக்கப்பட்டுள்ளன.',
+  "signup.doctor.council": "மருத்துவக் கவுன்சில்",
+  "signup.doctor.councilPlaceholder": "எ.கா. தமிழ்நாடு மருத்துவக் கவுன்சில்",
+  "signup.doctor.error.clinicNote": "கிளினிக்கின் பெயரை 200 எழுத்துகளுக்குள் வையுங்கள்.",
+  "signup.doctor.error.council": "உங்கள் மருத்துவக் கவுன்சிலை உள்ளிடவும்.",
+  "signup.doctor.error.number": "உங்கள் பதிவு எண்ணை உள்ளிடவும்.",
+  "signup.doctor.error.qualifications": "உங்கள் தகுதிகளை உள்ளிடவும்.",
+  "signup.doctor.noClinic": "பட்டியலில் இல்லை / தனிப்பட்ட மருத்துவப் பணி",
+  "signup.doctor.number": "பதிவு எண்",
+  "signup.doctor.openPortal": "மருத்துவர் போர்ட்டலைத் திற",
+  "signup.doctor.qualifications": "தகுதிகள்",
+  "signup.doctor.section.practice": "மருத்துவப் பணி மற்றும் தொடர்பு",
+  "signup.doctor.section.professional": "தொழில்முறை விவரங்கள்",
+  "signup.doctor.submitted":
+    "நன்றி. CareConnect உங்கள் மருத்துவப் பதிவைச் சரிபார்த்து உங்களைத் தொடர்புகொள்ளும். சரிபார்ப்புக்குப் பிறகே நீங்கள் நோயாளிகளுக்குத் தெரிவீர்கள்.",
+  "signup.doctor.subtitle": "மருத்துவராக CareConnect-இல் சேர விண்ணப்பிக்கவும்",
+  "signup.doctor.title": "மருத்துவராகப் பதிவுசெய்",
+  "signup.doctor.verification":
+    "உங்கள் பதிவை CareConnect சரிபார்க்கும். அதுவரை நீங்கள் பட்டியலிடப்பட மாட்டீர்கள், முன்பதிவு செய்ய முடியாது, நோயாளிகளின் தகவலை அணுக முடியாது.",
+  "signup.error.name": "உங்கள் முழுப் பெயரை உள்ளிடவும்.",
+  "signup.haveAccount": "ஏற்கனவே CareConnect கணக்கு உள்ளதா?",
+  "signup.limit": "உங்கள் விண்ணப்பங்கள் ஏற்கனவே பரிசீலனையில் உள்ளன. முடிவுக்காகக் காத்திருங்கள்.",
+  "signup.notOpen":
+    "இணைய விண்ணப்பங்கள் இன்னும் திறக்கப்படவில்லை. உங்கள் விவரங்கள் இந்தச் சாதனத்தில் சேமிக்கப்பட்டுள்ளன.",
+  "signup.sameAsAccount": "உங்கள் கணக்கில் உள்ளதே",
+  "signup.section.account": "உங்கள் கணக்கு",
+  "signup.signInFirst": "முதலில் உள்நுழையுங்கள்",
 };

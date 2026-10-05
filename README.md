@@ -162,6 +162,9 @@ These need backend or operational changes and are intentionally **not** worked a
   00054 also closes the release-audit finding that clinic staff can attach any doctor to their
   clinic and edit that doctor's profile and fee. **Until it is deployed, give clinic memberships
   only to fully trusted people.** See [docs/provider-onboarding.md](docs/provider-onboarding.md).
+- **The doctor portal and doctor applications need migration `00055_doctor_portal.sql`**, which
+  **has not been deployed** (pgTAP `012_*`). Until it is, no account is linked to a doctor, so
+  `/doctor` shows "Doctor access isn't enabled" and doctor applications say they aren't open yet.
 - **Page titles** (`<title>`) are in English; page content follows the chosen language.
 - The clinic conversation list embeds `patients.user_id` to tell patient messages from clinic
   replies. Clinic staff can already read that column under RLS; hiding it needs a backend change

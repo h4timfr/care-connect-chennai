@@ -1,6 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Building2, Loader2, MailCheck, UserRound } from "lucide-react";
+import { Loader2, MailCheck } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabaseConfigMessage } from "@/lib/supabase/client";
 import { describeAuthError } from "@/lib/supabase/errors";
 import { useAuth } from "@/lib/supabase/auth";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
+import { ProviderEntrances } from "@/components/ProviderAuth";
 import { safeRedirect } from "@/lib/redirect";
 import { MIN_PASSWORD_LENGTH } from "@/lib/passwords";
 import { Trans, useI18n, type MessageKey } from "@/lib/i18n";
@@ -16,19 +17,21 @@ import { Trans, useI18n, type MessageKey } from "@/lib/i18n";
 interface LoginSearch {
   redirect?: string | undefined;
   signup?: boolean | undefined;
-  /** "clinic": the clinic & provider entrance. Same account system; access comes from membership. */
-  portal?: "clinic" | undefined;
 }
 
 export const Route = createFileRoute("/login")({
   // TanStack Router merges validated values over the raw URL search, so a key left out here would
   // keep its raw, unvalidated value. Every key is therefore returned, as undefined when invalid.
-  validateSearch: ({ redirect, signup, portal }: Record<string, unknown>): LoginSearch => ({
+  validateSearch: ({ redirect, signup }: Record<string, unknown>): LoginSearch => ({
     // Still checked by safeRedirect() before use.
     redirect: typeof redirect === "string" ? redirect : undefined,
     signup: signup === true || signup === "true" ? true : undefined,
-    portal: portal === "clinic" ? "clinic" : undefined,
   }),
+  // Links from the previous release (/login?portal=clinic) now open the clinic portal sign-in.
+  beforeLoad: ({ location }) => {
+    const portal = (location.search as Record<string, unknown>)["portal"];
+    if (portal === "clinic" || portal === "doctor") throw redirect({ to: `/${portal}/login` });
+  },
   head: () => ({
     meta: [{ title: "Sign in — CareConnect" }],
   }),
@@ -45,10 +48,7 @@ function LoginPage() {
   const { user, loading: authLoading } = useAuth();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const isClinicPortal = search.portal === "clinic";
-  // The clinic portal itself checks membership (RLS) and shows "No clinic access" otherwise.
-  const redirectTo =
-    search.redirect === undefined && isClinicPortal ? "/clinic" : safeRedirect(search.redirect);
+  const redirectTo = safeRedirect(search.redirect);
 
   const [mode, setMode] = useState<Mode>(search.signup ? "signup" : "signin");
   const [fullName, setFullName] = useState("");
@@ -135,48 +135,7 @@ function LoginPage() {
   }
 
   return (
-    <AuthCard
-      title={
-        isClinicPortal && mode === "signin" ? t("auth.clinic.title") : t(copyKey(mode, "title"))
-      }
-      subtitle={
-        isClinicPortal && mode === "signin"
-          ? t("auth.clinic.subtitle")
-          : t(copyKey(mode, "subtitle"))
-      }
-    >
-      {mode !== "reset" && !notice ? (
-        <nav
-          aria-label={t("auth.portal.label")}
-          className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1"
-        >
-          {(
-            [
-              { clinic: false, label: "auth.portal.patient", icon: UserRound },
-              { clinic: true, label: "auth.portal.clinic", icon: Building2 },
-            ] as const
-          ).map((option) => {
-            const current = option.clinic === isClinicPortal;
-            return (
-              <Link
-                key={option.label}
-                to="/login"
-                search={{ ...search, portal: option.clinic ? "clinic" : undefined }}
-                replace
-                aria-current={current ? "page" : undefined}
-                className={
-                  current
-                    ? "flex min-w-0 items-center justify-center gap-1.5 rounded-lg bg-card px-2 py-2 text-xs font-semibold text-highlight shadow-sm sm:text-sm"
-                    : "flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
-                }
-              >
-                <option.icon className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="truncate">{t(option.label)}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      ) : null}
+    <AuthCard title={t(copyKey(mode, "title"))} subtitle={t(copyKey(mode, "subtitle"))}>
       {!isSupabaseConfigured ? (
         <div className="mb-4">
           <FormAlert>{supabaseConfigMessage}</FormAlert>
@@ -284,20 +243,10 @@ function LoginPage() {
                   ? t("auth.toSignIn")
                   : t("auth.backToSignIn")}
             </Button>
-            {isClinicPortal ? (
-              <p className="pt-2 text-center text-xs text-muted-foreground">
-                {t("auth.clinic.newClinic")}{" "}
-                <Link
-                  to="/providers"
-                  className="font-semibold text-primary underline-offset-2 hover:underline"
-                >
-                  {t("auth.clinic.apply")}
-                </Link>
-              </p>
-            ) : null}
           </div>
         </form>
       )}
+      {mode !== "reset" && !notice ? <ProviderEntrances mode={mode} /> : null}
     </AuthCard>
   );
 }

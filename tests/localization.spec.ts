@@ -185,7 +185,9 @@ test.describe("Every page in every language", () => {
     "/clinic/messages",
     "/clinic/profile",
     "/providers",
-    "/providers/apply",
+    "/clinic/signup",
+    "/doctor/signup",
+    "/doctor",
     "/admin",
   ];
 

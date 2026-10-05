@@ -30,9 +30,12 @@ const PAGES = [
   `/clinic/messages?c=${ids.conversation}`,
   "/clinic/profile",
   "/providers",
-  "/providers/apply",
+  "/clinic/signup",
+  "/doctor/signup",
+  "/doctor/login",
+  "/doctor",
   "/admin",
-  "/login?portal=clinic",
+  "/clinic/login",
 ];
 
 for (const viewport of VIEWPORTS) {
