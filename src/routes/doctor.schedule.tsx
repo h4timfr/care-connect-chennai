@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarClock } from "lucide-react";
 import { DoctorShell } from "@/components/layout/DoctorShell";
 import { EmptyState, InfoNotice } from "@/components/common";
-import { VerificationPill } from "@/components/ProviderStatus";
+import { LinkStatus } from "@/components/ProviderStatus";
+import type { VerificationState } from "@/lib/supabase/providers";
 import { ScheduleForm, ScheduleRow } from "@/components/ScheduleEditor";
 import { useI18n } from "@/lib/i18n";
 import type { MyDoctor } from "@/lib/supabase/doctor";
@@ -38,7 +39,8 @@ function Schedules({ me }: { me: MyDoctor }) {
             doctorId={me.id}
             clinicId={link.clinicId}
             clinicName={link.clinicName}
-            bookable={link.verified && link.active}
+            state={link.state}
+            active={link.active}
           />
         ))}
       </ul>
@@ -50,14 +52,17 @@ function ClinicHours({
   doctorId,
   clinicId,
   clinicName,
-  bookable,
+  state,
+  active,
 }: {
   doctorId: string;
   clinicId: string;
   clinicName: string;
-  bookable: boolean;
+  state: VerificationState;
+  active: boolean;
 }) {
   const { t } = useI18n();
+  const bookable = state === "verified" && active;
   // Hours are public (patients see them when booking); only verified links are editable.
   const schedules = useClinicSchedules(bookable ? clinicId : undefined);
   const mine = (schedules.data ?? []).filter((s) => s.doctorId === doctorId);
@@ -67,10 +72,18 @@ function ClinicHours({
         <h2 className="font-semibold [overflow-wrap:anywhere]" dir="auto">
           {clinicName}
         </h2>
-        <VerificationPill state={bookable ? "verified" : "pending"} />
+        <LinkStatus state={state} active={active} />
       </div>
       {!bookable ? (
-        <p className="mt-3 text-sm text-muted-foreground">{t("doctorSchedule.pending")}</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {t(
+            state === "rejected"
+              ? "doctorSchedule.rejected"
+              : state === "verified"
+                ? "doctorSchedule.inactive"
+                : "doctorSchedule.pending",
+          )}
+        </p>
       ) : (
         <>
           {schedules.error ? (

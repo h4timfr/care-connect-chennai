@@ -146,8 +146,13 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
                       </span>
                     ) : null}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {subtitleOf(c)}
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs text-muted-foreground">{subtitleOf(c)}</span>
+                    {last?.sender === "patient" ? (
+                      <span className="shrink-0 rounded-full bg-primary/12 px-2 py-0.5 text-[11px] font-medium text-primary">
+                        {t("messages.awaitingReply")}
+                      </span>
+                    ) : null}
                   </span>
                   <span className="mt-1 block truncate text-xs text-muted-foreground" dir="auto">
                     {last

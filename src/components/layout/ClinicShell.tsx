@@ -23,6 +23,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { MemberClinic } from "@/lib/supabase/queries";
+import { BrandMark, SkipToContent } from "@/components/BrandMark";
 
 const NAV: {
   to:
@@ -136,12 +137,11 @@ export function ClinicShell({
 
   return (
     <div className="min-h-screen bg-surface">
+      <SkipToContent />
       <div className="mx-auto flex max-w-[1500px]">
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e bg-sidebar px-4 py-5 lg:flex">
           <Link to="/clinic" className="mb-6 flex items-center gap-2 px-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-highlight text-primary-foreground shadow-sm">
-              <Stethoscope className="h-4.5 w-4.5" aria-hidden />
-            </span>
+            <BrandMark />
             <span className="min-w-0">
               <span className="block font-display text-sm font-bold">CareConnect</span>
               <span className="block truncate text-xs text-muted-foreground">

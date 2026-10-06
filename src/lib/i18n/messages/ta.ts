@@ -39,6 +39,9 @@ export const ta: Messages = {
   "common.sampleListing": "மாதிரிப் பட்டியல்",
   "common.sampleListingNote":
     "CareConnect அடைவில் இந்தப் பட்டியல் மாதிரி உள்ளடக்கமாகக் குறிக்கப்பட்டுள்ளது.",
+  "common.notYetBookable": "இன்னும் முன்பதிவு இல்லை",
+  "common.notYetBookableNote":
+    "இந்தப் பட்டியல் அடைவில் உள்ளது, ஆனால் ஆன்லைன் முன்பதிவுக்கு CareConnect சரிபார்த்த செயலில் உள்ள கிளினிக் இணைப்பு இல்லை.",
   "common.you": "நீங்கள்",
   "common.youPrefix": "நீங்கள்: {text}",
   "common.unknownPatient": "அறியப்படாத நோயாளி",
@@ -77,6 +80,7 @@ export const ta: Messages = {
   "error.server": "சேவையகத்துடன் தொடர்புகொள்ளும்போது ஏதோ தவறு நடந்தது. மீண்டும் முயலவும்.",
   "error.unavailable": "CareConnect தற்போது கிடைக்கவில்லை. சிறிது நேரம் கழித்து முயலவும்.",
   "error.generic": "ஏதோ தவறு நடந்தது. மீண்டும் முயலவும்.",
+  "config.errorPrefix": "உள்ளமைவுப் பிழை: ",
   "error.checkDetails": "நீங்கள் உள்ளிட்ட விவரங்களைச் சரிபார்க்கவும்.",
 
   // ---- Auth errors
@@ -635,6 +639,8 @@ export const ta: Messages = {
   "clinicPatients.col.lastVisit": "கடைசியாக முடிந்த வருகை",
   "clinicPatients.col.next": "அடுத்த சந்திப்பு",
   "clinicPatients.noneYet": "இன்னும் எந்த நோயாளியும் சந்திப்பை முன்பதிவு செய்யவில்லை.",
+  "clinicPatients.noneYetBody":
+    "நோயாளிகள் உங்கள் கிளினிக்கில் சந்திப்புகளை முன்பதிவு செய்ததும் அவர்கள் இங்கே தோன்றுவார்கள்.",
   "clinicPatients.noMatch": "அந்தப் பெயருக்கு எந்த நோயாளியும் பொருந்தவில்லை.",
 
   // ---- Clinic messages
@@ -911,7 +917,7 @@ export const ta: Messages = {
   "doctorProfile.feeHint":
     "நீங்கள் பணிபுரியும் அனைத்துக் கிளினிக்குகளிலும் நோயாளிகளுக்குக் காட்டப்படும்.",
   "doctorProfile.managedBody":
-    "இவை உங்கள் சரிபார்க்கப்பட்ட பதிவிலிருந்து வருகின்றன. மாற்ற CareConnect-ஐத் தொடர்புகொள்ளுங்கள்.",
+    "CareConnect உங்கள் பதிவை மதிப்பாய்வு செய்யும்போது இவை அமைக்கப்படுகின்றன. இவற்றை மாற்ற CareConnect-ஐத் தொடர்புகொள்ளவும்.",
   "doctorProfile.managedTitle": "CareConnect நிர்வகிப்பவை",
   "doctorProfile.notAllowed":
     "அந்த மாற்றம் அனுமதிக்கப்படவில்லை. சில விவரங்களை CareConnect மட்டுமே மாற்ற முடியும்.",
@@ -1157,4 +1163,31 @@ export const ta: Messages = {
   "candidates.tab.doctors": "மருத்துவர்கள் ({count})",
   "candidates.tab.facilities": "மையங்கள் ({count})",
   "candidates.title": "வழங்குநர் வேட்பாளர்கள்",
+
+  // ---- Portal status (link state, clinic profile)
+  "verification.inactive": "செயலில் இல்லை",
+  "doctorSchedule.inactive":
+    "இந்தக் கிளினிக்குடனான உங்கள் இணைப்பு செயலில் இல்லை, அதனால் இங்கே நேரங்களை அமைக்க முடியாது.",
+  "doctorSchedule.rejected":
+    "இந்தக் கிளினிக்கில் CareConnect உங்களைச் சரிபார்க்கவில்லை, அதனால் இங்கே நேரங்களை அமைக்க முடியாது.",
+  "doctorProfile.clinicsTitle": "கிளினிக் இணைப்புகள்",
+  "doctorProfile.clinicsBody":
+    "உங்கள் இணைப்பு சரிபார்க்கப்பட்டு செயலில் உள்ள கிளினிக்குகளில் மட்டுமே நோயாளிகள் உங்களைக் கண்டு முன்பதிவு செய்ய முடியும்.",
+  "clinicProfile.statusTitle": "நிலை",
+  "clinicProfile.yourRole": "உங்கள் பங்கு",
+  "clinicProfile.listing": "அடைவுப் பட்டியல்",
+  "clinicProfile.listingSample": "மாதிரிப் பட்டியல், உண்மையான வழங்குநராகக் காட்டப்படாது",
+  "clinicProfile.listingReal": "அடைவில் பட்டியலிடப்பட்டுள்ளது",
+  "clinicProfile.booking": "ஆன்லைன் முன்பதிவு",
+  "clinicProfile.bookingOn": "கிடைக்கிறது",
+  "clinicProfile.bookingOff": "இன்னும் கிடைக்கவில்லை",
+  "clinicProfile.bookingHow":
+    "இந்தக் கிளினிக்குடன் குறைந்தது ஒரு மருத்துவரின் செயலில் உள்ள இணைப்பை CareConnect சரிபார்த்ததும் ஆன்லைன் முன்பதிவு தொடங்கும்.",
+  "clinicProfile.completeness": "சுயவிவர முழுமை",
+  "clinicProfile.completeCount": "{total} விவரங்களில் {done} வழங்கப்பட்டுள்ளன",
+  "clinicProfile.provided": "வழங்கப்பட்டது",
+  "clinicProfile.missingHow":
+    "விடுபட்ட விவரங்களைச் சேர்க்க CareConnect-ஐத் தொடர்புகொள்ளவும். போர்டலில் திருத்தும் வசதி இன்னும் இல்லை.",
+  // Inbox: the patient wrote last (derived from the messages, not a stored counter).
+  "messages.awaitingReply": "பதிலுக்காகக் காத்திருக்கிறது",
 };

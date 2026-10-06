@@ -130,17 +130,29 @@ test.describe("Language selection", () => {
 
 test.describe("Long translations fit small screens", () => {
   // Tamil and Malayalam have the longest words; these pages overflowed before (sort select,
-  // appointment tabs, dashboard stat labels and request buttons).
+  // appointment tabs, dashboard stat labels and request buttons, and at 320px the "My appointments"
+  // heading, the "Message clinic" button and the doctor dashboard header).
   for (const lang of ["ta", "ml"]) {
-    for (const width of [390, 1024]) {
+    for (const width of [320, 390, 1024]) {
       test(`${lang} at ${width}px: no horizontal page scroll`, async ({ page, backend }) => {
         const mock = await backend({ appointments: [appointmentRow()] });
         mock.state.memberships = [
           { clinic_id: ids.clinicA, role: "clinic_admin", clinics: mock.state.clinics[0] },
         ];
+        mock.state.doctors[0]!["user_id"] = ids.user;
         await setLanguageCookie(page, lang);
         await page.setViewportSize({ width, height: 900 });
-        for (const path of ["/", "/discover", "/appointments", "/profile", "/clinic"]) {
+        for (const path of [
+          "/",
+          "/discover",
+          "/appointments",
+          "/profile",
+          `/doctors/${ids.doctorPending}`,
+          "/clinic",
+          "/clinic/appointments",
+          "/clinic/patients",
+          "/doctor",
+        ]) {
           await page.goto(path);
           await page.waitForLoadState("networkidle");
           const overflow = await page.evaluate(
@@ -150,6 +162,33 @@ test.describe("Long translations fit small screens", () => {
         }
       });
     }
+  }
+
+  // Full-width sign-in and registration buttons overflowed at phone widths before they wrapped.
+  for (const lang of ["ta", "ml"]) {
+    test(`${lang} at 320px: sign-in and registration pages don't scroll sideways`, async ({
+      page,
+      backend,
+    }) => {
+      await backend({}, { signedIn: false });
+      await setLanguageCookie(page, lang);
+      await page.setViewportSize({ width: 320, height: 800 });
+      for (const path of [
+        "/login",
+        "/signup",
+        "/clinic/login",
+        "/clinic/signup",
+        "/doctor/login",
+        "/doctor/signup",
+      ]) {
+        await page.goto(path);
+        await page.waitForLoadState("networkidle");
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+        expect(overflow, `${lang} ${path}`).toBeLessThanOrEqual(1);
+      }
+    });
   }
 
   test("Urdu keeps Latin times in reading order inside right-to-left text", async ({

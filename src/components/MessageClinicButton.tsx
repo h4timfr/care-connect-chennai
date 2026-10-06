@@ -7,6 +7,10 @@ import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";
 import { describeDataError } from "@/lib/supabase/errors";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+
+/** Keeps the button's height when the (often long, translated) label has to wrap. */
+const MIN_HEIGHT = { sm: "min-h-8", default: "min-h-9", lg: "min-h-11", icon: "min-h-9" } as const;
 
 /** Opens (or starts) the patient's conversation with a clinic. */
 export function MessageClinicButton({
@@ -59,7 +63,11 @@ export function MessageClinicButton({
     <Button
       variant={variant}
       size={size}
-      className={className}
+      className={cn(
+        "h-auto max-w-full whitespace-normal py-1.5 text-start",
+        MIN_HEIGHT[size ?? "default"],
+        className,
+      )}
       onClick={open}
       disabled={opening || (!!user && isLoadingPatient)}
     >

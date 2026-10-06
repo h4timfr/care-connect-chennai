@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Bookmark, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Initials, Rating, SampleBadge, VerifiedBadge } from "@/components/common";
+import { Initials, ListingStatus, Rating } from "@/components/common";
 import { useApp } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
 import { bookableClinicIds } from "@/lib/supabase/queries";
@@ -77,7 +77,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
         <span className="font-medium text-foreground">{fmt.inr(doctor.consultationFee)}</span>
         <span>{t.plural("common.experience", doctor.experienceYears)}</span>
         <Rating value={doctor.rating} count={doctor.reviewCount} sample={doctor.isSample} />
-        {doctor.isSample ? <SampleBadge /> : canBookOnline ? <VerifiedBadge /> : null}
+        <ListingStatus isSample={doctor.isSample} bookable={canBookOnline} />
       </div>
 
       {!compact && doctor.languages.length ? (

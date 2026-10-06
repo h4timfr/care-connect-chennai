@@ -39,6 +39,9 @@ export const ml: Messages = {
   "common.sampleListing": "സാമ്പിൾ ലിസ്റ്റിംഗ്",
   "common.sampleListingNote":
     "CareConnect ഡയറക്ടറിയിൽ ഈ ലിസ്റ്റിംഗ് സാമ്പിൾ ഉള്ളടക്കമായി അടയാളപ്പെടുത്തിയിരിക്കുന്നു.",
+  "common.notYetBookable": "ഇതുവരെ ബുക്കിംഗ് ലഭ്യമല്ല",
+  "common.notYetBookableNote":
+    "ഈ ലിസ്റ്റിംഗ് ഡയറക്ടറിയിലുണ്ട്, പക്ഷേ ഓൺലൈൻ ബുക്കിംഗിന് CareConnect പരിശോധിച്ച സജീവ ക്ലിനിക് ലിങ്ക് ഇല്ല.",
   "common.you": "നിങ്ങൾ",
   "common.youPrefix": "നിങ്ങൾ: {text}",
   "common.unknownPatient": "അജ്ഞാത രോഗി",
@@ -77,6 +80,7 @@ export const ml: Messages = {
   "error.server": "സെർവറുമായി ബന്ധപ്പെടുമ്പോൾ എന്തോ തകരാർ സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
   "error.unavailable": "CareConnect ഇപ്പോൾ ലഭ്യമല്ല. ദയവായി കുറച്ചു കഴിഞ്ഞ് ശ്രമിക്കുക.",
   "error.generic": "എന്തോ തകരാർ സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
+  "config.errorPrefix": "കോൺഫിഗറേഷൻ പിശക്: ",
   "error.checkDetails": "നിങ്ങൾ നൽകിയ വിവരങ്ങൾ ദയവായി പരിശോധിക്കുക.",
 
   // ---- Auth errors
@@ -630,6 +634,8 @@ export const ml: Messages = {
   "clinicPatients.col.lastVisit": "അവസാനം പൂർത്തിയായ സന്ദർശനം",
   "clinicPatients.col.next": "അടുത്ത അപ്പോയിന്റ്മെന്റ്",
   "clinicPatients.noneYet": "ഇതുവരെ ഒരു രോഗിയും അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്തിട്ടില്ല.",
+  "clinicPatients.noneYetBody":
+    "രോഗികൾ നിങ്ങളുടെ ക്ലിനിക്കിൽ അപ്പോയിന്റ്മെന്റുകൾ ബുക്ക് ചെയ്താൽ അവർ ഇവിടെ കാണിക്കും.",
   "clinicPatients.noMatch": "ആ പേരുമായി ഒരു രോഗിയും പൊരുത്തപ്പെടുന്നില്ല.",
 
   // ---- Clinic messages
@@ -901,7 +907,7 @@ export const ml: Messages = {
   "doctorProfile.editableTitle": "പ്രാക്ടീസ് വിവരങ്ങൾ",
   "doctorProfile.feeHint": "നിങ്ങൾ ജോലി ചെയ്യുന്ന എല്ലാ ക്ലിനിക്കുകളിലും രോഗികൾക്ക് കാണാം.",
   "doctorProfile.managedBody":
-    "ഇവ നിങ്ങളുടെ പരിശോധിച്ച രജിസ്ട്രേഷനിൽ നിന്നുള്ളതാണ്. മാറ്റാൻ CareConnect-നെ ബന്ധപ്പെടുക.",
+    "CareConnect നിങ്ങളുടെ രജിസ്ട്രേഷൻ പരിശോധിക്കുമ്പോഴാണ് ഇവ സജ്ജമാക്കുന്നത്. ഇവ മാറ്റാൻ CareConnect-നെ ബന്ധപ്പെടുക.",
   "doctorProfile.managedTitle": "CareConnect കൈകാര്യം ചെയ്യുന്നത്",
   "doctorProfile.notAllowed":
     "ആ മാറ്റം അനുവദനീയമല്ല. ചില വിവരങ്ങൾ CareConnect-ന് മാത്രമേ മാറ്റാനാവൂ.",
@@ -1144,4 +1150,31 @@ export const ml: Messages = {
   "candidates.tab.doctors": "ഡോക്ടർമാർ ({count})",
   "candidates.tab.facilities": "കേന്ദ്രങ്ങൾ ({count})",
   "candidates.title": "ദാതാ സ്ഥാനാർത്ഥികൾ",
+
+  // ---- Portal status (link state, clinic profile)
+  "verification.inactive": "നിഷ്ക്രിയം",
+  "doctorSchedule.inactive":
+    "ഈ ക്ലിനിക്കുമായുള്ള നിങ്ങളുടെ ലിങ്ക് നിഷ്ക്രിയമാണ്, അതിനാൽ ഇവിടെ സമയം സജ്ജമാക്കാനാവില്ല.",
+  "doctorSchedule.rejected":
+    "ഈ ക്ലിനിക്കിൽ CareConnect നിങ്ങളെ സ്ഥിരീകരിച്ചില്ല, അതിനാൽ ഇവിടെ സമയം സജ്ജമാക്കാനാവില്ല.",
+  "doctorProfile.clinicsTitle": "ക്ലിനിക് ലിങ്കുകൾ",
+  "doctorProfile.clinicsBody":
+    "നിങ്ങളുടെ ലിങ്ക് സ്ഥിരീകരിച്ചതും സജീവവുമായ ക്ലിനിക്കുകളിൽ മാത്രമേ രോഗികൾക്ക് നിങ്ങളെ കണ്ടെത്താനും ബുക്ക് ചെയ്യാനും കഴിയൂ.",
+  "clinicProfile.statusTitle": "നില",
+  "clinicProfile.yourRole": "നിങ്ങളുടെ റോൾ",
+  "clinicProfile.listing": "ഡയറക്ടറി ലിസ്റ്റിംഗ്",
+  "clinicProfile.listingSample": "സാമ്പിൾ ലിസ്റ്റിംഗ്, യഥാർത്ഥ ദാതാവായി കാണിക്കില്ല",
+  "clinicProfile.listingReal": "ഡയറക്ടറിയിൽ ലിസ്റ്റ് ചെയ്തിരിക്കുന്നു",
+  "clinicProfile.booking": "ഓൺലൈൻ ബുക്കിംഗ്",
+  "clinicProfile.bookingOn": "ലഭ്യമാണ്",
+  "clinicProfile.bookingOff": "ഇതുവരെ ലഭ്യമല്ല",
+  "clinicProfile.bookingHow":
+    "ഈ ക്ലിനിക്കുമായി കുറഞ്ഞത് ഒരു ഡോക്ടറുടെ സജീവ ലിങ്ക് CareConnect സ്ഥിരീകരിച്ചാൽ ഓൺലൈൻ ബുക്കിംഗ് തുടങ്ങും.",
+  "clinicProfile.completeness": "പ്രൊഫൈൽ പൂർണ്ണത",
+  "clinicProfile.completeCount": "{total}-ൽ {done} വിവരങ്ങൾ നൽകിയിട്ടുണ്ട്",
+  "clinicProfile.provided": "നൽകി",
+  "clinicProfile.missingHow":
+    "വിട്ടുപോയ വിവരങ്ങൾ ചേർക്കാൻ CareConnect-നെ ബന്ധപ്പെടുക. പോർട്ടലിൽ തിരുത്തൽ ഇതുവരെ ലഭ്യമല്ല.",
+  // Inbox: the patient wrote last (derived from the messages, not a stored counter).
+  "messages.awaitingReply": "മറുപടി കാത്തിരിക്കുന്നു",
 };

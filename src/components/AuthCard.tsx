@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { AlertCircle, Stethoscope } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSelect } from "@/components/LanguageSelect";
+import { BrandMark } from "@/components/BrandMark";
 
 /** Centered card used by the sign-in, sign-up and password-reset screens. */
 export function AuthCard({
@@ -24,10 +25,10 @@ export function AuthCard({
         <div className="mb-6 flex flex-col items-center text-center">
           <Link
             to="/"
-            className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-primary to-highlight text-primary-foreground shadow-sm"
+            className="mb-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={t("nav.homeLink")}
           >
-            <Stethoscope className="h-6 w-6" aria-hidden />
+            <BrandMark size="lg" />
           </Link>
           <h1 className="font-display text-2xl font-bold">{title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>

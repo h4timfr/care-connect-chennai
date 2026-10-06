@@ -37,6 +37,20 @@ function Pill({ tone, children }: { tone: keyof typeof TONE; children: string })
   );
 }
 
+/**
+ * A doctor–clinic link as it really is: its verification state, plus "Inactive" when the clinic
+ * has switched the link off. Only a verified, active link is bookable.
+ */
+export function LinkStatus({ state, active }: { state: VerificationState; active: boolean }) {
+  const { t } = useI18n();
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <VerificationPill state={state} />
+      {active ? null : <Pill tone="neutral">{t("verification.inactive")}</Pill>}
+    </span>
+  );
+}
+
 export function ApplicationStatusPill({ status }: { status: ApplicationStatus }) {
   const { t } = useI18n();
   return <Pill tone={APPLICATION[status].tone}>{t(APPLICATION[status].key)}</Pill>;

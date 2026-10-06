@@ -3,6 +3,7 @@ import { supabase } from "./client";
 import type { Database } from "@/lib/database.types";
 import type { MessageKey } from "@/lib/i18n";
 import type { AppointmentStatus } from "@/lib/types";
+import { toVerificationState, type VerificationState } from "./providers";
 
 /*
  * Doctor portal (migration 00055). An account is a doctor only when CareConnect has linked it to a
@@ -21,7 +22,14 @@ export interface MyDoctor {
   experienceYears: number;
   consultationFee: number;
   registrationNote: string;
-  links: { clinicId: string; clinicName: string; verified: boolean; active: boolean }[];
+  links: {
+    clinicId: string;
+    clinicName: string;
+    /** clinic_doctors.verification_state, unchanged (pending / verified / rejected). */
+    state: VerificationState;
+    verified: boolean;
+    active: boolean;
+  }[];
 }
 
 /** The doctor profile linked to this account, or null when the account is not a doctor. */
@@ -60,6 +68,7 @@ export function useMyDoctor(userId: string | undefined) {
         links: links.map((l) => ({
           clinicId: l.clinic_id,
           clinicName: l.clinics?.name ?? "",
+          state: toVerificationState(l.verification_state),
           verified: l.verification_state === "verified",
           active: l.active,
         })),

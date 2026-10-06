@@ -40,6 +40,9 @@ export const en = {
   "common.sampleListing": "Sample listing",
   "common.sampleListingNote":
     "This listing is marked as sample content in CareConnect's directory.",
+  "common.notYetBookable": "Not yet bookable",
+  "common.notYetBookableNote":
+    "This listing is in the directory, but CareConnect has not verified an active clinic link for online booking.",
   "common.you": "You",
   "common.youPrefix": "You: {text}",
   "common.unknownPatient": "Unknown patient",
@@ -78,6 +81,7 @@ export const en = {
   "error.server": "Something went wrong while talking to the server. Please try again.",
   "error.unavailable": "CareConnect is temporarily unavailable. Please try again later.",
   "error.generic": "Something went wrong. Please try again.",
+  "config.errorPrefix": "Configuration error: ",
   "error.checkDetails": "Please check the details you entered.",
 
   // ---- Auth errors
@@ -611,6 +615,8 @@ export const en = {
   "clinicPatients.col.lastVisit": "Last completed visit",
   "clinicPatients.col.next": "Next appointment",
   "clinicPatients.noneYet": "No patients have booked appointments yet.",
+  "clinicPatients.noneYetBody":
+    "Once patients book appointments with your clinic, they'll appear here.",
   "clinicPatients.noMatch": "No patients match that name.",
 
   // ---- Clinic messages
@@ -875,7 +881,7 @@ export const en = {
   "doctorProfile.editableTitle": "Practice details",
   "doctorProfile.feeHint": "Shown to patients at every clinic you work at.",
   "doctorProfile.managedBody":
-    "These come from your verified registration. Contact CareConnect to change them.",
+    "These are set when CareConnect reviews your registration. Contact CareConnect to change them.",
   "doctorProfile.managedTitle": "Managed by CareConnect",
   "doctorProfile.notAllowed":
     "That change isn't allowed. Some details can only be changed by CareConnect.",
@@ -1115,6 +1121,32 @@ export const en = {
   "candidates.tab.doctors": "Doctors ({count})",
   "candidates.tab.facilities": "Facilities ({count})",
   "candidates.title": "Provider candidates",
+
+  // ---- Portal status (link state, clinic profile)
+  "verification.inactive": "Inactive",
+  "doctorSchedule.inactive": "This clinic link is inactive, so opening hours can't be set here.",
+  "doctorSchedule.rejected":
+    "CareConnect didn't verify you at this clinic, so opening hours can't be set here.",
+  "doctorProfile.clinicsTitle": "Clinic links",
+  "doctorProfile.clinicsBody":
+    "Patients can find and book you only at clinics where your link is verified and active.",
+  "clinicProfile.statusTitle": "Status",
+  "clinicProfile.yourRole": "Your role",
+  "clinicProfile.listing": "Directory listing",
+  "clinicProfile.listingSample": "Sample listing, not shown as a real provider",
+  "clinicProfile.listingReal": "Listed in the directory",
+  "clinicProfile.booking": "Online booking",
+  "clinicProfile.bookingOn": "Available",
+  "clinicProfile.bookingOff": "Not yet available",
+  "clinicProfile.bookingHow":
+    "Online booking opens once CareConnect verifies at least one doctor's active link to this clinic.",
+  "clinicProfile.completeness": "Profile completeness",
+  "clinicProfile.completeCount": "{done} of {total} details provided",
+  "clinicProfile.provided": "provided",
+  "clinicProfile.missingHow":
+    "To add missing details, contact CareConnect. Editing isn't available in the portal yet.",
+  // Inbox: the patient wrote last (derived from the messages, not a stored counter).
+  "messages.awaitingReply": "Awaiting reply",
 } as const;
 
 export type MessageKey = keyof typeof en;

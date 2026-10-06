@@ -141,6 +141,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 /** Shown when the app has no usable backend configuration (details only in development). */
 function ConfigErrorBanner() {
+  const { t } = useI18n();
   if (isSupabaseConfigured) return null;
   return (
     <div
@@ -148,7 +149,7 @@ function ConfigErrorBanner() {
       className="border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-sm text-destructive"
     >
       {import.meta.env.DEV ? (
-        <strong className="font-semibold">Configuration error: </strong>
+        <strong className="font-semibold">{t("config.errorPrefix")}</strong>
       ) : null}
       {supabaseConfigMessage}
     </div>

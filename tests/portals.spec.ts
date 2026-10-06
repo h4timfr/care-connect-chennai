@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./support/fixtures";
-import { appointmentRow, ids, type MockBackend } from "./support/mock-backend";
+import { appointmentRow, conversationRow, ids, type MockBackend } from "./support/mock-backend";
 
 // Patient app, clinic portal and doctor portal share one Supabase Auth account system;
 // authorization comes only from what the database returns (clinic_memberships, the doctor
@@ -458,5 +458,133 @@ test.describe("Client-side state never grants access", () => {
     await expect(
       page.getByRole("heading", { name: "Doctor access isn't enabled for this account" }),
     ).toBeVisible();
+  });
+});
+
+test.describe("Portal status is truthful", () => {
+  test("the clinic profile states real facts and never claims verification", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    mock.state.memberships = [membershipA(mock)];
+    await page.goto("/clinic/profile");
+    const status = page.getByRole("region", { name: "Status" });
+    await expect(status.getByText("Clinic staff")).toBeVisible();
+    // The test clinic is sample data, so it says so instead of posing as a real provider.
+    await expect(status.getByText("Sample listing, not shown as a real provider")).toBeVisible();
+    // Dr. Verified Tester has a verified, active link here, so booking really is open.
+    await expect(status.getByText("Available", { exact: true })).toBeVisible();
+    await expect(page.getByText("Verified", { exact: true })).toHaveCount(0);
+    // Opening hours are empty in the fixture: counted as missing, not invented.
+    const completeness = page.getByRole("region", { name: "Profile completeness" });
+    await expect(completeness.getByText("7 of 8 details provided")).toBeVisible();
+    await expect(completeness.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "7");
+  });
+
+  test("online booking reads as unavailable when no doctor link is verified and active", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    mock.state.memberships = [membershipA(mock)];
+    const link = (mock.state.doctors[0]!["clinic_doctors"] as Record<string, unknown>[])[0]!;
+    link["active"] = false;
+    await page.goto("/clinic/profile");
+    const status = page.getByRole("region", { name: "Status" });
+    await expect(status.getByText("Not yet available")).toBeVisible();
+    await expect(status.getByText(/Online booking opens once CareConnect verifies/)).toBeVisible();
+  });
+
+  test("a doctor sees each clinic link's real state, including inactive and rejected", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    const me = makeDoctor(mock, "verified");
+    me["clinic_doctors"] = [
+      { clinic_id: ids.clinicA, active: false, verification_state: "verified" },
+      { clinic_id: ids.clinicB, active: true, verification_state: "rejected" },
+    ];
+    await page.goto("/doctor/profile");
+    const links = page.getByRole("region", { name: "Clinic links" });
+    const a = links.getByRole("listitem").filter({ hasText: "Test Clinic A" });
+    await expect(a.getByText("Verified")).toBeVisible();
+    await expect(a.getByText("Inactive")).toBeVisible();
+    const b = links.getByRole("listitem").filter({ hasText: "Test Clinic B" });
+    await expect(b.getByText("Not verified")).toBeVisible();
+    await expect(page.getByText("Awaiting verification")).toHaveCount(0);
+
+    await page.goto("/doctor/schedule");
+    await expect(page.getByText("This clinic link is inactive")).toBeVisible();
+    await expect(page.getByText("CareConnect didn't verify you at this clinic")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save hours" })).toHaveCount(0);
+  });
+
+  test("inboxes mark conversations where the patient wrote last, from real messages only", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({
+      conversations: [conversationRow([{ from: "patient", body: "Are you open today?" }])],
+      doctorConversations: [
+        {
+          id: "dconv-1",
+          clinic_id: ids.clinicA,
+          clinic_name: "Test Clinic A",
+          patient_name: "Patient For Me",
+          created_at: "2026-10-01T00:00:00Z",
+          messages: [
+            { id: "m1", body: "Hello?", created_at: "2026-10-01T04:00:00Z", from: "patient" },
+            { id: "m2", body: "Hi", created_at: "2026-10-01T05:00:00Z", from: "you" },
+          ],
+        },
+      ],
+    });
+    mock.state.memberships = [membershipA(mock)];
+    makeDoctor(mock, "verified");
+    await page.goto("/clinic/messages");
+    await expect(page.getByRole("button", { name: /Awaiting reply/ })).toBeVisible();
+    // Once the clinic has replied, the marker is gone: nothing is invented.
+    mock.state.conversations = [
+      conversationRow([
+        { from: "patient", body: "Are you open today?" },
+        { from: "clinic", body: "Yes, until 8." },
+      ]),
+    ];
+    await page.reload();
+    await expect(page.getByText("Yes, until 8.").first()).toBeVisible();
+    await expect(page.getByText("Awaiting reply")).toHaveCount(0);
+
+    // The doctor already replied in their only conversation.
+    await page.goto("/doctor/messages");
+    await expect(page.getByText("Patient For Me").first()).toBeVisible();
+    await expect(page.getByText("Awaiting reply")).toHaveCount(0);
+  });
+
+  test("clinic patients: an empty state, and cards instead of a table on phones", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    mock.state.memberships = [membershipA(mock)];
+    await page.goto("/clinic/patients");
+    await expect(page.getByText("No patients have booked appointments yet.")).toBeVisible();
+    await expect(page.getByRole("table")).toHaveCount(0);
+
+    mock.state.appointments = [appointmentRow({ patients: { full_name: "Card Patient" } })];
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.reload();
+    const card = page.getByRole("listitem").filter({ hasText: "Card Patient" });
+    await expect(card).toBeVisible();
+    await expect(card.getByText("Next appointment")).toBeVisible();
+    await expect(page.getByRole("table")).toBeHidden();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await expect(page.getByRole("cell", { name: "Card Patient" })).toBeVisible();
   });
 });

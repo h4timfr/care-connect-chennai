@@ -103,6 +103,7 @@ function ClinicAppointments() {
               key={f.value}
               variant={filter === f.value ? "default" : "outline"}
               size="sm"
+              className="h-auto min-h-8 whitespace-normal py-1 text-center"
               aria-pressed={filter === f.value}
               onClick={() => setFilter(f.value)}
             >
@@ -174,7 +175,7 @@ function AppointmentTable({ rows }: { rows: Appointment[] }) {
       <ul className="space-y-3 md:hidden">
         {rows.map((a) => (
           <li key={a.id} className="surface-card space-y-3 p-4 text-sm">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
               <div className="min-w-0">
                 <p className="truncate font-medium">
                   {a.patientName || t("common.unknownPatient")}

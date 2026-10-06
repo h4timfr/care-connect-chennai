@@ -39,6 +39,9 @@ export const ur: Messages = {
   "common.sampleListing": "نمونہ اندراج",
   "common.sampleListingNote":
     "CareConnect کی ڈائرکٹری میں یہ اندراج نمونہ مواد کے طور پر نشان زد ہے۔",
+  "common.notYetBookable": "ابھی بکنگ دستیاب نہیں",
+  "common.notYetBookableNote":
+    "یہ اندراج ڈائرکٹری میں ہے، لیکن CareConnect نے آن لائن بکنگ کے لیے کسی فعال کلینک لنک کی تصدیق نہیں کی ہے۔",
   "common.you": "آپ",
   "common.youPrefix": "آپ: {text}",
   "common.unknownPatient": "نامعلوم مریض",
@@ -77,6 +80,7 @@ export const ur: Messages = {
   "error.server": "سرور سے رابطے کے دوران کچھ غلط ہو گیا۔ براہِ کرم دوبارہ کوشش کریں۔",
   "error.unavailable": "CareConnect فی الحال دستیاب نہیں ہے۔ براہِ کرم کچھ دیر بعد کوشش کریں۔",
   "error.generic": "کچھ غلط ہو گیا۔ براہِ کرم دوبارہ کوشش کریں۔",
+  "config.errorPrefix": "کنفیگریشن کی خرابی: ",
   "error.checkDetails": "براہِ کرم اپنی درج کردہ معلومات چیک کریں۔",
 
   // ---- Auth errors
@@ -619,6 +623,8 @@ export const ur: Messages = {
   "clinicPatients.col.lastVisit": "آخری مکمل ملاقات",
   "clinicPatients.col.next": "اگلی اپائنٹمنٹ",
   "clinicPatients.noneYet": "ابھی تک کسی مریض نے اپائنٹمنٹ بک نہیں کی۔",
+  "clinicPatients.noneYetBody":
+    "جب مریض آپ کے کلینک میں اپائنٹمنٹس بک کریں گے تو وہ یہاں نظر آئیں گے۔",
   "clinicPatients.noMatch": "اس نام سے کوئی مریض مماثل نہیں۔",
 
   // ---- Clinic messages
@@ -886,7 +892,7 @@ export const ur: Messages = {
   "doctorProfile.editableTitle": "پریکٹس کی تفصیلات",
   "doctorProfile.feeHint": "آپ جن کلینکس میں کام کرتے ہیں، ان سب میں مریضوں کو دکھائی دیتی ہے۔",
   "doctorProfile.managedBody":
-    "یہ آپ کی تصدیق شدہ رجسٹریشن سے آتی ہیں۔ تبدیلی کے لیے CareConnect سے رابطہ کریں۔",
+    "یہ تب طے ہوتے ہیں جب CareConnect آپ کی رجسٹریشن کا جائزہ لیتا ہے۔ انہیں تبدیل کرنے کے لیے CareConnect سے رابطہ کریں۔",
   "doctorProfile.managedTitle": "CareConnect کے زیرِ انتظام",
   "doctorProfile.notAllowed": "یہ تبدیلی کی اجازت نہیں۔ کچھ تفصیلات صرف CareConnect بدل سکتا ہے۔",
   "doctorProfile.publicNote": "تصدیق کے بعد یہ تفصیلات آپ کی پروفائل پر عوامی طور پر نظر آتی ہیں۔",
@@ -1123,4 +1129,31 @@ export const ur: Messages = {
   "candidates.tab.doctors": "ڈاکٹر ({count})",
   "candidates.tab.facilities": "مراکز ({count})",
   "candidates.title": "فراہم کنندہ امیدوار",
+
+  // ---- Portal status (link state, clinic profile)
+  "verification.inactive": "غیر فعال",
+  "doctorSchedule.inactive":
+    "اس کلینک سے آپ کا لنک غیر فعال ہے، اس لیے یہاں اوقات طے نہیں کیے جا سکتے۔",
+  "doctorSchedule.rejected":
+    "CareConnect نے اس کلینک میں آپ کی تصدیق نہیں کی، اس لیے یہاں اوقات طے نہیں کیے جا سکتے۔",
+  "doctorProfile.clinicsTitle": "کلینک لنکس",
+  "doctorProfile.clinicsBody":
+    "مریض آپ کو صرف ان کلینکس میں تلاش اور بک کر سکتے ہیں جہاں آپ کا لنک تصدیق شدہ اور فعال ہے۔",
+  "clinicProfile.statusTitle": "حیثیت",
+  "clinicProfile.yourRole": "آپ کا کردار",
+  "clinicProfile.listing": "ڈائرکٹری اندراج",
+  "clinicProfile.listingSample": "نمونہ اندراج، حقیقی فراہم کنندہ کے طور پر نہیں دکھایا جاتا",
+  "clinicProfile.listingReal": "ڈائرکٹری میں درج",
+  "clinicProfile.booking": "آن لائن بکنگ",
+  "clinicProfile.bookingOn": "دستیاب",
+  "clinicProfile.bookingOff": "ابھی دستیاب نہیں",
+  "clinicProfile.bookingHow":
+    "جب CareConnect اس کلینک سے کم از کم ایک ڈاکٹر کے فعال لنک کی تصدیق کرے گا تو آن لائن بکنگ شروع ہو جائے گی۔",
+  "clinicProfile.completeness": "پروفائل کی تکمیل",
+  "clinicProfile.completeCount": "{total} میں سے {done} تفصیلات فراہم کی گئی ہیں",
+  "clinicProfile.provided": "فراہم کردہ",
+  "clinicProfile.missingHow":
+    "رہ جانے والی تفصیلات شامل کرنے کے لیے CareConnect سے رابطہ کریں۔ پورٹل میں ترمیم ابھی دستیاب نہیں ہے۔",
+  // Inbox: the patient wrote last (derived from the messages, not a stored counter).
+  "messages.awaitingReply": "جواب کا انتظار",
 };

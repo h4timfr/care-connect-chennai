@@ -21,6 +21,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import { isSupabaseConfigured, supabase, supabaseConfigMessage } from "@/lib/supabase/client";
 import { describeAuthError, describeDataError } from "@/lib/supabase/errors";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/BrandMark";
 
 export type Portal = "clinic" | "doctor";
 
@@ -81,10 +82,10 @@ export function PortalAuthCard({
         <div className="mb-6 flex flex-col items-center text-center">
           <Link
             to="/"
-            className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-primary to-highlight text-primary-foreground shadow-sm"
+            className="mb-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={t("nav.homeLink")}
           >
-            <Stethoscope className="h-6 w-6" aria-hidden />
+            <BrandMark size="lg" />
           </Link>
           <p className="font-display text-sm font-bold">CareConnect</p>
           <span
@@ -233,7 +234,7 @@ export function ProviderSignIn({
         </p>
         <Button
           variant="outline"
-          className="w-full"
+          className="w-full min-h-9 py-1.5 h-auto whitespace-normal text-center"
           onClick={() => {
             setResetSentTo(null);
             setMode("signin");
@@ -273,7 +274,7 @@ export function ProviderSignIn({
                 setMode("reset");
                 setError(null);
               }}
-              className="text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+              className="py-1 text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
             >
               {t("auth.forgotPassword")}
             </button>
@@ -294,14 +295,19 @@ export function ProviderSignIn({
       <Button
         type="submit"
         size="lg"
-        className="w-full"
+        className="w-full min-h-11 py-2 h-auto whitespace-normal text-center"
         disabled={submitting || !isSupabaseConfigured}
       >
         {submitting ? <Loader2 className="animate-spin" aria-hidden /> : null}
         {mode === "reset" ? t("auth.reset.submit") : t(`portal.${portal}.submit` as MessageKey)}
       </Button>
       {mode === "reset" ? (
-        <Button type="button" variant="ghost" className="w-full" onClick={() => setMode("signin")}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full min-h-9 py-1.5 h-auto whitespace-normal text-center"
+          onClick={() => setMode("signin")}
+        >
           {t("auth.backToSignIn")}
         </Button>
       ) : (
@@ -329,7 +335,7 @@ export function PatientLink({ signup }: { signup?: boolean }) {
       <Link
         to="/login"
         search={signup ? { signup: true } : {}}
-        className="font-semibold text-primary underline-offset-2 hover:underline"
+        className="inline-block py-1 font-semibold text-primary underline-offset-2 hover:underline"
       >
         {signup ? t("portal.backToPatientSignup") : t("portal.backToPatientSignin")}
       </Link>

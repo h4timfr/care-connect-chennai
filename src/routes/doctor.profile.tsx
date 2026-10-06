@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { DoctorShell } from "@/components/layout/DoctorShell";
 import { FormAlert } from "@/components/AuthCard";
 import { InfoNotice } from "@/components/common";
+import { LinkStatus } from "@/components/ProviderStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,6 +96,30 @@ function ProfileForm({ me }: { me: MyDoctor }) {
             </div>
           ))}
         </dl>
+      </section>
+
+      <section className="surface-card p-5" aria-labelledby="doctor-links-heading">
+        <h2 id="doctor-links-heading" className="font-semibold">
+          {t("doctorProfile.clinicsTitle")}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("doctorProfile.clinicsBody")}</p>
+        {me.links.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">{t("doctorDashboard.noClinics")}</p>
+        ) : (
+          <ul className="mt-3 divide-y">
+            {me.links.map((l) => (
+              <li
+                key={l.clinicId}
+                className="flex flex-wrap items-center justify-between gap-2 py-2.5"
+              >
+                <span className="min-w-0 font-medium [overflow-wrap:anywhere]" dir="auto">
+                  {l.clinicName}
+                </span>
+                <LinkStatus state={l.state} active={l.active} />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <form

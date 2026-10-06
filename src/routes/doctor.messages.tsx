@@ -81,8 +81,15 @@ function Inbox() {
                 active?.id === c.id && "border-primary/50 bg-primary-soft/50",
               )}
             >
-              <span className="block truncate font-medium" dir="auto">
-                {c.patientName}
+              <span className="flex items-center justify-between gap-2">
+                <span className="truncate font-medium" dir="auto">
+                  {c.patientName}
+                </span>
+                {c.messages[c.messages.length - 1]?.from === "patient" ? (
+                  <span className="shrink-0 rounded-full bg-primary/12 px-2 py-0.5 text-[11px] font-medium text-primary">
+                    {t("messages.awaitingReply")}
+                  </span>
+                ) : null}
               </span>
               <span className="block truncate text-xs text-muted-foreground" dir="auto">
                 {c.clinicName}

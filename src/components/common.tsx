@@ -8,6 +8,7 @@ import {
   Heart,
   HeartPulse,
   Info,
+  CalendarClock,
   Loader2,
   Smile,
   Sparkles,
@@ -93,7 +94,7 @@ export function Initials({ name, className }: { name: string; className?: string
  * Shown on doctor and clinic listings the database marks as sample content (`is_demo`), so
  * patients are never led to believe a sample listing is a real, verified provider.
  */
-export function SampleBadge({ className }: { className?: string }) {
+export function SampleBadge({ className }: { className?: string | undefined }) {
   const { t } = useI18n();
   return (
     <span
@@ -112,7 +113,7 @@ export function SampleBadge({ className }: { className?: string }) {
  * A real provider CareConnect has checked: a clinic that is not sample content, or a doctor who is
  * not sample content and has a verified, active clinic link (the same rule booking enforces).
  */
-export function VerifiedBadge({ className }: { className?: string }) {
+export function VerifiedBadge({ className }: { className?: string | undefined }) {
   const { t } = useI18n();
   return (
     <span
@@ -126,6 +127,41 @@ export function VerifiedBadge({ className }: { className?: string }) {
       {t("common.verified")}
     </span>
   );
+}
+
+/** Listed, but no verified active clinic–doctor link exists for online booking. */
+export function NotBookableBadge({ className }: { className?: string | undefined }) {
+  const { t } = useI18n();
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground",
+        className,
+      )}
+      title={t("common.notYetBookableNote")}
+    >
+      <CalendarClock className="h-3 w-3" aria-hidden />
+      {t("common.notYetBookable")}
+    </span>
+  );
+}
+
+/**
+ * The one truthful status for a listing: sample content, verified for online booking (a verified,
+ * active clinic–doctor link — the rule book_appointment enforces), or listed but not yet bookable.
+ */
+export function ListingStatus({
+  isSample,
+  bookable,
+  className,
+}: {
+  isSample: boolean;
+  bookable: boolean;
+  className?: string | undefined;
+}) {
+  if (isSample) return <SampleBadge className={className} />;
+  if (bookable) return <VerifiedBadge className={className} />;
+  return <NotBookableBadge className={className} />;
 }
 
 export function SectionHeader({

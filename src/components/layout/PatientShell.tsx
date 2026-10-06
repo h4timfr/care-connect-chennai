@@ -1,13 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  Building2,
-  CalendarDays,
-  Compass,
-  Home,
-  MessageCircle,
-  Stethoscope,
-  User,
-} from "lucide-react";
+import { Building2, CalendarDays, Compass, Home, MessageCircle, User } from "lucide-react";
 import { useRef, type ReactNode } from "react";
 import { useFocusMainOnNavigate } from "@/hooks/useFocusMainOnNavigate";
 import { cn } from "@/lib/utils";
@@ -18,6 +10,7 @@ import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { LanguageSelect } from "@/components/LanguageSelect";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { BrandMark, SkipToContent } from "@/components/BrandMark";
 
 const NAV: {
   to: "/" | "/discover" | "/appointments" | "/messages" | "/profile";
@@ -64,12 +57,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background pb-20 lg:pb-0">
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:text-sm focus:shadow-pop"
-      >
-        {t("nav.skipToContent")}
-      </a>
+      <SkipToContent />
       <header className="sticky top-0 z-40 border-b bg-card/85 shadow-xs backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-6">
@@ -78,9 +66,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
               className="flex shrink-0 items-center gap-2"
               aria-label={t("nav.homeLink")}
             >
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-highlight text-primary-foreground shadow-sm">
-                <Stethoscope className="h-4.5 w-4.5" aria-hidden />
-              </span>
+              <BrandMark />
               <span className="hidden font-display text-lg font-bold tracking-tight min-[360px]:inline">
                 CareConnect
               </span>

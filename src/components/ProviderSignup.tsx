@@ -197,7 +197,11 @@ export function ProviderSignup<T extends object>(props: ProviderSignupProps<T>) 
         <p className="text-sm text-muted-foreground">
           {t(`signup.${portal}.submitted` as MessageKey)}
         </p>
-        <Button asChild variant="outline" className="w-full">
+        <Button
+          asChild
+          variant="outline"
+          className="w-full min-h-9 py-1.5 h-auto whitespace-normal text-center"
+        >
           <Link to="/">{t("portal.toPatientApp")}</Link>
         </Button>
       </div>
@@ -290,7 +294,7 @@ export function ProviderSignup<T extends object>(props: ProviderSignupProps<T>) 
               type="submit"
               variant="highlight"
               size="lg"
-              className="w-full"
+              className="w-full min-h-11 py-2 h-auto whitespace-normal text-center"
               disabled={submitting || !isSupabaseConfigured}
             >
               {submitting ? <Loader2 className="animate-spin" aria-hidden /> : null}

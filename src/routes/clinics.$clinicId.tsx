@@ -6,9 +6,10 @@ import {
   ErrorState,
   PageLoader,
   Rating,
-  SampleBadge,
+  ListingStatus,
   SectionHeader,
 } from "@/components/common";
+import { clinicHasBookableDoctor } from "@/lib/supabase/queries";
 import { DoctorCard } from "@/components/DoctorCard";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { Button } from "@/components/ui/button";
@@ -86,7 +87,10 @@ function ClinicProfile() {
                     {t("clinic.consultations", { min: fmt.inr(minFee), max: fmt.inr(maxFee) })}
                   </span>
                 ) : null}
-                {clinic.isSample ? <SampleBadge /> : null}
+                <ListingStatus
+                  isSample={clinic.isSample}
+                  bookable={clinicHasBookableDoctor(clinic.id, doctors)}
+                />
               </div>
             </div>
             <MessageClinicButton clinicId={clinic.id} size="lg" className="w-full sm:w-auto" />

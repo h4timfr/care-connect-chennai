@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays } from "lucide-react";
 import { DoctorShell } from "@/components/layout/DoctorShell";
 import { EmptyState, InfoNotice, StatusBadge } from "@/components/common";
-import { VerificationPill } from "@/components/ProviderStatus";
+import { LinkStatus } from "@/components/ProviderStatus";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { useDoctorAppointments, type MyDoctor } from "@/lib/supabase/doctor";
@@ -55,7 +55,7 @@ function Dashboard({ me }: { me: MyDoctor }) {
                 <span className="min-w-0 font-medium [overflow-wrap:anywhere]" dir="auto">
                   {l.clinicName}
                 </span>
-                <VerificationPill state={l.verified ? "verified" : "pending"} />
+                <LinkStatus state={l.state} active={l.active} />
               </li>
             ))}
           </ul>
@@ -63,11 +63,11 @@ function Dashboard({ me }: { me: MyDoctor }) {
       </section>
 
       <section aria-labelledby="doctor-upcoming">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 id="doctor-upcoming" className="font-semibold">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="doctor-upcoming" className="min-w-0 font-semibold [overflow-wrap:anywhere]">
             {t("doctorDashboard.upcoming")}
           </h2>
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="shrink-0">
             <Link to="/doctor/appointments">{t("common.seeAll")}</Link>
           </Button>
         </div>

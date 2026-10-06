@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { FormAlert } from "@/components/AuthCard";
 import { EmptyState, ErrorState, InfoNotice, Initials, PageLoader } from "@/components/common";
-import { VerificationPill } from "@/components/ProviderStatus";
+import { LinkStatus } from "@/components/ProviderStatus";
 import { ScheduleForm, ScheduleRow } from "@/components/ScheduleEditor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,7 +126,7 @@ function DoctorLinkCard({
             <h3 className="font-display font-semibold [overflow-wrap:anywhere]" dir="auto">
               {link.doctorName}
             </h3>
-            <VerificationPill state={link.state} />
+            <LinkStatus state={link.state} active={link.active} />
           </div>
           <p className="text-sm text-primary">{fmt.specialty(link.specialtyId)}</p>
           {fee !== undefined ? (

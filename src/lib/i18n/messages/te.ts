@@ -38,6 +38,9 @@ export const te: Messages = {
   "common.experience_other": "{count} సంవత్సరాల అనుభవం",
   "common.sampleListing": "నమూనా జాబితా",
   "common.sampleListingNote": "CareConnect డైరెక్టరీలో ఈ జాబితా నమూనా కంటెంట్‌గా గుర్తించబడింది.",
+  "common.notYetBookable": "ఇంకా బుకింగ్ అందుబాటులో లేదు",
+  "common.notYetBookableNote":
+    "ఈ జాబితా డైరెక్టరీలో ఉంది, కానీ ఆన్‌లైన్ బుకింగ్‌కు CareConnect ధృవీకరించిన క్రియాశీల క్లినిక్ లింక్ లేదు.",
   "common.you": "మీరు",
   "common.youPrefix": "మీరు: {text}",
   "common.unknownPatient": "తెలియని రోగి",
@@ -77,6 +80,7 @@ export const te: Messages = {
   "error.unavailable":
     "CareConnect ప్రస్తుతం అందుబాటులో లేదు. దయచేసి కొంతసేపటి తర్వాత ప్రయత్నించండి.",
   "error.generic": "ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "config.errorPrefix": "కాన్ఫిగరేషన్ లోపం: ",
   "error.checkDetails": "దయచేసి మీరు నమోదు చేసిన వివరాలను తనిఖీ చేయండి.",
 
   // ---- Auth errors
@@ -617,6 +621,8 @@ export const te: Messages = {
   "clinicPatients.col.lastVisit": "చివరిగా పూర్తయిన సందర్శన",
   "clinicPatients.col.next": "తదుపరి అపాయింట్‌మెంట్",
   "clinicPatients.noneYet": "ఇంకా ఏ రోగీ అపాయింట్‌మెంట్ బుక్ చేయలేదు.",
+  "clinicPatients.noneYetBody":
+    "రోగులు మీ క్లినిక్‌లో అపాయింట్‌మెంట్లు బుక్ చేసిన తర్వాత వారు ఇక్కడ కనిపిస్తారు.",
   "clinicPatients.noMatch": "ఆ పేరుతో ఏ రోగీ సరిపోలలేదు.",
 
   // ---- Clinic messages
@@ -884,7 +890,7 @@ export const te: Messages = {
   "doctorProfile.editableTitle": "ప్రాక్టీస్ వివరాలు",
   "doctorProfile.feeHint": "మీరు పనిచేసే అన్ని క్లినిక్‌లలో రోగులకు చూపిస్తారు.",
   "doctorProfile.managedBody":
-    "ఇవి మీ ధృవీకరించిన రిజిస్ట్రేషన్ నుంచి వస్తాయి. మార్చడానికి CareConnectని సంప్రదించండి.",
+    "CareConnect మీ రిజిస్ట్రేషన్‌ను సమీక్షించినప్పుడు ఇవి సెట్ అవుతాయి. వీటిని మార్చడానికి CareConnectను సంప్రదించండి.",
   "doctorProfile.managedTitle": "CareConnect నిర్వహించేవి",
   "doctorProfile.notAllowed":
     "ఆ మార్పుకు అనుమతి లేదు. కొన్ని వివరాలను CareConnect మాత్రమే మార్చగలదు.",
@@ -1122,4 +1128,31 @@ export const te: Messages = {
   "candidates.tab.doctors": "వైద్యులు ({count})",
   "candidates.tab.facilities": "కేంద్రాలు ({count})",
   "candidates.title": "ప్రొవైడర్ అభ్యర్థులు",
+
+  // ---- Portal status (link state, clinic profile)
+  "verification.inactive": "నిష్క్రియం",
+  "doctorSchedule.inactive":
+    "ఈ క్లినిక్‌తో మీ లింక్ నిష్క్రియంగా ఉంది, కాబట్టి ఇక్కడ సమయాలు సెట్ చేయలేరు.",
+  "doctorSchedule.rejected":
+    "ఈ క్లినిక్‌లో CareConnect మిమ్మల్ని ధృవీకరించలేదు, కాబట్టి ఇక్కడ సమయాలు సెట్ చేయలేరు.",
+  "doctorProfile.clinicsTitle": "క్లినిక్ లింక్‌లు",
+  "doctorProfile.clinicsBody":
+    "మీ లింక్ ధృవీకరించబడి క్రియాశీలంగా ఉన్న క్లినిక్‌లలో మాత్రమే రోగులు మిమ్మల్ని కనుగొని బుక్ చేయగలరు.",
+  "clinicProfile.statusTitle": "స్థితి",
+  "clinicProfile.yourRole": "మీ పాత్ర",
+  "clinicProfile.listing": "డైరెక్టరీ జాబితా",
+  "clinicProfile.listingSample": "నమూనా జాబితా, నిజమైన ప్రొవైడర్‌గా చూపబడదు",
+  "clinicProfile.listingReal": "డైరెక్టరీలో జాబితా చేయబడింది",
+  "clinicProfile.booking": "ఆన్‌లైన్ బుకింగ్",
+  "clinicProfile.bookingOn": "అందుబాటులో ఉంది",
+  "clinicProfile.bookingOff": "ఇంకా అందుబాటులో లేదు",
+  "clinicProfile.bookingHow":
+    "ఈ క్లినిక్‌తో కనీసం ఒక డాక్టర్ క్రియాశీల లింక్‌ను CareConnect ధృవీకరించిన తర్వాత ఆన్‌లైన్ బుకింగ్ ప్రారంభమవుతుంది.",
+  "clinicProfile.completeness": "ప్రొఫైల్ సంపూర్ణత",
+  "clinicProfile.completeCount": "{total}లో {done} వివరాలు ఇవ్వబడ్డాయి",
+  "clinicProfile.provided": "ఇవ్వబడింది",
+  "clinicProfile.missingHow":
+    "లేని వివరాలను జోడించడానికి CareConnectను సంప్రదించండి. పోర్టల్‌లో సవరణ ఇంకా అందుబాటులో లేదు.",
+  // Inbox: the patient wrote last (derived from the messages, not a stored counter).
+  "messages.awaitingReply": "సమాధానం కోసం వేచి ఉంది",
 };

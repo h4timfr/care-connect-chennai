@@ -180,6 +180,11 @@ export function useReviewApplication() {
 
 export type VerificationState = "pending" | "verified" | "rejected";
 
+/** A clinic_doctors.verification_state value; anything unexpected is treated as pending. */
+export function toVerificationState(value: string): VerificationState {
+  return value === "verified" || value === "rejected" ? value : "pending";
+}
+
 export interface DoctorLink {
   clinicId: string;
   clinicName: string;
@@ -221,7 +226,7 @@ function mapLink(row: LinkRow): DoctorLink {
     specialtyId: row.doctors.specialty_id ?? "",
     registrationNote: row.doctors.registration_note ?? "",
     qualifications: row.doctors.qualifications ?? [],
-    state: state === "verified" || state === "rejected" ? state : "pending",
+    state: toVerificationState(state),
     active: row.active,
     isSample: row.doctors.is_demo,
   };

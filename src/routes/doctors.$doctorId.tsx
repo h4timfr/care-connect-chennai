@@ -17,7 +17,7 @@ import {
   InfoNotice,
   PageLoader,
   Rating,
-  SampleBadge,
+  ListingStatus,
 } from "@/components/common";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { DateStrip, SlotGrid } from "@/components/SlotPicker";
@@ -110,7 +110,7 @@ function DoctorProfile() {
                 <span className="rounded-full bg-muted px-3 py-1 font-medium">
                   {t("common.consultationFee", { fee: fmt.inr(doctor.consultationFee) })}
                 </span>
-                {doctor.isSample ? <SampleBadge /> : null}
+                <ListingStatus isSample={doctor.isSample} bookable={bookable.size > 0} />
               </div>
             </div>
             {bookable.size ? (

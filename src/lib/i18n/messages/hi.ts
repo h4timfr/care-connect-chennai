@@ -39,6 +39,9 @@ export const hi: Messages = {
   "common.sampleListing": "नमूना लिस्टिंग",
   "common.sampleListingNote":
     "CareConnect की निर्देशिका में यह लिस्टिंग नमूना सामग्री के रूप में चिह्नित है।",
+  "common.notYetBookable": "अभी बुकिंग उपलब्ध नहीं",
+  "common.notYetBookableNote":
+    "यह लिस्टिंग निर्देशिका में है, लेकिन ऑनलाइन बुकिंग के लिए CareConnect ने कोई सत्यापित सक्रिय क्लिनिक लिंक नहीं जाँचा है।",
   "common.you": "आप",
   "common.youPrefix": "आप: {text}",
   "common.unknownPatient": "अज्ञात मरीज़",
@@ -77,6 +80,7 @@ export const hi: Messages = {
   "error.server": "सर्वर से बात करते समय कुछ गलत हो गया। कृपया फिर से कोशिश करें।",
   "error.unavailable": "CareConnect अभी उपलब्ध नहीं है। कृपया थोड़ी देर बाद कोशिश करें।",
   "error.generic": "कुछ गलत हो गया। कृपया फिर से कोशिश करें।",
+  "config.errorPrefix": "कॉन्फ़िगरेशन त्रुटि: ",
   "error.checkDetails": "कृपया अपनी दर्ज की गई जानकारी जाँचें।",
 
   // ---- Auth errors
@@ -613,6 +617,8 @@ export const hi: Messages = {
   "clinicPatients.col.lastVisit": "पिछली पूरी विज़िट",
   "clinicPatients.col.next": "अगला अपॉइंटमेंट",
   "clinicPatients.noneYet": "अभी तक किसी मरीज़ ने अपॉइंटमेंट बुक नहीं किया है।",
+  "clinicPatients.noneYetBody":
+    "जब मरीज़ आपके क्लिनिक में अपॉइंटमेंट बुक करेंगे, तब वे यहाँ दिखेंगे।",
   "clinicPatients.noMatch": "इस नाम से कोई मरीज़ मेल नहीं खाता।",
 
   // ---- Clinic messages
@@ -880,7 +886,7 @@ export const hi: Messages = {
   "doctorProfile.editableTitle": "प्रैक्टिस का विवरण",
   "doctorProfile.feeHint": "आप जिन क्लिनिकों में काम करते हैं, उन सभी में मरीज़ों को दिखता है।",
   "doctorProfile.managedBody":
-    "ये आपके सत्यापित पंजीकरण से आते हैं। बदलने के लिए CareConnect से संपर्क करें।",
+    "ये तब तय होते हैं जब CareConnect आपके पंजीकरण की समीक्षा करता है। इन्हें बदलने के लिए CareConnect से संपर्क करें।",
   "doctorProfile.managedTitle": "CareConnect द्वारा प्रबंधित",
   "doctorProfile.notAllowed": "यह बदलाव अनुमत नहीं है। कुछ विवरण केवल CareConnect बदल सकता है।",
   "doctorProfile.publicNote":
@@ -1119,4 +1125,31 @@ export const hi: Messages = {
   "candidates.tab.doctors": "डॉक्टर ({count})",
   "candidates.tab.facilities": "केंद्र ({count})",
   "candidates.title": "प्रदाता उम्मीदवार",
+
+  // ---- Portal status (link state, clinic profile)
+  "verification.inactive": "निष्क्रिय",
+  "doctorSchedule.inactive":
+    "इस क्लिनिक से आपका लिंक निष्क्रिय है, इसलिए यहाँ समय तय नहीं किया जा सकता।",
+  "doctorSchedule.rejected":
+    "CareConnect ने इस क्लिनिक में आपका सत्यापन नहीं किया, इसलिए यहाँ समय तय नहीं किया जा सकता।",
+  "doctorProfile.clinicsTitle": "क्लिनिक लिंक",
+  "doctorProfile.clinicsBody":
+    "मरीज़ आपको सिर्फ़ उन क्लिनिक में ढूँढ और बुक कर सकते हैं जहाँ आपका लिंक सत्यापित और सक्रिय है।",
+  "clinicProfile.statusTitle": "स्थिति",
+  "clinicProfile.yourRole": "आपकी भूमिका",
+  "clinicProfile.listing": "निर्देशिका लिस्टिंग",
+  "clinicProfile.listingSample": "नमूना लिस्टिंग, असली प्रदाता के रूप में नहीं दिखाई जाती",
+  "clinicProfile.listingReal": "निर्देशिका में सूचीबद्ध",
+  "clinicProfile.booking": "ऑनलाइन बुकिंग",
+  "clinicProfile.bookingOn": "उपलब्ध",
+  "clinicProfile.bookingOff": "अभी उपलब्ध नहीं",
+  "clinicProfile.bookingHow":
+    "CareConnect जब इस क्लिनिक से कम से कम एक डॉक्टर के सक्रिय लिंक का सत्यापन करेगा, तब ऑनलाइन बुकिंग शुरू होगी।",
+  "clinicProfile.completeness": "प्रोफ़ाइल की पूर्णता",
+  "clinicProfile.completeCount": "{total} में से {done} जानकारियाँ दी गई हैं",
+  "clinicProfile.provided": "दिया गया",
+  "clinicProfile.missingHow":
+    "छूटी हुई जानकारी जोड़ने के लिए CareConnect से संपर्क करें। पोर्टल में अभी बदलाव की सुविधा नहीं है।",
+  // Inbox: the patient wrote last (derived from the messages, not a stored counter).
+  "messages.awaitingReply": "जवाब का इंतज़ार",
 };

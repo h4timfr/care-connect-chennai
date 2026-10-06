@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ClinicShell } from "@/components/layout/ClinicShell";
-import { ErrorState, Initials, PageLoader } from "@/components/common";
+import { EmptyState, ErrorState, Initials, PageLoader } from "@/components/common";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/lib/store";
 import { isoDate } from "@/lib/format";
@@ -73,6 +73,21 @@ function PatientList({ clinicId }: { clinicId: string }) {
   const filtered = needle
     ? patients.filter((p) => p.name.toLowerCase().includes(needle))
     : patients;
+  // One summary per patient, from this clinic's appointments only (RLS-scoped query).
+  const rows = filtered.map((p) => ({
+    id: p.id,
+    name: p.name,
+    count: p.appointments.length,
+    lastVisit: p.appointments
+      .filter((a) => a.status === "completed" || a.status === "arrived")
+      .map((a) => a.date)
+      .sort()
+      .at(-1),
+    next: p.appointments
+      .filter((a) => (a.status === "pending" || a.status === "confirmed") && a.date >= today)
+      .map((a) => a.date)
+      .sort()[0],
+  }));
 
   return (
     <div className="space-y-4">
@@ -91,65 +106,91 @@ function PatientList({ clinicId }: { clinicId: string }) {
         />
       </div>
 
-      <div className="surface-card overflow-x-auto">
-        <table className="w-full min-w-[520px] text-start text-sm">
-          <thead className="bg-muted/50 text-muted-foreground">
-            <tr>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicPatients.col.patient")}
-              </th>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicPatients.col.appointments")}
-              </th>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicPatients.col.lastVisit")}
-              </th>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicPatients.col.next")}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {filtered.map((p) => {
-              const visits = p.appointments.filter(
-                (a) => a.status === "completed" || a.status === "arrived",
-              );
-              const lastVisit = visits
-                .map((a) => a.date)
-                .sort()
-                .at(-1);
-              const next = p.appointments
-                .filter(
-                  (a) => (a.status === "pending" || a.status === "confirmed") && a.date >= today,
-                )
-                .map((a) => a.date)
-                .sort()[0];
-              return (
-                <tr key={p.id} className="transition-colors hover:bg-muted/30">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Initials name={p.name} className="h-10 w-10 text-xs" />
-                      <span className="font-medium">{p.name}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">{fmt.number(p.appointments.length)}</td>
-                  <td className="p-4">{lastVisit ? fmt.shortDate(lastVisit) : "—"}</td>
-                  <td className="p-4">{next ? fmt.shortDate(next) : "—"}</td>
+      {patients.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title={t("clinicPatients.noneYet")}
+          description={t("clinicPatients.noneYetBody")}
+        />
+      ) : rows.length === 0 ? (
+        <p className="surface-card p-8 text-center text-muted-foreground">
+          {t("clinicPatients.noMatch")}
+        </p>
+      ) : (
+        <>
+          {/* Phones: one card per patient instead of a table that scrolls sideways. */}
+          <ul className="space-y-3 md:hidden">
+            {rows.map((r) => (
+              <li key={r.id} className="surface-card p-4">
+                <div className="flex items-center gap-3">
+                  <Initials name={r.name} className="h-10 w-10 text-xs" />
+                  <p className="min-w-0 font-medium [overflow-wrap:anywhere]" dir="auto">
+                    {r.name}
+                  </p>
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs [overflow-wrap:anywhere] min-[400px]:grid-cols-3">
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">
+                      {t("clinicPatients.col.appointments")}
+                    </dt>
+                    <dd className="mt-0.5 text-sm font-medium">{fmt.number(r.count)}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">{t("clinicPatients.col.lastVisit")}</dt>
+                    <dd className="mt-0.5 text-sm font-medium">
+                      {r.lastVisit ? fmt.shortDate(r.lastVisit) : "—"}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">{t("clinicPatients.col.next")}</dt>
+                    <dd className="mt-0.5 text-sm font-medium">
+                      {r.next ? fmt.shortDate(r.next) : "—"}
+                    </dd>
+                  </div>
+                </dl>
+              </li>
+            ))}
+          </ul>
+
+          <div className="surface-card hidden overflow-x-auto md:block">
+            <table className="w-full text-start text-sm">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th scope="col" className="p-4 text-start font-medium">
+                    {t("clinicPatients.col.patient")}
+                  </th>
+                  <th scope="col" className="p-4 text-start font-medium">
+                    {t("clinicPatients.col.appointments")}
+                  </th>
+                  <th scope="col" className="p-4 text-start font-medium">
+                    {t("clinicPatients.col.lastVisit")}
+                  </th>
+                  <th scope="col" className="p-4 text-start font-medium">
+                    {t("clinicPatients.col.next")}
+                  </th>
                 </tr>
-              );
-            })}
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                  {patients.length === 0
-                    ? t("clinicPatients.noneYet")
-                    : t("clinicPatients.noMatch")}
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="divide-y">
+                {rows.map((r) => (
+                  <tr key={r.id} className="transition-colors hover:bg-muted/30">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Initials name={r.name} className="h-10 w-10 text-xs" />
+                        <span className="font-medium" dir="auto">
+                          {r.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4">{fmt.number(r.count)}</td>
+                    <td className="p-4">{r.lastVisit ? fmt.shortDate(r.lastVisit) : "—"}</td>
+                    <td className="p-4">{r.next ? fmt.shortDate(r.next) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

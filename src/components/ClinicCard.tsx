@@ -1,14 +1,19 @@
 import { Link } from "@tanstack/react-router";
 import { MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Rating, SampleBadge, VerifiedBadge } from "@/components/common";
+import { ListingStatus, Rating } from "@/components/common";
+import { clinicHasBookableDoctor } from "@/lib/supabase/queries";
 import { useApp } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
 import type { Clinic } from "@/lib/types";
 
 export function ClinicCard({ clinic }: { clinic: Clinic }) {
   const { doctorsOfClinic } = useApp();
-  const doctorCount = doctorsOfClinic(clinic.id).length;
+  const clinicDoctors = doctorsOfClinic(clinic.id);
+  const doctorCount = clinicDoctors.length;
+  // "Verified" only when a doctor here is bookable (verified, active link); a clinic merely being
+  // in the directory is not a verification.
+  const bookable = clinicHasBookableDoctor(clinic.id, clinicDoctors);
   const [minFee, maxFee] = clinic.feeRange;
   const { t, fmt } = useI18n();
 
@@ -71,11 +76,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
         </dl>
 
         <p className="truncate text-sm text-muted-foreground">{clinic.address}</p>
-        {clinic.isSample ? (
-          <SampleBadge className="self-start" />
-        ) : (
-          <VerifiedBadge className="self-start" />
-        )}
+        <ListingStatus isSample={clinic.isSample} bookable={bookable} className="self-start" />
 
         <Button asChild className="mt-auto w-full" size="sm">
           <Link to="/clinics/$clinicId" params={{ clinicId: clinic.id }}>

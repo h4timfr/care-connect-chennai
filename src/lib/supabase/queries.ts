@@ -100,6 +100,13 @@ export function bookableClinicIds(doctor: Doctor) {
   return doctor.clinicLinks.filter((l) => l.active && l.verified).map((l) => l.clinicId);
 }
 
+/** True when CareConnect has verified an active doctor link at this clinic (the booking rule). */
+export function clinicHasBookableDoctor(clinicId: string, doctors: Doctor[]) {
+  return doctors.some((d) =>
+    d.clinicLinks.some((l) => l.clinicId === clinicId && l.active && l.verified),
+  );
+}
+
 export function useClinics(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["clinics"],

@@ -48,7 +48,7 @@ function ResetPasswordPage() {
         subtitle={linkError ? t("reset.expiredSubtitle") : t("reset.neededSubtitle")}
       >
         <p className="mb-4 text-sm text-muted-foreground">{t("reset.getNewLink")}</p>
-        <Button asChild className="w-full">
+        <Button asChild className="w-full min-h-9 py-1.5 h-auto whitespace-normal text-center">
           <Link to="/login">{t("reset.goToSignIn")}</Link>
         </Button>
       </AuthCard>
@@ -144,7 +144,11 @@ function NewPasswordForm({ email }: { email: string }) {
           />
         </div>
         {error ? <FormAlert>{error}</FormAlert> : null}
-        <Button type="submit" className="w-full" disabled={submitting}>
+        <Button
+          type="submit"
+          className="w-full min-h-9 py-1.5 h-auto whitespace-normal text-center"
+          disabled={submitting}
+        >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
           {submitting ? t("common.saving") : t("reset.save")}
         </Button>

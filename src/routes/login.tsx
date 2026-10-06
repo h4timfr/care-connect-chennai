@@ -156,7 +156,11 @@ function LoginPage() {
               />
             </p>
           </div>
-          <Button variant="outline" className="w-full" onClick={() => changeMode("signin")}>
+          <Button
+            variant="outline"
+            className="w-full min-h-9 py-1.5 h-auto whitespace-normal text-center"
+            onClick={() => changeMode("signin")}
+          >
             {t("auth.backToSignIn")}
           </Button>
         </div>
@@ -198,7 +202,7 @@ function LoginPage() {
                   <button
                     type="button"
                     onClick={() => changeMode("reset")}
-                    className="text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+                    className="py-1 text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
                   >
                     {t("auth.forgotPassword")}
                   </button>
@@ -227,13 +231,19 @@ function LoginPage() {
           {error ? <FormAlert>{error}</FormAlert> : null}
 
           <div className="flex flex-col gap-2 pt-1">
-            <Button type="submit" size="lg" disabled={submitting || !isSupabaseConfigured}>
+            <Button
+              type="submit"
+              size="lg"
+              className="min-h-11 py-2 h-auto whitespace-normal text-center"
+              disabled={submitting || !isSupabaseConfigured}
+            >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               {submitting ? t(copyKey(mode, "busy")) : t(copyKey(mode, "submit"))}
             </Button>
             <Button
               type="button"
               variant="ghost"
+              className="min-h-9 py-1.5 h-auto whitespace-normal text-center"
               onClick={() => changeMode(mode === "signin" ? "signup" : "signin")}
               disabled={submitting}
             >
