@@ -78,13 +78,13 @@ export interface Expectations {
   possibleNeedsConfirmation: number;
 }
 
-/** The research summary this pipeline was commissioned for. */
+/** The research summary of the commissioned workbook (2026-10-06; see research/README.md). */
 export const EXPECTED_CHENNAI: Expectations = {
-  facilities: 20,
-  doctors: 50,
-  relationships: 50,
-  confirmedPublic: 41,
-  possibleNeedsConfirmation: 9,
+  facilities: 100,
+  doctors: 399,
+  relationships: 418,
+  confirmedPublic: 418,
+  possibleNeedsConfirmation: 0,
 };
 
 const CONFIDENCE = ["high", "medium", "low"];
@@ -207,7 +207,7 @@ export function validateCatalogue(
       errors.push(`${p}.address: 2–500 chars or null`);
     if (!text(f.locality, 2, 80)) errors.push(`${p}.locality: 2–80 chars`);
     if (f.website !== null && !isUrl(f.website)) errors.push(`${p}.website: http(s) URL or null`);
-    if (!textArray(f.specialties, 120)) errors.push(`${p}.specialties: array of strings`);
+    if (!textArray(f.specialties, 200)) errors.push(`${p}.specialties: array of strings`);
     if (!CONFIDENCE.includes(String(f.source_confidence)))
       errors.push(`${p}.source_confidence: high, medium or low`);
     if (!textArray(f.unresolved_issues, 500))

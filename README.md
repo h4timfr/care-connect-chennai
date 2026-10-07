@@ -168,8 +168,9 @@ These need backend or operational changes and are intentionally **not** worked a
 - **Provider-candidate review needs migration `00056_provider_candidates.sql`**, which **has not
   been deployed** (pgTAP `013_*`). Research candidates live in their own private tables, are
   visible only to platform admins at `/admin/providers`, and are never listed or bookable. **No
-  research catalogue has been imported:** `research/chennai-provider-candidates.json` is an empty
-  placeholder until the commissioned research file is added. See
+  research catalogue has been imported:** `research/chennai-provider-candidates.json` holds the
+  2026-10-06 research workbook (100 facilities, 399 doctors, 418 relationships, 0 registrations
+  verified), and `candidates-import.sql` is generated from it but not run anywhere. See
   [research/README.md](research/README.md).
 - **Page titles** (`<title>`) are in English; page content follows the chosen language.
 - The clinic conversation list embeds `patients.user_id` to tell patient messages from clinic

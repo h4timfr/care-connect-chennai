@@ -5,8 +5,8 @@
  *
  * Options:
  *   --check            validate only, write nothing
- *   --allow-partial    skip the commissioned totals (20 facilities / 50 doctors / 50 relationships,
- *                      41 CONFIRMED_PUBLIC / 9 POSSIBLE_NEEDS_CONFIRMATION)
+ *   --allow-partial    skip the commissioned totals (100 facilities / 399 doctors /
+ *                      418 relationships, 418 CONFIRMED_PUBLIC / 0 POSSIBLE_NEEDS_CONFIRMATION)
  *
  * The SQL is never applied automatically. Review it, run it on staging as the database owner, then
  * production. It creates RESEARCH CANDIDATES only (migration 00056): not providers, not bookable.
