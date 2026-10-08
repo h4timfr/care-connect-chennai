@@ -1,146 +1,220 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, Clock, MapPin, Phone, Mail } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, Mail, MapPin, Phone, SearchX } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
-import { Rating, SectionHeader } from "@/components/common";
+import {
+  EmptyState,
+  ErrorState,
+  PageLoader,
+  Rating,
+  ListingStatus,
+  SectionHeader,
+} from "@/components/common";
+import { clinicCanPatientContact, clinicHasBookableDoctor } from "@/lib/supabase/queries";
+import { DoctorCard } from "@/components/DoctorCard";
+import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
-import { inr } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { DoctorCard } from "@/components/DoctorCard";
+import { mailtoHref, telHref } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { describeDataError } from "@/lib/supabase/errors";
 
 export const Route = createFileRoute("/clinics/$clinicId")({
+  head: () => ({ meta: [{ title: "Clinic — CareConnect" }] }),
   component: ClinicProfile,
 });
 
 function ClinicProfile() {
   const { clinicId } = Route.useParams();
-  const app = useApp();
+  const { clinicById, doctorsOfClinic, catalog } = useApp();
 
-  const clinic = app.clinicById(clinicId);
-  const clinicDoctors = app.doctorsOfClinic(clinicId);
+  const clinic = clinicById(clinicId);
+  const { t, fmt } = useI18n();
 
-  const router = useRouter();
   if (!clinic) {
     return (
       <PatientShell>
-        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-          <h1 className="text-2xl font-bold mb-2">Clinic not found</h1>
-          <p className="text-muted-foreground mb-4">
-            The clinic you are looking for does not exist or has been removed.
-          </p>
-          <Button onClick={() => window.history.back()}>Go Back</Button>
-        </div>
+        {catalog.isLoading ? (
+          <PageLoader label={t("clinic.loading")} />
+        ) : catalog.error ? (
+          <ErrorState
+            title={t("clinic.loadError")}
+            message={t(describeDataError(catalog.error))}
+            onRetry={catalog.refetch}
+          />
+        ) : (
+          <EmptyState
+            icon={SearchX}
+            title={t("clinic.notFoundTitle")}
+            description={t("clinic.notFoundBody")}
+            action={
+              <Button asChild variant="outline" size="sm">
+                <Link to="/discover" search={{ tab: "clinics" }}>
+                  {t("clinic.browse")}
+                </Link>
+              </Button>
+            }
+          />
+        )}
       </PatientShell>
     );
   }
 
+  const doctors = doctorsOfClinic(clinic.id);
+  const patientContactable = clinicCanPatientContact(clinic, doctors);
+  const [minFee, maxFee] = clinic.feeRange;
+
   return (
     <PatientShell>
       <div className="mx-auto max-w-4xl space-y-8">
-        <button
-          onClick={() => router.history.back()}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        <Link
+          to="/discover"
+          search={{ tab: "clinics" }}
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden /> {t("clinic.backToClinics")}
+        </Link>
 
-        <div className="surface-card overflow-hidden">
-          <div className={cn("h-32 sm:h-48", "bg-gradient-to-br", clinic.photoTone)}></div>
-          <div className="p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
-              <div>
-                <h1 className="font-display text-3xl font-bold">{clinic.name}</h1>
-                <p className="text-muted-foreground mt-1 text-lg">{clinic.area}</p>
-                <div className="flex items-center gap-4 mt-3 text-sm font-medium">
-                  <Rating value={clinic.rating} count={clinic.reviewCount} />
+        <section className="surface-card overflow-hidden">
+          <div className="flex flex-col justify-between gap-5 p-5 sm:flex-row sm:items-start sm:p-8">
+            <div className="min-w-0">
+              <h1 className="font-display text-3xl font-bold">{clinic.name}</h1>
+              {clinic.area ? (
+                <p className="mt-1 text-lg text-muted-foreground">{clinic.area}</p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <Rating value={clinic.rating} count={clinic.reviewCount} sample={clinic.isSample} />
+                {maxFee > 0 ? (
                   <span className="text-muted-foreground">
-                    {inr(clinic.feeRange[0])} – {inr(clinic.feeRange[1])}
+                    {t("clinic.consultations", { min: fmt.inr(minFee), max: fmt.inr(maxFee) })}
                   </span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 shrink-0 sm:w-48">
-                <Button asChild size="lg" className="w-full">
-                  <Link to="/">Book Appointment</Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="w-full">
-                  <Link to="/messages">Message Clinic</Link>
-                </Button>
+                ) : null}
+                <ListingStatus
+                  isSample={clinic.isSample}
+                  contactable={patientContactable}
+                  bookable={clinicHasBookableDoctor(clinic.id, doctors)}
+                />
               </div>
             </div>
+            <MessageClinicButton
+              clinicId={clinic.id}
+              contactable={patientContactable}
+              size="lg"
+              className="w-full sm:w-auto"
+            />
           </div>
-        </div>
+        </section>
 
-        <div className="grid gap-8 md:grid-cols-[1fr_300px]">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-8">
-            <section>
-              <SectionHeader title="About" />
-              <p className="text-muted-foreground leading-relaxed">{clinic.about}</p>
+            <section aria-labelledby="clinic-about">
+              <SectionHeader id="clinic-about" title={t("clinic.about")} />
+              <p className="leading-relaxed text-muted-foreground" dir="auto">
+                {clinic.about || t("doctor.noDescription")}
+              </p>
+              {clinic.specialtyIds.length ? (
+                <ul className="mt-4 flex flex-wrap gap-1.5" aria-label={t("common.specialties")}>
+                  {clinic.specialtyIds.map((id) => (
+                    <li
+                      key={id}
+                      className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+                    >
+                      {fmt.specialty(id)}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </section>
 
-            <section>
-              <SectionHeader title="Doctors" />
-              <div className="grid gap-4 sm:grid-cols-2">
-                {clinicDoctors.map((d) => (
-                  <DoctorCard key={d.id} doctor={d} compact />
-                ))}
-              </div>
+            <section aria-labelledby="clinic-doctors">
+              <SectionHeader id="clinic-doctors" title={t("clinic.doctors")} />
+              {doctors.length ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {doctors.map((d) => (
+                    <DoctorCard key={d.id} doctor={d} compact />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("clinic.noDoctors")}</p>
+              )}
             </section>
 
-            <section>
-              <SectionHeader title="Services" />
-              <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                {(clinic.services || []).map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ul>
-            </section>
+            {clinic.services.length ? (
+              <section aria-labelledby="clinic-services">
+                <SectionHeader id="clinic-services" title={t("clinic.services")} />
+                <ul className="list-inside list-disc space-y-1 text-muted-foreground">
+                  {clinic.services.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
-            <section>
-              <SectionHeader title="Facilities" />
-              <div className="flex flex-wrap gap-2">
-                {(clinic.facilities || []).map((f) => (
-                  <span key={f} className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium">
-                    {f}
-                  </span>
-                ))}
-              </div>
-            </section>
+            {clinic.facilities.length ? (
+              <section aria-labelledby="clinic-facilities">
+                <SectionHeader id="clinic-facilities" title={t("clinic.facilities")} />
+                <ul className="flex flex-wrap gap-2">
+                  {clinic.facilities.map((f) => (
+                    <li key={f} className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium">
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </div>
 
-          <div className="space-y-6">
-            <section className="surface-card p-5 space-y-4">
-              <h2 className="font-display font-semibold text-lg">Contact</h2>
+          <aside className="space-y-6">
+            <section className="surface-card space-y-4 p-5" aria-labelledby="clinic-contact">
+              <h2 id="clinic-contact" className="font-display text-lg font-semibold">
+                {t("clinic.contact")}
+              </h2>
               <div className="space-y-3 text-sm text-muted-foreground">
                 <p className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-foreground" />
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
                   {clinic.address}
                 </p>
-                <p className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-foreground" />
-                  {clinic.phone}
-                </p>
-                <p className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-foreground" />
-                  {clinic.email}
-                </p>
+                {patientContactable && telHref(clinic.phone) ? (
+                  <a
+                    href={telHref(clinic.phone) ?? undefined}
+                    className="flex items-center gap-2 hover:text-foreground"
+                  >
+                    <Phone className="h-4 w-4 text-foreground" aria-hidden />
+                    <span dir="ltr">{clinic.phone}</span>
+                  </a>
+                ) : null}
+                {patientContactable && mailtoHref(clinic.email) ? (
+                  <a
+                    href={mailtoHref(clinic.email) ?? undefined}
+                    className="flex items-center gap-2 break-all hover:text-foreground"
+                  >
+                    <Mail className="h-4 w-4 shrink-0 text-foreground" aria-hidden />
+                    <span dir="ltr">{clinic.email}</span>
+                  </a>
+                ) : null}
               </div>
             </section>
 
-            <section className="surface-card p-5 space-y-4">
-              <h2 className="font-display font-semibold text-lg">Hours</h2>
-              <div className="space-y-2 text-sm">
-                {(clinic.openingHours || []).map((h) => (
-                  <div
-                    key={h.day}
-                    className="flex justify-between border-b last:border-0 pb-2 last:pb-0"
-                  >
-                    <span className="text-muted-foreground">{h.day}</span>
-                    <span className="font-medium text-right">{h.hours}</span>
-                  </div>
-                ))}
-              </div>
+            <section className="surface-card space-y-3 p-5" aria-labelledby="clinic-hours">
+              <h2 id="clinic-hours" className="font-display text-lg font-semibold">
+                {t("clinic.openingHours")}
+              </h2>
+              {clinic.openingHours.length ? (
+                <dl className="space-y-2 text-sm">
+                  {clinic.openingHours.map((h) => (
+                    <div
+                      key={h.day}
+                      className="flex justify-between border-b pb-2 last:border-0 last:pb-0"
+                    >
+                      <dt className="text-muted-foreground">{h.day}</dt>
+                      <dd className="text-end font-medium">{h.hours}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("clinic.noOpeningHours")}</p>
+              )}
             </section>
-          </div>
+          </aside>
         </div>
       </div>
     </PatientShell>

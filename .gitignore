@@ -35,3 +35,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Playwright artifacts
+test-results/
+playwright-report/
+
+# Supabase CLI local state (linked project, versions, pooler URL)
+supabase/.temp/

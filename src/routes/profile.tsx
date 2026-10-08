@@ -1,52 +1,63 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { User, Mail, Phone, MapPin, Globe, Shield, LogOut } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Building2, LogOut } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
-import { Initials } from "@/components/common";
+import { ErrorState, PageLoader } from "@/components/common";
+import { AvatarEditor } from "@/components/AvatarEditor";
+import { MissingProfile } from "@/components/MissingProfile";
+import { PersonalDetailsCard } from "@/components/PersonalDetailsCard";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
-import { longDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/supabase/auth";
-
+import { describeDataError } from "@/lib/supabase/errors";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export const Route = createFileRoute("/profile")({
+  head: () => ({ meta: [{ title: "Your profile — CareConnect" }] }),
   component: ProfilePage,
 });
 
 function ProfilePage() {
-  const { patient, isLoadingPatient } = useApp();
-  const { signOut, user } = useAuth();
-  const { loading } = useProtectedRoute("/profile");
+  const {
+    patient,
+    isLoadingPatient,
+    patientError,
+    refetchPatient,
+    doctorById,
+    catalog,
+    memberClinics,
+  } = useApp();
+  const { signOut } = useAuth();
+  const { loading, user } = useProtectedRoute();
   const navigate = useNavigate();
+  const { t, fmt } = useI18n();
 
-  if (loading || isLoadingPatient) {
+  if (loading || !user || isLoadingPatient) {
     return (
       <PatientShell>
-        <div className="p-8">Loading...</div>
+        <PageLoader
+          label={!loading && !user ? t("common.redirectingToSignIn") : t("profile.loading")}
+        />
       </PatientShell>
     );
   }
 
-  if (!user) return null;
+  if (patientError) {
+    return (
+      <PatientShell>
+        <ErrorState
+          title={t("profile.loadError")}
+          message={t(describeDataError(patientError))}
+          onRetry={refetchPatient}
+        />
+      </PatientShell>
+    );
+  }
 
   if (!patient) {
     return (
       <PatientShell>
-        <div className="flex flex-col items-center justify-center h-[50vh] text-center">
-          <User className="h-12 w-12 text-muted-foreground mb-4" />
-          <h2 className="text-xl font-bold mb-2">Profile Not Found</h2>
-          <p className="text-muted-foreground mb-6">You need to set up your profile first.</p>
-          <Button
-            onClick={async () => {
-              const { supabase } = await import("@/lib/supabase/client");
-              await supabase.auth.signOut();
-              window.location.href = "/login";
-            }}
-          >
-            Sign Out
-          </Button>
-        </div>
+        <MissingProfile action="profile" />
       </PatientShell>
     );
   }
@@ -56,82 +67,110 @@ function ProfilePage() {
     navigate({ to: "/login" });
   };
 
+  const savedDoctors = patient.savedDoctorIds
+    .map((id) => doctorById(id))
+    .filter((d): d is NonNullable<typeof d> => Boolean(d));
+
   return (
     <PatientShell>
       <div className="mx-auto max-w-2xl space-y-6">
         <div>
-          <h1 className="font-display text-2xl font-bold">Profile</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your personal information and preferences.
-          </p>
+          <h1 className="font-display text-2xl font-bold">{t("profile.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("profile.subtitle")}</p>
         </div>
 
-        <div className="surface-card p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
-          <Initials name={patient.name} className="h-24 w-24 text-3xl" />
-          <div className="flex-1 space-y-1">
-            <h2 className="font-display text-2xl font-bold">{patient.name}</h2>
-            <p className="text-muted-foreground">{patient.email}</p>
-            <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2"></div>
+        <section
+          className="surface-card flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:items-start sm:text-start"
+          aria-label={t("avatar.heading")}
+        >
+          <AvatarEditor name={patient.name || patient.email} />
+          <div className="min-w-0 space-y-1 sm:pt-6">
+            <h2 className="truncate font-display text-2xl font-bold">{patient.name}</h2>
+            <p className="truncate text-muted-foreground" dir="ltr">
+              {patient.email}
+            </p>
           </div>
-        </div>
+        </section>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <section className="surface-card p-6 space-y-4">
-            <h3 className="font-medium flex items-center gap-2">
-              <User className="h-4 w-4" /> Personal Details
-            </h3>
-            <dl className="space-y-3 text-sm">
-              <div>
-                <dt className="text-muted-foreground mb-0.5">Phone</dt>
-                <dd className="font-medium flex items-center gap-2">
-                  <Phone className="h-3 w-3 text-muted-foreground" /> {patient.phone}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground mb-0.5">Location</dt>
-                <dd className="font-medium flex items-center gap-2">
-                  <MapPin className="h-3 w-3 text-muted-foreground" /> {patient.area}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground mb-0.5">Date of Birth</dt>
-                <dd className="font-medium">{longDate(patient.dateOfBirth)}</dd>
-              </div>
-            </dl>
-          </section>
+        <PersonalDetailsCard patient={patient} />
 
-          <section className="surface-card p-6 space-y-4">
-            <h3 className="font-medium flex items-center gap-2">
-              <Globe className="h-4 w-4" /> Preferences
-            </h3>
-            <dl className="space-y-3 text-sm">
-              <div>
-                <dt className="text-muted-foreground mb-0.5">Language</dt>
-                <dd className="font-medium">{patient.preferredLanguage}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground mb-0.5">Notifications</dt>
-                <dd className="font-medium">SMS & Email</dd>
-              </div>
-            </dl>
-          </section>
-        </div>
-
-        <section className="surface-card p-6 space-y-4">
-          <h3 className="font-medium flex items-center gap-2 text-destructive">
-            <Shield className="h-4 w-4" /> Account Actions
-          </h3>
-          {/* Action Buttons */}
-          <div className="pt-4 flex flex-col gap-3">
-            <Button
-              variant="outline"
-              className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
-              onClick={handleSignOut}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+        {memberClinics.length ? (
+          <section className="surface-card space-y-3 p-6" aria-labelledby="clinic-access-heading">
+            <h2 id="clinic-access-heading" className="flex items-center gap-2 font-medium">
+              <Building2 className="h-4 w-4" aria-hidden /> {t("profile.clinicAccess")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {t.plural("profile.clinicAccessBody", memberClinics.length)}
+            </p>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/clinic">{t("profile.openClinicPortal")}</Link>
             </Button>
-          </div>
+          </section>
+        ) : (
+          <section className="surface-card space-y-3 p-6" aria-labelledby="provider-heading">
+            <h2 id="provider-heading" className="flex items-center gap-2 font-medium">
+              <Building2 className="h-4 w-4 text-primary" aria-hidden />{" "}
+              {t("profile.providerTitle")}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t("profile.providerBody")}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/providers">{t("profile.providerLearn")}</Link>
+              </Button>
+              <Button asChild variant="soft" size="sm">
+                <Link to="/clinic/signup">{t("providerEntry.clinicRegister")}</Link>
+              </Button>
+              <Button asChild variant="soft" size="sm">
+                <Link to="/doctor/signup">{t("providerEntry.doctorRegister")}</Link>
+              </Button>
+            </div>
+          </section>
+        )}
+
+        <section className="surface-card space-y-3 p-6" aria-labelledby="saved-heading">
+          <h2 id="saved-heading" className="font-medium">
+            {t("profile.savedDoctors")}
+          </h2>
+          {catalog.error && patient.savedDoctorIds.length ? (
+            <ErrorState
+              title={t("profile.savedLoadError")}
+              message={t(describeDataError(catalog.error))}
+              onRetry={catalog.refetch}
+            />
+          ) : catalog.isLoading && patient.savedDoctorIds.length ? (
+            <p className="text-sm text-muted-foreground">{t("profile.savedLoading")}</p>
+          ) : savedDoctors.length ? (
+            <ul className="divide-y">
+              {savedDoctors.map((d) => (
+                <li key={d.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{d.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {fmt.specialty(d.specialtyId)}
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/doctors/$doctorId" params={{ doctorId: d.id }}>
+                      {t("common.view")}
+                    </Link>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("profile.noSaved")}</p>
+          )}
+        </section>
+
+        <section className="surface-card p-6">
+          <Button
+            variant="outline"
+            className="w-full border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4 rtl:rotate-180" aria-hidden />
+            {t("common.signOut")}
+          </Button>
         </section>
       </div>
     </PatientShell>

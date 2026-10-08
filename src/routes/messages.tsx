@@ -1,263 +1,303 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { MessageSquare, ArrowLeft, Send, User } from "lucide-react";
+import { ArrowLeft, Loader2, MessageSquare, Send } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { PatientShell } from "@/components/layout/PatientShell";
-import { EmptyState, Initials } from "@/components/common";
-import { useApp } from "@/lib/store";
-import { cn } from "@/lib/utils";
-import { useState, useRef, useEffect } from "react";
-import { to12h } from "@/lib/format";
+import { EmptyState, ErrorState, Initials, PageLoader } from "@/components/common";
+import { MissingProfile } from "@/components/MissingProfile";
+import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
-
+import { useApp } from "@/lib/store";
+import { describeDataError } from "@/lib/supabase/errors";
+import { isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import type { Conversation } from "@/lib/types";
 
 export const Route = createFileRoute("/messages")({
+  // Returned explicitly so an invalid raw ?c= can't survive TanStack's merge with the URL.
+  validateSearch: ({ c }: Record<string, unknown>): { c?: string | undefined } => ({
+    c: typeof c === "string" && c ? c : undefined,
+  }),
+  head: () => ({ meta: [{ title: "Messages — CareConnect" }] }),
   component: MessagesView,
-  validateSearch: (search: Record<string, unknown>) => {
-    const params: { c?: string } = {};
-    if (typeof search["c"] === "string" && search["c"]) {
-      params.c = search["c"];
-    }
-    return params;
-  },
 });
 
+const MAX_MESSAGE_LENGTH = 2000;
+
+const lastSentAt = (c: Conversation) => c.messages[c.messages.length - 1]?.sentAt ?? "";
+
 function MessagesView() {
-  const { conversations, patient, markRead, sendMessage, clinicById, doctorById } = useApp();
-  const search = Route.useSearch();
-  const navigate = useNavigate();
-  const { loading, user } = useProtectedRoute("/messages");
-  const [text, setText] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
+  const {
+    conversations,
+    conversationsStatus: status,
+    patient,
+    isLoadingPatient,
+    patientError,
+  } = useApp();
+  const { loading, user } = useProtectedRoute();
+  const { t } = useI18n();
+  const { c: requestedId } = Route.useSearch();
+  // A conversation that was just started can be newer than the cached list: wait for the
+  // refetch rather than briefly claiming the inbox is empty or the conversation unavailable.
+  const awaitingRequested =
+    !!requestedId && status.isFetching && !conversations.some((c) => c.id === requestedId);
 
-  const myConversations = conversations
-    .filter((c) => c.patientId === patient?.id)
-    .sort((a, b) => {
-      const lastA = a.messages?.[a.messages.length - 1]?.sentAt ?? "";
-      const lastB = b.messages?.[b.messages.length - 1]?.sentAt ?? "";
-      return lastB.localeCompare(lastA);
-    });
-
-  const activeConversation = search.c ? myConversations.find((c) => c.id === search.c) : undefined;
-
-  useEffect(() => {
-    if (activeConversation && activeConversation.unreadForPatient > 0) {
-      markRead(activeConversation.id, "patient");
-    }
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeConversation, markRead]);
-
-  if (loading) {
-    return (
-      <PatientShell>
-        <div className="flex h-[80vh] flex-col items-center justify-center space-y-4">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </PatientShell>
+  let body;
+  if (loading || !user || isLoadingPatient || status.isLoading || awaitingRequested) {
+    body = <PageLoader label={t("messages.loading")} />;
+  } else if (patientError || status.error) {
+    body = (
+      <ErrorState
+        title={t("messages.loadError")}
+        message={t(describeDataError(patientError ?? status.error))}
+        onRetry={status.refetch}
+      />
     );
+  } else if (!patient) {
+    body = <MissingProfile action="messages" />;
+  } else {
+    const mine = conversations
+      .filter((c) => c.patientId === patient.id)
+      .sort((a, b) => lastSentAt(b).localeCompare(lastSentAt(a)));
+    body = <Inbox conversations={mine} />;
   }
-
-  if (!user || !patient) {
-    return null; // redirecting
-  }
-
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text.trim() || !activeConversation) return;
-    sendMessage(activeConversation.id, "patient", text.trim());
-    setText("");
-  };
-
-  const clinic = activeConversation ? clinicById(activeConversation.clinicId) : undefined;
-  const doctor = activeConversation?.doctorId ? doctorById(activeConversation.doctorId) : undefined;
-  const activeTitle = doctor ? `${doctor.name} (${clinic?.name})` : clinic?.name;
 
   return (
     <PatientShell>
+      <div className="space-y-4">
+        <CatalogNotice />
+        {body}
+      </div>
+    </PatientShell>
+  );
+}
+
+function Inbox({ conversations }: { conversations: Conversation[] }) {
+  const { sendMessage, clinicById, doctorById } = useApp();
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/messages" });
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+  const { t, fmt } = useI18n();
+
+  const active = search.c ? conversations.find((c) => c.id === search.c) : undefined;
+  const activeId = active?.id;
+  const activeMessageCount = active?.messages.length ?? 0;
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [activeId, activeMessageCount]);
+
+  const titleOf = (c: Conversation) => {
+    const clinic = clinicById(c.clinicId);
+    const doctor = c.doctorId ? doctorById(c.doctorId) : undefined;
+    const clinicName = clinic?.name ?? t("common.clinic");
+    return doctor ? `${clinicName} · ${doctor.name}` : clinicName;
+  };
+
+  const handleSend = async (e?: FormEvent) => {
+    e?.preventDefault();
+    const body = text.trim();
+    if (!body || !active || sending) return;
+    setSending(true);
+    try {
+      await sendMessage(active.id, body);
+      setText("");
+    } catch (err) {
+      toast.error(t("messages.notSent", { reason: t(describeDataError(err)) }));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!conversations.length) {
+    return (
+      <div className="space-y-6">
+        <h1 className="font-display text-2xl font-bold">{t("messages.title")}</h1>
+        <EmptyState
+          icon={MessageSquare}
+          title={t("messages.emptyTitle")}
+          description={t("messages.emptyBody")}
+          action={
+            <Button asChild size="sm">
+              <Link to="/discover">{t("common.findDoctors")}</Link>
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid h-[calc(100dvh-13rem)] min-h-[420px] overflow-hidden rounded-xl border bg-card shadow-sm md:grid-cols-[300px_minmax(0,1fr)] lg:h-[calc(100dvh-10rem)] lg:grid-cols-[340px_minmax(0,1fr)]">
       <div
         className={cn(
-          "grid h-[calc(100vh-140px)] min-h-[400px] overflow-hidden rounded-xl border bg-card shadow-sm md:grid-cols-[320px_minmax(0,1fr)] lg:grid-cols-[380px_minmax(0,1fr)]",
+          "flex min-h-0 flex-col border-e bg-muted/20",
+          active ? "hidden md:flex" : "flex",
         )}
       >
-        {/* Sidebar */}
-        <div
-          className={cn(
-            "flex flex-col border-r bg-muted/20",
-            activeConversation ? "hidden md:flex" : "flex",
-          )}
-        >
-          <div className="p-4 border-b bg-card">
-            <h1 className="font-display font-semibold text-lg">Messages</h1>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {myConversations.length > 0 ? (
-              <div className="divide-y">
-                {myConversations.map((c) => {
-                  const cClinic = clinicById(c.clinicId);
-                  const cDoctor = c.doctorId ? doctorById(c.doctorId) : undefined;
-                  const last = c.messages[c.messages.length - 1];
-                  const title = cDoctor ? `${cDoctor.name} (${cClinic?.name})` : cClinic?.name;
-                  const isActive = search.c === c.id;
-
-                  return (
-                    <div
-                      key={c.id}
-                      className={cn(
-                        "p-4 flex items-center gap-3 cursor-pointer transition-colors",
-                        isActive ? "bg-primary-soft/50" : "hover:bg-muted/50",
-                      )}
-                      onClick={() => {
-                        navigate({ to: "/messages", search: { c: c.id } });
-                      }}
-                    >
-                      <div className="relative shrink-0">
-                        <Initials name={title ?? "Clinic"} className="h-10 w-10 text-xs" />
-                        {c.unreadForPatient > 0 && !isActive && (
-                          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-card bg-primary" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex justify-between items-baseline mb-0.5">
-                          <h3
-                            className={cn(
-                              "font-medium truncate text-sm",
-                              c.unreadForPatient > 0 && !isActive && "font-bold text-foreground",
-                            )}
-                          >
-                            {title}
-                          </h3>
-                          {last && (
-                            <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                              {new Date(last.sentAt).toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </span>
-                          )}
-                        </div>
-                        <p
-                          className={cn(
-                            "text-xs truncate",
-                            c.unreadForPatient > 0 && !isActive
-                              ? "font-medium text-foreground"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {last
-                            ? last.sender === "patient"
-                              ? `You: ${last.body}`
-                              : last.body
-                            : "No messages"}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                No conversations yet.
-              </div>
-            )}
-          </div>
+        <div className="border-b bg-card p-4">
+          <h1 className="font-display text-lg font-semibold">{t("messages.title")}</h1>
         </div>
-
-        {/* Chat Area */}
-        <div
-          className={cn(
-            "flex flex-col bg-background/50",
-            !activeConversation ? "hidden md:flex" : "flex",
-          )}
-        >
-          {activeConversation ? (
-            <>
-              <div className="flex items-center gap-3 p-3 border-b bg-card">
+        <ul className="flex-1 divide-y overflow-y-auto" aria-label={t("messages.conversations")}>
+          {conversations.map((c) => {
+            const last = c.messages[c.messages.length - 1];
+            const title = titleOf(c);
+            const isActive = c.id === activeId;
+            return (
+              <li key={c.id}>
                 <button
-                  onClick={() => navigate({ to: "/messages" })}
-                  className="md:hidden p-2 -ml-2 text-muted-foreground"
+                  type="button"
+                  onClick={() => navigate({ search: { c: c.id } })}
+                  aria-current={isActive ? "true" : undefined}
+                  className={cn(
+                    "flex w-full items-center gap-3 p-4 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    isActive ? "bg-primary-soft/50" : "hover:bg-muted/50",
+                  )}
                 >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-                <Initials name={activeTitle ?? "Clinic"} className="h-9 w-9 text-xs" />
-                <div className="min-w-0">
-                  <h2 className="font-semibold text-sm truncate">{activeTitle}</h2>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {activeConversation.kind === "appointment"
-                      ? "Appointment Query"
-                      : "General Inquiry"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <div className="text-center">
-                  <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                    Messages are for clinic communication. Not for medical emergencies.
+                  <span className="relative shrink-0">
+                    <Initials name={title} className="h-10 w-10 text-xs" />
                   </span>
-                </div>
+                  <span className="min-w-0 flex-1">
+                    <span className="mb-0.5 flex items-baseline justify-between gap-2">
+                      <span className="truncate text-sm font-medium">{title}</span>
+                      {last ? (
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {fmt.shortDate(isoDate(new Date(last.sentAt)))}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground" dir="auto">
+                      {last
+                        ? last.sender === "patient"
+                          ? t("common.youPrefix", { text: last.body })
+                          : last.body
+                        : t("messages.noMessages")}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
-                {activeConversation.messages.map((m) => {
+      <div
+        className={cn("flex min-h-0 flex-col bg-background/50", active ? "flex" : "hidden md:flex")}
+      >
+        {active ? (
+          <>
+            <div className="flex items-center gap-3 border-b bg-card p-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => navigate({ search: {} })}
+                aria-label={t("messages.back")}
+              >
+                <ArrowLeft className="h-5 w-5 rtl:rotate-180" aria-hidden />
+              </Button>
+              <Initials name={titleOf(active)} className="h-9 w-9 text-xs" />
+              <div className="min-w-0">
+                <h2 className="truncate text-sm font-semibold">{titleOf(active)}</h2>
+                <p className="truncate text-xs text-muted-foreground">
+                  {active.kind === "appointment"
+                    ? t("messages.aboutAppointment")
+                    : t("messages.general")}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite">
+              <p className="text-center">
+                <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {t("messages.notForEmergencies")}
+                </span>
+              </p>
+              {active.messages.length ? (
+                active.messages.map((m) => {
                   const isMe = m.sender === "patient";
                   return (
                     <div
                       key={m.id}
                       className={cn(
-                        "flex flex-col max-w-[80%]",
-                        isMe ? "ml-auto items-end" : "mr-auto items-start",
+                        "flex max-w-[80%] flex-col",
+                        isMe ? "ms-auto items-end" : "me-auto items-start",
                       )}
                     >
                       <div
                         className={cn(
-                          "px-4 py-2 rounded-2xl text-sm",
+                          "whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-start text-sm",
                           isMe
-                            ? "bg-primary text-primary-foreground rounded-tr-sm"
-                            : "bg-muted text-foreground rounded-tl-sm",
+                            ? "rounded-se-sm bg-primary text-primary-foreground"
+                            : "rounded-ss-sm bg-muted text-foreground",
                         )}
                       >
-                        {m.body}
+                        <span className="sr-only">
+                          {isMe ? t("messages.senderYou") : t("messages.senderClinic")}{" "}
+                        </span>
+                        <span dir="auto">{m.body}</span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-                        {to12h(m.sentAt.split("T")[1]?.substring(0, 5) ?? "00:00")}
+                      <span className="mx-1 mt-1 text-[10px] text-muted-foreground">
+                        {fmt.shortDate(isoDate(new Date(m.sentAt)))}, {fmt.clockTime(m.sentAt)}
                       </span>
                     </div>
                   );
-                })}
-                <div ref={endRef} />
-              </div>
-
-              <form onSubmit={handleSend} className="p-3 border-t bg-card">
-                <div className="flex items-end gap-2 bg-muted/50 rounded-xl p-1 border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all">
-                  <textarea
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 max-h-32 min-h-10 resize-none bg-transparent px-3 py-2 text-sm outline-none"
-                    rows={1}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend(e);
-                      }
-                    }}
-                  />
-                  <Button
-                    type="submit"
-                    size="icon"
-                    className="h-9 w-9 rounded-lg shrink-0 mb-0.5 mr-0.5"
-                    disabled={!text.trim()}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </form>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mb-4 opacity-20" />
-              <p>Select a conversation</p>
+                })
+              ) : (
+                <p className="pt-8 text-center text-sm text-muted-foreground">
+                  {t("messages.writeBelow")}
+                </p>
+              )}
+              <div ref={endRef} />
             </div>
-          )}
-        </div>
+
+            <form onSubmit={handleSend} className="border-t bg-card p-3">
+              <div className="flex items-end gap-2 rounded-xl border bg-muted/50 p-1 transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
+                <label htmlFor="message-input" className="sr-only">
+                  {t("messages.inputLabel")}
+                </label>
+                <textarea
+                  id="message-input"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={t("messages.placeholder")}
+                  maxLength={MAX_MESSAGE_LENGTH}
+                  className="max-h-32 min-h-10 flex-1 resize-none bg-transparent px-3 py-2 text-sm outline-none"
+                  rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleSend();
+                    }
+                  }}
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="mb-0.5 me-0.5 h-9 w-9 shrink-0 rounded-lg"
+                  disabled={!text.trim() || sending}
+                  aria-label={t("messages.send")}
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Send className="h-4 w-4 rtl:-scale-x-100" aria-hidden />
+                  )}
+                </Button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
+            <MessageSquare className="h-12 w-12 opacity-20" aria-hidden />
+            <p>{search.c ? t("messages.unavailable") : t("messages.select")}</p>
+          </div>
+        )}
       </div>
-    </PatientShell>
+    </div>
   );
 }

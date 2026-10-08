@@ -1,63 +1,93 @@
-﻿import { Link } from "@tanstack/react-router";
-import { Clock, MapPin, Phone } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Rating } from "@/components/common";
+import { ListingStatus, Rating } from "@/components/common";
+import { clinicCanPatientContact, clinicHasBookableDoctor } from "@/lib/supabase/queries";
 import { useApp } from "@/lib/store";
-import { specialtyName } from "@/lib/format";
-import { inr, relativeDay, to12h } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import type { Clinic } from "@/lib/types";
 
 export function ClinicCard({ clinic }: { clinic: Clinic }) {
   const { doctorsOfClinic } = useApp();
-  const doctors = doctorsOfClinic(clinic.id);
-  const nextSlots = null; // Removed mock availability
+  const clinicDoctors = doctorsOfClinic(clinic.id);
+  const doctorCount = clinicDoctors.length;
+  // "Verified" only when a doctor here is bookable (verified, active link); a clinic merely being
+  // in the directory is not a verification.
+  const bookable = clinicHasBookableDoctor(clinic.id, clinicDoctors);
+  const [minFee, maxFee] = clinic.feeRange;
+  const { t, fmt } = useI18n();
 
   return (
-    <article className="surface-card overflow-hidden transition-shadow hover:shadow-pop">
-      <div className={`h-24 bg-gradient-to-r ${clinic.photoTone}`} aria-hidden />
-      <div className="space-y-3 p-4 sm:p-5">
+    <article className="surface-card flex flex-col overflow-hidden transition-[box-shadow,border-color] hover:border-primary/30 hover:shadow-raised">
+      <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">
-            <h3 className="truncate font-display text-base font-semibold">{clinic.name}</h3>
-            <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {clinic.area}
-            </p>
+            <h3 className="truncate font-display text-base font-semibold">
+              <Link
+                to="/clinics/$clinicId"
+                params={{ clinicId: clinic.id }}
+                className="hover:underline focus-visible:underline focus-visible:outline-none"
+              >
+                {clinic.name}
+              </Link>
+            </h3>
+            {clinic.area ? (
+              <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {clinic.area}
+              </p>
+            ) : null}
           </div>
-          <Rating value={clinic.rating} count={clinic.reviewCount} />
+          <Rating value={clinic.rating} count={clinic.reviewCount} sample={clinic.isSample} />
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {clinic.specialtyIds.map((id) => (
-            <span
-              key={id}
-              className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
-            >
-              {specialtyName(id)}
-            </span>
-          ))}
-        </div>
+        {clinic.specialtyIds.length ? (
+          <ul className="flex flex-wrap gap-1.5" aria-label={t("common.specialties")}>
+            {clinic.specialtyIds.map((id) => (
+              <li
+                key={id}
+                className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+              >
+                {fmt.specialty(id)}
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
-        <dl className="grid gap-1.5 text-sm text-muted-foreground sm:grid-cols-2">
-          <div className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{clinic.openingHours[0]?.hours}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{clinic.phone}</span>
-          </div>
+        <dl className="grid gap-1.5 text-sm text-muted-foreground">
+          {clinicCanPatientContact(clinic, clinicDoctors) ? (
+            <div>
+              <dt className="sr-only">{t("common.phone")}</dt>
+              <dd className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="truncate" dir="ltr">
+                  {clinic.phone}
+                </span>
+              </dd>
+            </div>
+          ) : null}
           <div>
-            {doctors.length} doctors · {inr(clinic.feeRange[0])}–{inr(clinic.feeRange[1])}
+            <dt className="sr-only">{t("clinic.doctorsAndFees")}</dt>
+            <dd>
+              {t.plural("common.doctors", doctorCount)}
+              {maxFee > 0
+                ? ` · ${t("common.feeRange", { min: fmt.inr(minFee), max: fmt.inr(maxFee) })}`
+                : ""}
+            </dd>
           </div>
-          <div className="truncate">{clinic.services.slice(0, 2).join(", ")}</div>
         </dl>
 
         <p className="truncate text-sm text-muted-foreground">{clinic.address}</p>
+        <ListingStatus
+          isSample={clinic.isSample}
+          contactable={clinicCanPatientContact(clinic, clinicDoctors)}
+          bookable={bookable}
+          className="self-start"
+        />
 
-        <Button asChild className="w-full" size="sm">
+        <Button asChild className="mt-auto w-full" size="sm">
           <Link to="/clinics/$clinicId" params={{ clinicId: clinic.id }}>
-            View clinic
+            {t("clinic.viewClinic")}
           </Link>
         </Button>
       </div>

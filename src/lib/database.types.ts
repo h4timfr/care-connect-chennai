@@ -207,6 +207,12 @@ export type Database = {
           fee_range: number[] | null;
           id: string;
           is_demo: boolean;
+          clinic_verification_state: string;
+          is_published: boolean;
+          patient_contact_permission: string;
+          patient_contact_permission_at: string | null;
+          patient_contact_permission_by: string | null;
+          booking_enabled: boolean;
           languages: string[] | null;
           lat: number | null;
           lng: number | null;
@@ -229,6 +235,12 @@ export type Database = {
           fee_range?: number[] | null;
           id?: string;
           is_demo?: boolean;
+          clinic_verification_state?: string;
+          is_published?: boolean;
+          patient_contact_permission?: string;
+          patient_contact_permission_at?: string | null;
+          patient_contact_permission_by?: string | null;
+          booking_enabled?: boolean;
           languages?: string[] | null;
           lat?: number | null;
           lng?: number | null;
@@ -251,6 +263,12 @@ export type Database = {
           fee_range?: number[] | null;
           id?: string;
           is_demo?: boolean;
+          clinic_verification_state?: string;
+          is_published?: boolean;
+          patient_contact_permission?: string;
+          patient_contact_permission_at?: string | null;
+          patient_contact_permission_by?: string | null;
+          booking_enabled?: boolean;
           languages?: string[] | null;
           lat?: number | null;
           lng?: number | null;
@@ -567,6 +585,296 @@ export type Database = {
           },
         ];
       };
+      // Private provider-candidate review (migration 00056, local, not yet deployed). Platform
+      // admins only. Research facts are written by the owner-run import; the UI updates review state.
+      candidate_facilities: {
+        Row: {
+          address: string | null;
+          booking_enabled: false;
+          created_at: string;
+          facility_type: string;
+          id: string;
+          locality: string;
+          name: string;
+          notes: string | null;
+          permission_status: "unknown" | "requested" | "granted" | "denied";
+          research_id: string;
+          researched_on: string;
+          review_status:
+            | "candidate"
+            | "under_review"
+            | "contact_pending"
+            | "contacted"
+            | "verification_pending"
+            | "verified"
+            | "rejected";
+          source_confidence: "high" | "medium" | "low";
+          specialties: string[];
+          unresolved_issues: string[];
+          updated_at: string;
+          website: string | null;
+        };
+        Insert: never;
+        Update: {
+          notes?: string | null;
+          permission_status?: "unknown" | "requested" | "granted" | "denied";
+          review_status?:
+            | "candidate"
+            | "under_review"
+            | "contact_pending"
+            | "contacted"
+            | "verification_pending"
+            | "verified"
+            | "rejected";
+        };
+        Relationships: [];
+      };
+      candidate_doctors: {
+        Row: {
+          booking_enabled: false;
+          created_at: string;
+          full_name: string;
+          id: string;
+          notes: string | null;
+          permission_status: "unknown" | "requested" | "granted" | "denied";
+          qualifications: string | null;
+          registration_info: string | null;
+          registration_status: "not_verified" | "public_listing_seen" | "verified";
+          research_id: string;
+          researched_on: string;
+          review_status:
+            | "candidate"
+            | "under_review"
+            | "contact_pending"
+            | "contacted"
+            | "verification_pending"
+            | "verified"
+            | "rejected";
+          source_confidence: "high" | "medium" | "low";
+          specialty: string;
+          unresolved_issues: string[];
+          updated_at: string;
+        };
+        Insert: never;
+        Update: {
+          notes?: string | null;
+          permission_status?: "unknown" | "requested" | "granted" | "denied";
+          review_status?:
+            | "candidate"
+            | "under_review"
+            | "contact_pending"
+            | "contacted"
+            | "verification_pending"
+            | "verified"
+            | "rejected";
+        };
+        Relationships: [];
+      };
+      candidate_relationships: {
+        Row: {
+          careconnect_status: "unverified" | "confirmed" | "rejected";
+          confidence: "high" | "medium" | "low";
+          created_at: string;
+          doctor_candidate_id: string;
+          facility_candidate_id: string;
+          id: string;
+          notes: string | null;
+          research_status: "CONFIRMED_PUBLIC" | "POSSIBLE_NEEDS_CONFIRMATION";
+          unresolved_issues: string[];
+          updated_at: string;
+        };
+        Insert: never;
+        Update: {
+          careconnect_status?: "unverified" | "confirmed" | "rejected";
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      candidate_sources: {
+        Row: {
+          confidence: "high" | "medium" | "low";
+          created_at: string;
+          doctor_candidate_id: string | null;
+          facility_candidate_id: string | null;
+          id: string;
+          origin: "research" | "admin";
+          relationship_id: string | null;
+          researched_on: string;
+          source_type:
+            | "official_facility"
+            | "official_institution"
+            | "government_registry"
+            | "directory"
+            | "news"
+            | "other";
+          supports: string;
+          url: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      candidate_evidence: {
+        Row: {
+          doctor_candidate_id: string | null;
+          evidence_type:
+            | "provider_identity"
+            | "clinic_identity"
+            | "doctor_registration"
+            | "doctor_clinic_relationship"
+            | "address"
+            | "contact_details"
+            | "listing_permission"
+            | "appointment_arrangement";
+          facility_candidate_id: string | null;
+          id: string;
+          recorded_at: string;
+          recorded_by: string;
+          relationship_id: string | null;
+          source: string;
+          value: string;
+        };
+        Insert: {
+          doctor_candidate_id?: string | null;
+          evidence_type: Database["public"]["Tables"]["candidate_evidence"]["Row"]["evidence_type"];
+          facility_candidate_id?: string | null;
+          relationship_id?: string | null;
+          source: string;
+          value: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      candidate_contacts: {
+        Row: {
+          contacted_on: string;
+          doctor_candidate_id: string | null;
+          facility_candidate_id: string | null;
+          id: string;
+          method: "phone" | "email" | "in_person" | "website_form" | "other";
+          notes: string | null;
+          outcome:
+            "no_response" | "reached" | "interested" | "declined" | "follow_up" | "wrong_contact";
+          permission_status: "unknown" | "requested" | "granted" | "denied";
+          recorded_at: string;
+          recorded_by: string;
+        };
+        Insert: {
+          contacted_on: string;
+          doctor_candidate_id?: string | null;
+          facility_candidate_id?: string | null;
+          method: Database["public"]["Tables"]["candidate_contacts"]["Row"]["method"];
+          notes?: string | null;
+          outcome: Database["public"]["Tables"]["candidate_contacts"]["Row"]["outcome"];
+          permission_status?: "unknown" | "requested" | "granted" | "denied";
+        };
+        Update: never;
+        Relationships: [];
+      };
+      // Added by migration 00055 (local, not yet deployed). Applicants insert content columns only.
+      doctor_applications: {
+        Row: {
+          applicant_id: string;
+          clinic_id: string | null;
+          clinic_note: string | null;
+          consultation_fee: number | null;
+          contact_email: string;
+          contact_phone: string;
+          created_at: string;
+          doctor_id: string | null;
+          experience_years: number;
+          full_name: string;
+          id: string;
+          message: string | null;
+          qualifications: string;
+          registration_council: string;
+          registration_number: string;
+          review_note: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          specialty_id: string;
+          status: "submitted" | "approved" | "rejected" | "withdrawn";
+          updated_at: string;
+        };
+        Insert: {
+          clinic_id?: string | null;
+          clinic_note?: string | null;
+          consultation_fee?: number | null;
+          contact_email: string;
+          contact_phone: string;
+          experience_years: number;
+          full_name: string;
+          message?: string | null;
+          qualifications: string;
+          registration_council: string;
+          registration_number: string;
+          specialty_id: string;
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "doctor_applications_clinic_id_fkey";
+            columns: ["clinic_id"];
+            isOneToOne: false;
+            referencedRelation: "clinics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      // Added by migration 00054 (local, not yet deployed). Applicants may insert only the content
+      // columns; status, owner and review fields come from defaults and the review functions.
+      provider_applications: {
+        Row: {
+          address: string;
+          applicant_id: string;
+          area: string;
+          clinic_id: string | null;
+          clinic_name: string;
+          contact_email: string;
+          contact_name: string;
+          contact_phone: string;
+          contact_role: "owner" | "administrator" | "doctor" | "manager" | "other";
+          created_at: string;
+          doctor_count: number | null;
+          id: string;
+          message: string | null;
+          registration_details: string;
+          review_note: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: "submitted" | "approved" | "rejected" | "withdrawn";
+          updated_at: string;
+        };
+        Insert: {
+          address: string;
+          area: string;
+          clinic_name: string;
+          contact_email: string;
+          contact_name: string;
+          contact_phone: string;
+          contact_role: "owner" | "administrator" | "doctor" | "manager" | "other";
+          doctor_count?: number | null;
+          message?: string | null;
+          registration_details: string;
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "provider_applications_applicant_id_fkey";
+            columns: ["applicant_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "provider_applications_clinic_id_fkey";
+            columns: ["clinic_id"];
+            isOneToOne: false;
+            referencedRelation: "clinics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_roles: {
         Row: {
           created_at: string;
@@ -667,6 +975,28 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      admin_set_clinic_publication_state: {
+        Args: {
+          p_booking_enabled: boolean;
+          p_clinic_id: string;
+          p_contact_permission: string;
+          p_is_published: boolean;
+          p_verification_state: string;
+        };
+        Returns: undefined;
+      };
+      admin_list_clinics: {
+        Args: Record<string, never>;
+        Returns: Database["public"]["Tables"]["clinics"]["Row"][];
+      };
+      get_my_clinic_contacts: {
+        Args: Record<string, never>;
+        Returns: {
+          clinic_id: string;
+          email: string;
+          phone: string;
+        }[];
+      };
       get_doctor_availability: {
         Args: { p_date: string; p_doctor_id: string };
         Returns: {
@@ -674,12 +1004,73 @@ export type Database = {
         }[];
       };
       get_doctor_slots: {
-        Args: { p_date: string; p_doctor_id: string };
+        // The legacy two-argument overload is removed by migration 00058.
+        Args: { p_clinic_id: string; p_date: string; p_doctor_id: string };
         Returns: {
           available: boolean;
           slot_time: string;
         }[];
       };
+      // Doctor portal functions from migration 00055 (local, not yet deployed).
+      admin_review_doctor_application: {
+        Args: {
+          p_application_id: string;
+          p_approve: boolean;
+          p_note: string | null;
+          p_existing_doctor_id?: string | null;
+        };
+        Returns: string | null;
+      };
+      doctor_appointments: {
+        Args: Record<string, never>;
+        Returns: {
+          clinic_id: string;
+          clinic_name: string;
+          date: string;
+          id: string;
+          patient_name: string;
+          reason: string | null;
+          status: Database["public"]["Enums"]["appointment_status"];
+          time: string;
+        }[];
+      };
+      doctor_conversations: {
+        Args: Record<string, never>;
+        Returns: {
+          clinic_id: string;
+          clinic_name: string;
+          created_at: string;
+          id: string;
+          messages: Json;
+          patient_name: string;
+        }[];
+      };
+      withdraw_doctor_application: { Args: { p_application_id: string }; Returns: undefined };
+      // Onboarding functions from migration 00054 (local, not yet deployed).
+      admin_add_clinic_member: {
+        Args: { p_clinic_id: string; p_email: string; p_role: string };
+        Returns: string;
+      };
+      admin_review_provider_application: {
+        Args: { p_application_id: string; p_approve: boolean; p_note: string | null };
+        Returns: string | null;
+      };
+      clinic_propose_doctor: {
+        Args: {
+          p_about: string | null;
+          p_clinic_id: string;
+          p_consultation_fee: number;
+          p_experience_years: number;
+          p_gender: string | null;
+          p_languages: string[];
+          p_name: string;
+          p_qualifications: string[];
+          p_registration_note: string;
+          p_specialty_id: string;
+        };
+        Returns: string;
+      };
+      withdraw_provider_application: { Args: { p_application_id: string }; Returns: undefined };
       toggle_saved_clinic: { Args: { p_clinic_id: string }; Returns: string[] };
       toggle_saved_doctor: { Args: { p_doctor_id: string }; Returns: string[] };
     };

@@ -1,0 +1,85 @@
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { Loader2, MessageCircle } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button, type ButtonProps } from "@/components/ui/button";
+import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/supabase/auth";
+import { describeDataError } from "@/lib/supabase/errors";
+import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+
+/** Keeps the button's height when the (often long, translated) label has to wrap. */
+const MIN_HEIGHT = { sm: "min-h-8", default: "min-h-9", lg: "min-h-11", icon: "min-h-9" } as const;
+
+/** Opens (or starts) the patient's conversation with a clinic. */
+export function MessageClinicButton({
+  clinicId,
+  doctorId,
+  appointmentId,
+  variant = "outline",
+  size = "sm",
+  className,
+  contactable,
+}: {
+  clinicId: string;
+  doctorId?: string;
+  appointmentId?: string;
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
+  className?: string;
+  contactable: boolean;
+}) {
+  const { user } = useAuth();
+  const { patient, isLoadingPatient, ensureConversation } = useApp();
+  const navigate = useNavigate();
+  const href = useRouterState({ select: (s) => s.location.href });
+  const [opening, setOpening] = useState(false);
+  const { t } = useI18n();
+
+  const open = async () => {
+    if (!user) {
+      navigate({ to: "/login", search: { redirect: href } });
+      return;
+    }
+    if (!patient) {
+      toast.error(t("messageClinic.noProfile"));
+      return;
+    }
+    setOpening(true);
+    try {
+      const conversationId = await ensureConversation({
+        clinicId,
+        ...(doctorId ? { doctorId } : {}),
+        ...(appointmentId ? { appointmentId } : {}),
+      });
+      navigate({ to: "/messages", search: { c: conversationId } });
+    } catch (err) {
+      toast.error(t(describeDataError(err)));
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  if (!contactable) return null;
+  return (
+    <Button
+      variant={variant}
+      size={size}
+      className={cn(
+        "h-auto max-w-full whitespace-normal py-1.5 text-start",
+        MIN_HEIGHT[size ?? "default"],
+        className,
+      )}
+      onClick={open}
+      disabled={opening || (!!user && isLoadingPatient)}
+    >
+      {opening ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      ) : (
+        <MessageCircle className="h-4 w-4" aria-hidden />
+      )}
+      {t("messageClinic.button")}
+    </Button>
+  );
+}

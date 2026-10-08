@@ -1,141 +1,209 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Banknote, CalendarDays, Stethoscope, Users, type LucideIcon } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { ClinicShell } from "@/components/layout/ClinicShell";
-import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { useApp } from "@/lib/store";
-import { CalendarDays, Users, Stethoscope, Banknote } from "lucide-react";
-import { StatusBadge } from "@/components/common";
-import { isoDate, shortDate, to12h } from "@/lib/format";
-import { useMemo } from "react";
+import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
+import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
+import { useApp } from "@/lib/store";
+import { isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { describeStatusError } from "@/lib/supabase/appointments";
+import type { AppointmentStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/clinic/")({
   component: ClinicDashboard,
 });
 
+const NEEDS_ACTION_LIMIT = 5;
+
 function ClinicDashboard() {
-  const { loading, user } = useProtectedRoute();
-  const { clinicAppointments: appointments, activeClinic, doctors, doctorById } = useApp();
-
-  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
+  const { activeClinic, clinicAppointmentsStatus: status } = useApp();
   const today = isoDate(new Date());
+  const { t, fmt } = useI18n();
 
-  const clinicAppointments = appointments.filter((a) => a.clinicId === activeClinic.id);
-  const todayAppointments = clinicAppointments.filter(
-    (a) => a.date === today && a.status !== "cancelled",
-  );
-  const pendingRequests = clinicAppointments.filter((a) => a.status === "pending");
-
-  const estimatedRevenue = todayAppointments
-    .filter((a) => a.status === "completed" || a.status === "arrived" || a.status === "confirmed")
-    .reduce((sum, a) => sum + a.fee, 0);
-
-  const activeDoctors = doctors.filter((d) => d.clinicIds?.includes(activeClinic.id)).length;
+  let body;
+  if (!activeClinic) {
+    body = null;
+  } else if (status.isLoading) {
+    body = <PageLoader label={t("clinicDashboard.loading")} />;
+  } else if (status.error) {
+    body = (
+      <ErrorState
+        title={t("clinicDashboard.loadError")}
+        message={t(describeStatusError(status.error))}
+        onRetry={status.refetch}
+      />
+    );
+  } else {
+    body = <Dashboard clinicId={activeClinic.id} today={today} />;
+  }
 
   return (
     <ClinicShell
-      title="Dashboard"
-      description={`Overview for ${shortDate(today)}`}
-      actions={<Button size="sm">New Appointment</Button>}
+      title={t("clinicDashboard.title")}
+      description={t("clinicDashboard.overview", { date: fmt.shortDate(today) })}
     >
-      <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="surface-card p-5 border-l-4 border-l-primary">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Today's Visits</p>
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="font-display text-3xl font-bold">{todayAppointments.length}</p>
-          </div>
-
-          <div className="surface-card p-5 border-l-4 border-l-amber-500">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="font-display text-3xl font-bold">{pendingRequests.length}</p>
-          </div>
-
-          <div className="surface-card p-5 border-l-4 border-l-emerald-500">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Est. Revenue</p>
-              <Banknote className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="font-display text-3xl font-bold">₹{estimatedRevenue}</p>
-          </div>
-
-          <div className="surface-card p-5 border-l-4 border-l-indigo-500">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-sm font-medium text-muted-foreground">Active Doctors</p>
-              <Stethoscope className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="font-display text-3xl font-bold">{activeDoctors}</p>
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-4">
-            <h2 className="font-display font-semibold text-lg">Today's Schedule</h2>
-            <div className="surface-card divide-y">
-              {todayAppointments.length > 0 ? (
-                todayAppointments
-                  .sort((a, b) => a.time.localeCompare(b.time))
-                  .map((a) => {
-                    const doctor = doctorById(a.doctorId);
-                    return (
-                      <div key={a.id} className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="font-medium w-16 shrink-0">{to12h(a.time)}</div>
-                          <div>
-                            <p className="font-medium">{a.patientName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              with {doctor?.name} · {a.reason}
-                            </p>
-                          </div>
-                        </div>
-                        <StatusBadge status={a.status} />
-                      </div>
-                    );
-                  })
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  No appointments scheduled for today.
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h2 className="font-display font-semibold text-lg">Needs Action</h2>
-            <div className="surface-card p-4 space-y-4">
-              {pendingRequests.slice(0, 5).map((a) => (
-                <div key={a.id} className="border-b last:border-0 pb-3 last:pb-0">
-                  <p className="font-medium text-sm">{a.patientName}</p>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    {shortDate(a.date)} at {to12h(a.time)}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 h-7 text-xs">
-                      Confirm
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 h-7 text-xs text-destructive"
-                    >
-                      Decline
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {pendingRequests.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No pending requests.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      {body}
     </ClinicShell>
+  );
+}
+
+function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
+  const { clinicAppointments, doctorsOfClinic, doctorById, setAppointmentStatus, catalog } =
+    useApp();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { t, fmt } = useI18n();
+
+  const appointments = clinicAppointments.filter((a) => a.clinicId === clinicId);
+  const todays = appointments
+    .filter((a) => a.date === today && a.status !== "cancelled")
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const pending = appointments
+    .filter((a) => a.status === "pending")
+    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+  const expectedFees = todays
+    .filter((a) => a.status !== "pending")
+    .reduce((sum, a) => sum + a.fee, 0);
+
+  const update = async (id: string, next: AppointmentStatus) => {
+    if (updatingId) return;
+    setUpdatingId(id);
+    try {
+      await setAppointmentStatus(id, next);
+      toast.success(
+        t(
+          next === "confirmed"
+            ? "clinicAppointments.done.confirmed"
+            : "clinicAppointments.done.declined",
+        ),
+      );
+    } catch (err) {
+      toast.error(t(describeStatusError(err)));
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <CatalogNotice />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <Stat
+          label={t("clinicDashboard.todaysVisits")}
+          value={fmt.number(todays.length)}
+          icon={CalendarDays}
+        />
+        <Stat
+          label={t("clinicDashboard.awaiting")}
+          value={fmt.number(pending.length)}
+          icon={Users}
+        />
+        <Stat label={t("clinicDashboard.fees")} value={fmt.inr(expectedFees)} icon={Banknote} />
+        <Stat
+          label={t("clinicDashboard.doctors")}
+          value={catalog.error ? "—" : fmt.number(doctorsOfClinic(clinicId).length)}
+          icon={Stethoscope}
+        />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <section className="min-w-0 space-y-4 lg:col-span-2" aria-labelledby="schedule-heading">
+          <h2
+            id="schedule-heading"
+            className="font-display text-lg font-semibold [overflow-wrap:anywhere]"
+          >
+            {t("clinicDashboard.schedule")}
+          </h2>
+          <div className="surface-card divide-y">
+            {todays.length ? (
+              todays.map((a) => (
+                <div key={a.id} className="flex items-center justify-between gap-3 p-4">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="w-20 shrink-0 font-medium">{fmt.time(a.time)}</div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {a.patientName || t("common.unknownPatient")}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {[doctorById(a.doctorId)?.name, a.reason].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                  </div>
+                  <StatusBadge status={a.status} />
+                </div>
+              ))
+            ) : (
+              <p className="p-8 text-center text-muted-foreground">
+                {t("clinicDashboard.noneToday")}
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section className="min-w-0 space-y-4" aria-labelledby="pending-heading">
+          <h2
+            id="pending-heading"
+            className="font-display text-lg font-semibold [overflow-wrap:anywhere]"
+          >
+            {t("clinicDashboard.awaiting")}
+          </h2>
+          <div className="surface-card space-y-4 p-4">
+            {pending.slice(0, NEEDS_ACTION_LIMIT).map((a) => (
+              <div key={a.id} className="border-b pb-3 last:border-0 last:pb-0">
+                <p className="text-sm font-medium">{a.patientName || t("common.unknownPatient")}</p>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  {t("common.dateAtTime", { date: fmt.shortDate(a.date), time: fmt.time(a.time) })}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    className="h-auto min-h-8 flex-1 whitespace-normal text-xs"
+                    disabled={updatingId !== null}
+                    onClick={() => update(a.id, "confirmed")}
+                  >
+                    {t("clinicAppointments.action.confirm")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-auto min-h-8 flex-1 whitespace-normal text-xs text-destructive"
+                    disabled={updatingId !== null}
+                    onClick={() => update(a.id, "cancelled")}
+                  >
+                    {t("clinicAppointments.action.decline")}
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {pending.length > NEEDS_ACTION_LIMIT ? (
+              <Link to="/clinic/appointments" className="block text-sm font-medium text-primary">
+                {t("clinicDashboard.viewAll", { count: fmt.number(pending.length) })}
+              </Link>
+            ) : null}
+            {pending.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                {t("clinicDashboard.noRequests")}
+              </p>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
+  return (
+    <div className="surface-card min-w-0 p-4 sm:p-5">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <p className="min-w-0 text-sm font-medium text-muted-foreground [overflow-wrap:anywhere]">
+          {label}
+        </p>
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      </div>
+      <p className="font-display text-3xl font-bold">{value}</p>
+    </div>
   );
 }
