@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { describeDataError } from "@/lib/supabase/errors";
+import { doctorCanPatientContact } from "@/lib/supabase/queries";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({
@@ -174,6 +175,7 @@ function AppointmentDetails() {
               clinicId={appointment.clinicId}
               doctorId={appointment.doctorId}
               appointmentId={appointment.id}
+              contactable={doctor ? doctorCanPatientContact(doctor, appointment.clinicId) : false}
             />
             {isCancellable(appointment) ? (
               <CancelAppointmentButton appointment={appointment} />

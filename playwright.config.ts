@@ -4,12 +4,20 @@ import { defineConfig, devices } from "@playwright/test";
 // Otherwise the suite builds the app for Node and serves the production build on :4173.
 const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const PORT = 4173;
+const liveSmoke = process.env.PLAYWRIGHT_LIVE_SMOKE === "1";
+if (!liveSmoke) {
+  // Browser fixtures intercept this reserved domain. A normal test run must never inherit a
+  // production .env and accidentally contact its Supabase project.
+  process.env.VITE_SUPABASE_URL = "https://careconnect-test.invalid";
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_local_test_only";
+}
 
 export default defineConfig({
   testDir: "./tests",
   // Only *.spec.ts. tests/security.test.ts is a manual script that creates real accounts in the
   // configured Supabase project and must never run as part of this suite.
-  testMatch: "**/*.spec.ts",
+  testMatch: liveSmoke ? "**/app.spec.ts" : "**/*.spec.ts",
+  testIgnore: liveSmoke ? undefined : "**/app.spec.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

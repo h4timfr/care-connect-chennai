@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ListingStatus, Rating } from "@/components/common";
-import { clinicHasBookableDoctor } from "@/lib/supabase/queries";
+import { clinicCanPatientContact, clinicHasBookableDoctor } from "@/lib/supabase/queries";
 import { useApp } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
 import type { Clinic } from "@/lib/types";
@@ -55,15 +55,17 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
         ) : null}
 
         <dl className="grid gap-1.5 text-sm text-muted-foreground">
-          <div>
-            <dt className="sr-only">{t("common.phone")}</dt>
-            <dd className="flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="truncate" dir="ltr">
-                {clinic.phone}
-              </span>
-            </dd>
-          </div>
+          {clinicCanPatientContact(clinic, clinicDoctors) ? (
+            <div>
+              <dt className="sr-only">{t("common.phone")}</dt>
+              <dd className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="truncate" dir="ltr">
+                  {clinic.phone}
+                </span>
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt className="sr-only">{t("clinic.doctorsAndFees")}</dt>
             <dd>
@@ -76,7 +78,12 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
         </dl>
 
         <p className="truncate text-sm text-muted-foreground">{clinic.address}</p>
-        <ListingStatus isSample={clinic.isSample} bookable={bookable} className="self-start" />
+        <ListingStatus
+          isSample={clinic.isSample}
+          contactable={clinicCanPatientContact(clinic, clinicDoctors)}
+          bookable={bookable}
+          className="self-start"
+        />
 
         <Button asChild className="mt-auto w-full" size="sm">
           <Link to="/clinics/$clinicId" params={{ clinicId: clinic.id }}>

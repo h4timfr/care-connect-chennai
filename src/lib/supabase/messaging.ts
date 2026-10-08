@@ -1,14 +1,16 @@
 import { useEffect, useId } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
+import { useAuth } from "./auth";
 import { codeOf } from "./errors";
 import type { Conversation } from "@/lib/types";
 
 export function useConversations(patientId?: string, clinicIds: string[] = [], enabled = true) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const channelId = useId();
   const clinicIdsKey = clinicIds.join(",");
-  const active = enabled && (!!patientId || clinicIds.length > 0);
+  const active = enabled && !!user && (!!patientId || clinicIds.length > 0);
 
   useEffect(() => {
     if (!active) return;
@@ -27,7 +29,7 @@ export function useConversations(patientId?: string, clinicIds: string[] = [], e
   }, [active, channelId, queryClient]);
 
   return useQuery({
-    queryKey: ["conversations", patientId, clinicIdsKey],
+    queryKey: ["conversations", user?.id, patientId, clinicIdsKey],
     enabled: active,
     queryFn: async (): Promise<Conversation[]> => {
       let query = supabase

@@ -2,6 +2,7 @@ import {
   appointmentRow,
   conversationRow,
   defaultState,
+  enablePatientContact,
   fakeAccessToken,
   ids,
   TEST_EMAIL,
@@ -652,7 +653,8 @@ test.describe("Messages", () => {
 
   test("a newly started conversation never shows as unavailable", async ({ page, backend }) => {
     const seen: string[] = [];
-    await backend({ delays: { conversations: 800 } });
+    const mock = await backend({ delays: { conversations: 800 } });
+    enablePatientContact(mock.state, ids.clinicA);
     await page.exposeFunction("recordText", (text: string) => seen.push(text));
     await page.addInitScript(() => {
       new MutationObserver(() => {
@@ -681,6 +683,7 @@ test.describe("Messages", () => {
     const mock = await backend({
       concurrentConversation: { ...conversationRow([]), id: "conv-created-elsewhere" },
     });
+    enablePatientContact(mock.state, ids.clinicA);
     await page.goto(`/doctors/${ids.doctorVerified}`);
     await page.getByRole("button", { name: "Message clinic" }).first().click();
     await expect(page).toHaveURL(/\/messages\?c=conv-created-elsewhere$/);
@@ -692,6 +695,7 @@ test.describe("Messages", () => {
     backend,
   }) => {
     const mock = await backend();
+    enablePatientContact(mock.state, ids.clinicA);
     await page.goto(`/doctors/${ids.doctorVerified}`);
     await page.getByRole("button", { name: "Message clinic" }).first().click();
     await expect(page).toHaveURL(new RegExp(`/messages\\?c=${ids.conversation}$`));

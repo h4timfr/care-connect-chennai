@@ -110,10 +110,72 @@ REVOKE ALL ON FUNCTION public.check_doctor_update() FROM anon;
 -- ---------------------------------------------------------------------------------------------
 -- 3. Opening hours: the doctor, at clinics where their link is verified
 -- ---------------------------------------------------------------------------------------------
+-- The original public SELECT policy exposed stale/pending schedules to every role. Permissive
+-- policies are ORed, so the doctor's FOR ALL policy alone cannot narrow SELECT. Anonymous reads
+-- remain limited to verified active relationships; signed-in staff and doctors use their own
+-- scoped policies, also bounded by the restrictive verification check.
+DROP POLICY IF EXISTS schedules_read_public ON public.doctor_schedules;
+CREATE POLICY schedules_read_public ON public.doctor_schedules
+FOR SELECT TO anon USING (EXISTS (
+    SELECT 1 FROM public.clinic_doctors cd
+    WHERE cd.clinic_id = doctor_schedules.clinic_id
+      AND cd.doctor_id = doctor_schedules.doctor_id
+      AND cd.verification_state = 'verified' AND cd.active
+));
+
+DROP POLICY IF EXISTS schedules_select_verified ON public.doctor_schedules;
+CREATE POLICY schedules_select_verified ON public.doctor_schedules
+AS RESTRICTIVE FOR SELECT TO authenticated
+USING (EXISTS (
+    SELECT 1 FROM public.clinic_doctors cd
+    WHERE cd.clinic_id = doctor_schedules.clinic_id
+      AND cd.doctor_id = doctor_schedules.doctor_id
+      AND cd.verification_state = 'verified' AND cd.active
+));
+
+-- A doctor may also hold a clinic membership. Without a restrictive policy, the permissive
+-- schedules_write_staff policy would let that account edit another doctor's schedule or remove
+-- a pending schedule. Staff accounts without a linked doctor retain their clinic permissions.
+DROP POLICY IF EXISTS schedules_doctor_identity_guard ON public.doctor_schedules;
+CREATE POLICY schedules_doctor_identity_guard ON public.doctor_schedules
+AS RESTRICTIVE FOR ALL TO authenticated
+USING (
+    NOT EXISTS (SELECT 1 FROM private.my_doctor_ids())
+    OR (
+        doctor_id IN (SELECT private.my_doctor_ids())
+        AND EXISTS (
+            SELECT 1 FROM public.clinic_doctors cd
+            WHERE cd.clinic_id = doctor_schedules.clinic_id
+              AND cd.doctor_id = doctor_schedules.doctor_id
+              AND cd.verification_state = 'verified' AND cd.active
+        )
+    )
+)
+WITH CHECK (
+    NOT EXISTS (SELECT 1 FROM private.my_doctor_ids())
+    OR (
+        doctor_id IN (SELECT private.my_doctor_ids())
+        AND EXISTS (
+            SELECT 1 FROM public.clinic_doctors cd
+            WHERE cd.clinic_id = doctor_schedules.clinic_id
+              AND cd.doctor_id = doctor_schedules.doctor_id
+              AND cd.verification_state = 'verified' AND cd.active
+        )
+    )
+);
+
 DROP POLICY IF EXISTS schedules_write_doctor ON public.doctor_schedules;
 CREATE POLICY schedules_write_doctor ON public.doctor_schedules
 FOR ALL TO authenticated
-USING (doctor_id IN (SELECT private.my_doctor_ids()))
+USING (
+    doctor_id IN (SELECT private.my_doctor_ids())
+    AND EXISTS (
+        SELECT 1 FROM public.clinic_doctors cd
+        WHERE cd.clinic_id = doctor_schedules.clinic_id
+          AND cd.doctor_id = doctor_schedules.doctor_id
+          AND cd.verification_state = 'verified' AND cd.active
+    )
+)
 WITH CHECK (
     doctor_id IN (SELECT private.my_doctor_ids())
     AND EXISTS (

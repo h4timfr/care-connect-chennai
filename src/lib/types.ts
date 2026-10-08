@@ -50,14 +50,22 @@ export interface Clinic {
   reviewCount: number;
   /** Mirrors `clinics.is_demo`: the record is sample content, not a real provider. */
   isSample: boolean;
+  verificationState: "pending" | "verified" | "rejected";
+  isPublished: boolean;
+  patientContactPermission: "not_granted" | "granted" | "revoked";
+  bookingEnabled: boolean;
 }
 
 /** A doctor's association with a clinic (`clinic_doctors`). */
 export interface ClinicLink {
   clinicId: string;
   active: boolean;
-  /** Only active + verified links accept online bookings (enforced by the booking RPC). */
+  /** Link verification is distinct from clinic publication and booking permission. */
   verified: boolean;
+  clinicVerified: boolean;
+  clinicPublished: boolean;
+  clinicContactPermission: "not_granted" | "granted" | "revoked";
+  clinicBookingEnabled: boolean;
 }
 
 export interface Doctor {

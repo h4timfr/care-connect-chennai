@@ -9,7 +9,7 @@ import {
   ListingStatus,
   SectionHeader,
 } from "@/components/common";
-import { clinicHasBookableDoctor } from "@/lib/supabase/queries";
+import { clinicCanPatientContact, clinicHasBookableDoctor } from "@/lib/supabase/queries";
 import { DoctorCard } from "@/components/DoctorCard";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,7 @@ function ClinicProfile() {
   }
 
   const doctors = doctorsOfClinic(clinic.id);
+  const patientContactable = clinicCanPatientContact(clinic, doctors);
   const [minFee, maxFee] = clinic.feeRange;
 
   return (
@@ -89,11 +90,17 @@ function ClinicProfile() {
                 ) : null}
                 <ListingStatus
                   isSample={clinic.isSample}
+                  contactable={patientContactable}
                   bookable={clinicHasBookableDoctor(clinic.id, doctors)}
                 />
               </div>
             </div>
-            <MessageClinicButton clinicId={clinic.id} size="lg" className="w-full sm:w-auto" />
+            <MessageClinicButton
+              clinicId={clinic.id}
+              contactable={patientContactable}
+              size="lg"
+              className="w-full sm:w-auto"
+            />
           </div>
         </section>
 
@@ -166,7 +173,7 @@ function ClinicProfile() {
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
                   {clinic.address}
                 </p>
-                {telHref(clinic.phone) ? (
+                {patientContactable && telHref(clinic.phone) ? (
                   <a
                     href={telHref(clinic.phone) ?? undefined}
                     className="flex items-center gap-2 hover:text-foreground"
@@ -175,7 +182,7 @@ function ClinicProfile() {
                     <span dir="ltr">{clinic.phone}</span>
                   </a>
                 ) : null}
-                {mailtoHref(clinic.email) ? (
+                {patientContactable && mailtoHref(clinic.email) ? (
                   <a
                     href={mailtoHref(clinic.email) ?? undefined}
                     className="flex items-center gap-2 break-all hover:text-foreground"

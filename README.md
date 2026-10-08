@@ -22,14 +22,18 @@ npm run dev            # http://localhost:8080
 | ------------------------------- | ------------------------------------------------------------------- |
 | `VITE_SUPABASE_URL`             | Project URL, e.g. `https://<project-ref>.supabase.co`               |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | The project's **publishable** (anon) key. Safe to ship to browsers. |
+| `VITE_SUPABASE_TARGET`          | On Vercel, set `production` for Production and `staging` for Preview. |
 
 `VITE_SUPABASE_ANON_KEY` is still accepted as a legacy name for the publishable key.
 
 - Never put a secret / `service_role` key in a `VITE_` variable — it would be bundled into the
   browser build. The client refuses to start with one.
 - `.env` is git-ignored. Restart the dev server after changing it.
-- If the variables are missing, the app shows a configuration error banner instead of calling a
-  placeholder backend.
+- Builds require an explicit project URL and publishable key. Missing values fail the build.
+- Vercel Preview builds require an explicitly configured staging target and URL. There is no
+  production fallback. Keep Preview disabled until a separate staging project is available.
+- `npx playwright test` uses the reserved `careconnect-test.invalid` URL and excludes the live
+  project smoke test by default; browser fixtures intercept every mock request.
 
 ## Scripts
 
@@ -162,9 +166,11 @@ These need backend or operational changes and are intentionally **not** worked a
   00054 also closes the release-audit finding that clinic staff can attach any doctor to their
   clinic and edit that doctor's profile and fee. **Until it is deployed, give clinic memberships
   only to fully trusted people.** See [docs/provider-onboarding.md](docs/provider-onboarding.md).
-- **The doctor portal and doctor applications need migration `00055_doctor_portal.sql`**, which
-  **has not been deployed** (pgTAP `012_*`). Until it is, no account is linked to a doctor, so
-  `/doctor` shows "Doctor access isn't enabled" and doctor applications say they aren't open yet.
+- **The doctor portal and doctor applications depend on migration `00055_doctor_portal.sql`**
+  (pgTAP `012_*`). Its deployment status must be reconciled against the shared migration history
+  and live schema: the local file has edits and may differ from a version applied elsewhere. Do
+  not blindly reapply it. Until the required database changes are confirmed, `/doctor` fails
+  closed and doctor applications say they aren't open yet.
 - **Provider-candidate review needs migration `00056_provider_candidates.sql`**, which **has not
   been deployed** (pgTAP `013_*`). Research candidates live in their own private tables, are
   visible only to platform admins at `/admin/providers`, and are never listed or bookable. **No
@@ -172,6 +178,12 @@ These need backend or operational changes and are intentionally **not** worked a
   2026-10-06 research workbook (100 facilities, 399 doctors, 418 relationships, 0 registrations
   verified), and `candidates-import.sql` is generated from it but not run anywhere. See
   [research/README.md](research/README.md).
+- **The provider publication, read, contact and schedule boundaries depend on migrations 00057,
+  00058 and 00059** and SQL/security test `015`. Their hosted validation and deployment status are
+  unconfirmed. Reconcile the shared migration history before staging or production changes; see
+  [docs/provider-onboarding.md](docs/provider-onboarding.md) for the ordered staging and release
+  gates. Migration 00059 is required for the final clinic-contact and anonymous schedule-read
+  boundaries.
 - **Page titles** (`<title>`) are in English; page content follows the chosen language.
 - The clinic conversation list embeds `patients.user_id` to tell patient messages from clinic
   replies. Clinic staff can already read that column under RLS; hiding it needs a backend change

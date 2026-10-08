@@ -16,9 +16,20 @@ export const SEARCH_RESULT_LIMIT = 100;
 // Only the columns the UI shows. In particular doctors.user_id (an auth account id) and other
 // internal columns are never requested by these public listings.
 const CLINIC_COLUMNS =
-  "id, name, address, area, phone, email, about, specialty_ids, services, facilities, languages, opening_hours, fee_range, rating, review_count, is_demo";
+  "id, name, address, area, about, specialty_ids, services, facilities, languages, opening_hours, fee_range, rating, review_count, is_demo, clinic_verification_state, is_published, patient_contact_permission, booking_enabled";
 const DOCTOR_SELECT =
-  "id, name, gender, experience_years, consultation_fee, about, specialty_id, qualifications, languages, services, rating, review_count, registration_note, is_demo, clinic_doctors(clinic_id, active, verification_state)";
+  "id, name, gender, experience_years, consultation_fee, about, specialty_id, qualifications, languages, services, rating, review_count, registration_note, is_demo, clinic_doctors!inner(clinic_id, active, verification_state, clinics!inner(clinic_verification_state, is_published, patient_contact_permission, booking_enabled))";
+
+function publicDoctorQuery() {
+  return supabase
+    .from("doctors")
+    .select(DOCTOR_SELECT)
+    .eq("is_demo", false)
+    .eq("clinic_doctors.active", true)
+    .eq("clinic_doctors.verification_state", "verified")
+    .eq("clinic_doctors.clinics.clinic_verification_state", "verified")
+    .eq("clinic_doctors.clinics.is_published", true);
+}
 
 type ClinicListRow = Pick<
   ClinicRow,
@@ -26,8 +37,6 @@ type ClinicListRow = Pick<
   | "name"
   | "address"
   | "area"
-  | "phone"
-  | "email"
   | "about"
   | "specialty_ids"
   | "services"
@@ -38,9 +47,16 @@ type ClinicListRow = Pick<
   | "rating"
   | "review_count"
   | "is_demo"
+  | "clinic_verification_state"
+  | "is_published"
+  | "patient_contact_permission"
+  | "booking_enabled"
 >;
 
-function mapClinic(c: ClinicListRow): Clinic {
+function mapClinic(
+  c: ClinicListRow,
+  contact: Pick<Clinic, "phone" | "email"> = { phone: "", email: "" },
+): Clinic {
   const openingHours = Array.isArray(c.opening_hours)
     ? (c.opening_hours as Clinic["openingHours"])
     : [];
@@ -49,8 +65,8 @@ function mapClinic(c: ClinicListRow): Clinic {
     name: c.name,
     address: c.address,
     area: c.area ?? "",
-    phone: c.phone,
-    email: c.email,
+    phone: contact.phone,
+    email: contact.email,
     about: c.about ?? "",
     specialtyIds: c.specialty_ids ?? [],
     services: c.services ?? [],
@@ -61,19 +77,58 @@ function mapClinic(c: ClinicListRow): Clinic {
     rating: Number(c.rating) || 0,
     reviewCount: c.review_count ?? 0,
     isSample: c.is_demo,
+    verificationState:
+      c.clinic_verification_state === "verified" || c.clinic_verification_state === "rejected"
+        ? c.clinic_verification_state
+        : "pending",
+    isPublished: c.is_published,
+    patientContactPermission:
+      c.patient_contact_permission === "granted" || c.patient_contact_permission === "revoked"
+        ? c.patient_contact_permission
+        : "not_granted",
+    bookingEnabled: c.booking_enabled,
   };
 }
 
 type DoctorWithLinks = Omit<DoctorRow, "user_id" | "created_at"> & {
-  clinic_doctors: Pick<ClinicDoctorRow, "clinic_id" | "active" | "verification_state">[] | null;
+  clinic_doctors:
+    | (Pick<ClinicDoctorRow, "clinic_id" | "active" | "verification_state"> & {
+        clinics:
+          | Pick<
+              ClinicRow,
+              | "clinic_verification_state"
+              | "is_published"
+              | "patient_contact_permission"
+              | "booking_enabled"
+            >
+          | Pick<
+              ClinicRow,
+              | "clinic_verification_state"
+              | "is_published"
+              | "patient_contact_permission"
+              | "booking_enabled"
+            >[]
+          | null;
+      })[]
+    | null;
 };
 
 function mapDoctor(d: DoctorWithLinks): Doctor {
-  const clinicLinks = (d.clinic_doctors ?? []).map((cd) => ({
-    clinicId: cd.clinic_id,
-    active: cd.active,
-    verified: cd.verification_state === "verified",
-  }));
+  const clinicLinks = (d.clinic_doctors ?? []).map((cd) => {
+    const c = Array.isArray(cd.clinics) ? cd.clinics[0] : cd.clinics;
+    return {
+      clinicId: cd.clinic_id,
+      active: cd.active,
+      verified: cd.verification_state === "verified",
+      clinicVerified: c?.clinic_verification_state === "verified",
+      clinicPublished: c?.is_published ?? false,
+      clinicContactPermission:
+        c?.patient_contact_permission === "granted" || c?.patient_contact_permission === "revoked"
+          ? c.patient_contact_permission
+          : "not_granted",
+      clinicBookingEnabled: c?.booking_enabled ?? false,
+    } as const;
+  });
   return {
     id: d.id,
     name: d.name,
@@ -97,13 +152,54 @@ function mapDoctor(d: DoctorWithLinks): Doctor {
 
 /** Clinics where this doctor currently accepts online bookings. */
 export function bookableClinicIds(doctor: Doctor) {
-  return doctor.clinicLinks.filter((l) => l.active && l.verified).map((l) => l.clinicId);
+  if (doctor.isSample) return [];
+  return doctor.clinicLinks
+    .filter(
+      (l) =>
+        l.active && l.verified && l.clinicVerified && l.clinicPublished && l.clinicBookingEnabled,
+    )
+    .map((l) => l.clinicId);
 }
 
 /** True when CareConnect has verified an active doctor link at this clinic (the booking rule). */
 export function clinicHasBookableDoctor(clinicId: string, doctors: Doctor[]) {
-  return doctors.some((d) =>
-    d.clinicLinks.some((l) => l.clinicId === clinicId && l.active && l.verified),
+  return doctors.some(
+    (d) =>
+      !d.isSample &&
+      d.clinicLinks.some(
+        (l) =>
+          l.clinicId === clinicId &&
+          l.active &&
+          l.verified &&
+          l.clinicVerified &&
+          l.clinicPublished &&
+          l.clinicBookingEnabled,
+      ),
+  );
+}
+
+export function clinicCanPatientContact(clinic: Clinic, doctors: Doctor[]) {
+  return (
+    !clinic.isSample &&
+    clinic.verificationState === "verified" &&
+    clinic.isPublished &&
+    clinic.patientContactPermission === "granted" &&
+    doctors.some((d) => doctorCanPatientContact(d, clinic.id))
+  );
+}
+
+export function doctorCanPatientContact(doctor: Doctor, clinicId?: string) {
+  return (
+    !doctor.isSample &&
+    doctor.clinicLinks.some(
+      (l) =>
+        (!clinicId || l.clinicId === clinicId) &&
+        l.active &&
+        l.verified &&
+        l.clinicVerified &&
+        l.clinicPublished &&
+        l.clinicContactPermission === "granted",
+    )
   );
 }
 
@@ -113,9 +209,29 @@ export function useClinics(options?: { enabled?: boolean }) {
     enabled: options?.enabled ?? true,
     staleTime: CATALOG_STALE_TIME,
     queryFn: async () => {
-      const { data, error } = await supabase.from("clinics").select(CLINIC_COLUMNS).order("name");
+      const { data, error } = await supabase
+        .from("clinics")
+        .select(CLINIC_COLUMNS)
+        .eq("clinic_verification_state", "verified")
+        .eq("is_published", true)
+        .eq("is_demo", false)
+        .order("name");
       if (error) throw error;
-      return data.map(mapClinic);
+      return data.map((clinic) => mapClinic(clinic));
+    },
+  });
+}
+
+/** Unfiltered clinic rows for the platform-admin review screens; RLS remains authoritative. */
+export function useAdminClinics(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["admin", "clinics"],
+    enabled: options?.enabled ?? true,
+    staleTime: CATALOG_STALE_TIME,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_list_clinics");
+      if (error) throw error;
+      return data.map((clinic) => mapClinic(clinic, { phone: clinic.phone, email: clinic.email }));
     },
   });
 }
@@ -126,7 +242,7 @@ export function useDoctors(options?: { enabled?: boolean }) {
     enabled: options?.enabled ?? true,
     staleTime: CATALOG_STALE_TIME,
     queryFn: async () => {
-      const { data, error } = await supabase.from("doctors").select(DOCTOR_SELECT).order("name");
+      const { data, error } = await publicDoctorQuery().order("name");
       if (error) throw error;
       return data.map(mapDoctor);
     },
@@ -305,7 +421,7 @@ export function useDoctorSearch(
       const words = searchWords(filters.text);
       const clinicMatches = doctorIdsByClinicMatch(words, catalog);
 
-      let query = supabase.from("doctors").select(DOCTOR_SELECT);
+      let query = publicDoctorQuery();
 
       // Every search word has to match somewhere (name, specialty, language, or clinic name/area).
       for (const w of words) {
@@ -351,7 +467,12 @@ export function useClinicSearch(filters: ClinicFilters, placeholder: Clinic[] | 
     placeholderData: (previous: Clinic[] | undefined) => previous ?? placeholder,
     staleTime: 60 * 1000,
     queryFn: async () => {
-      let query = supabase.from("clinics").select(CLINIC_COLUMNS);
+      let query = supabase
+        .from("clinics")
+        .select(CLINIC_COLUMNS)
+        .eq("clinic_verification_state", "verified")
+        .eq("is_published", true)
+        .eq("is_demo", false);
       for (const w of searchWords(filters.text)) {
         const conditions = [
           ...wordPrefixConditions("name", w),
@@ -366,7 +487,7 @@ export function useClinicSearch(filters: ClinicFilters, placeholder: Clinic[] | 
 
       const { data, error } = await query.order("name").limit(SEARCH_RESULT_LIMIT);
       if (error) throw error;
-      return data.map(mapClinic);
+      return data.map((clinic) => mapClinic(clinic));
     },
   });
 }
@@ -424,16 +545,24 @@ export function useAuthorizedClinics(userId?: string, options?: { enabled?: bool
     enabled: (options?.enabled ?? true) && !!userId,
     queryFn: async (): Promise<MemberClinic[]> => {
       if (!userId) return [];
-      const { data, error } = await supabase
-        .from("clinic_memberships")
-        .select(`clinic_id, role, clinics!inner(${CLINIC_COLUMNS})` as const)
-        .eq("user_id", userId)
-        .eq("active", true);
+      const [{ data, error }, { data: contacts, error: contactsError }] = await Promise.all([
+        supabase
+          .from("clinic_memberships")
+          .select(`clinic_id, role, clinics!inner(${CLINIC_COLUMNS})` as const)
+          .eq("user_id", userId)
+          .eq("active", true),
+        supabase.rpc("get_my_clinic_contacts"),
+      ]);
 
       if (error) throw error;
+      if (contactsError) throw contactsError;
+      const contactsByClinic = new Map(contacts.map((contact) => [contact.clinic_id, contact]));
       return data
         .map((row) => ({
-          ...mapClinic(Array.isArray(row.clinics) ? row.clinics[0] : row.clinics),
+          ...mapClinic(
+            Array.isArray(row.clinics) ? row.clinics[0] : row.clinics,
+            contactsByClinic.get(row.clinic_id) ?? { phone: "", email: "" },
+          ),
           memberRole: row.role,
         }))
         .sort((a, b) => a.name.localeCompare(b.name));

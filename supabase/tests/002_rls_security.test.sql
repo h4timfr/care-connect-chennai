@@ -15,30 +15,30 @@ INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
 
 -- (The auth triggers will have created public.users automatically)
 -- Patients (Auto-created by trigger, so we UPDATE their fixtures)
-UPDATE public.patients SET id = '11111111-1111-1111-1111-111111111111', full_name = 'Patient A', date_of_birth = '1990-01-01' WHERE user_id = '00000000-0000-0000-0000-000000000001';
-UPDATE public.patients SET id = '22222222-2222-2222-2222-222222222222', full_name = 'Patient B', date_of_birth = '1990-01-01' WHERE user_id = '00000000-0000-0000-0000-000000000002';
+UPDATE public.patients SET id = 'e1111111-1111-1111-1111-111111111111', full_name = 'Patient A', date_of_birth = '1990-01-01' WHERE user_id = '00000000-0000-0000-0000-000000000001';
+UPDATE public.patients SET id = 'e2222222-2222-2222-2222-222222222222', full_name = 'Patient B', date_of_birth = '1990-01-01' WHERE user_id = '00000000-0000-0000-0000-000000000002';
 
 -- Roles are now determined by memberships, so no need to update users table
 
 -- Clinics & Doctors
 INSERT INTO public.clinics (id, name, address, phone, email) VALUES 
-('33333333-3333-3333-3333-333333333333', 'Clinic A', '123 Test St', '555-0100', 'a@test.com'),
-('44444444-4444-4444-4444-444444444444', 'Clinic B', '456 Test St', '555-0200', 'b@test.com');
+('e3333333-3333-3333-3333-333333333333', 'Clinic A', '123 Test St', '555-0100', 'a@test.com'),
+('e4444444-4444-4444-4444-444444444444', 'Clinic B', '456 Test St', '555-0200', 'b@test.com');
 
 INSERT INTO public.doctors (id, user_id, name, consultation_fee) VALUES 
-('55555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-000000000004', 'Doctor A', 500);
+('e5555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-000000000004', 'Doctor A', 500);
 
 INSERT INTO public.clinic_doctors (clinic_id, doctor_id) VALUES 
-('33333333-3333-3333-3333-333333333333', '55555555-5555-5555-5555-555555555555');
+('e3333333-3333-3333-3333-333333333333', 'e5555555-5555-5555-5555-555555555555');
 
 INSERT INTO public.clinic_memberships (clinic_id, user_id, role) VALUES 
-('33333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000003', 'clinic_staff'),
-('33333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000009', 'clinic_admin');
+('e3333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000003', 'clinic_staff'),
+('e3333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000009', 'clinic_admin');
 
 -- Appointments
 INSERT INTO public.appointments (id, patient_id, clinic_id, doctor_id, date, time, status, fee) VALUES 
-('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', '55555555-5555-5555-5555-555555555555', CURRENT_DATE + 1, '10:00', 'confirmed', 500),
-('77777777-7777-7777-7777-777777777777', '22222222-2222-2222-2222-222222222222', '44444444-4444-4444-4444-444444444444', '55555555-5555-5555-5555-555555555555', CURRENT_DATE + 2, '10:00', 'confirmed', 500);
+('e6666666-6666-6666-6666-666666666666', 'e1111111-1111-1111-1111-111111111111', 'e3333333-3333-3333-3333-333333333333', 'e5555555-5555-5555-5555-555555555555', CURRENT_DATE + 1, '10:00', 'confirmed', 500),
+('e7777777-7777-7777-7777-777777777777', 'e2222222-2222-2222-2222-222222222222', 'e4444444-4444-4444-4444-444444444444', 'e5555555-5555-5555-5555-555555555555', CURRENT_DATE + 2, '10:00', 'confirmed', 500);
 
 -- TEST A & B: Patient A visibility
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000001", "role": "authenticated"}';
@@ -50,16 +50,16 @@ SELECT extensions.is(
 );
 SELECT extensions.is(
     (SELECT id FROM public.appointments LIMIT 1),
-    '66666666-6666-6666-6666-666666666666'::uuid,
+    'e6666666-6666-6666-6666-666666666666'::uuid,
     'Patient A sees exactly Patient A appointment'
 );
 
 -- TEST C: Patient A cannot modify Patient B
-UPDATE public.appointments SET status = 'cancelled' WHERE id = '77777777-7777-7777-7777-777777777777';
+UPDATE public.appointments SET status = 'cancelled' WHERE id = 'e7777777-7777-7777-7777-777777777777';
 -- (Since RLS hides it, the update affects 0 rows, so we revert to postgres role to check)
 RESET ROLE;
 SELECT extensions.is(
-    (SELECT status FROM public.appointments WHERE id = '77777777-7777-7777-7777-777777777777'),
+    (SELECT status FROM public.appointments WHERE id = 'e7777777-7777-7777-7777-777777777777'),
     'confirmed'::public.appointment_status,
     'Patient A cannot modify Patient B appointment'
 );
@@ -72,10 +72,10 @@ SELECT extensions.is(
     1::bigint,
     'Staff A should only see appointments for Clinic A'
 );
-UPDATE public.appointments SET status = 'cancelled' WHERE id = '77777777-7777-7777-7777-777777777777';
+UPDATE public.appointments SET status = 'cancelled' WHERE id = 'e7777777-7777-7777-7777-777777777777';
 RESET ROLE;
 SELECT extensions.is(
-    (SELECT status FROM public.appointments WHERE id = '77777777-7777-7777-7777-777777777777'),
+    (SELECT status FROM public.appointments WHERE id = 'e7777777-7777-7777-7777-777777777777'),
     'confirmed'::public.appointment_status,
     'Staff A cannot modify Clinic B appointment'
 );
@@ -88,10 +88,10 @@ SELECT extensions.is(
     1::bigint,
     'Admin A should only see appointments for Clinic A'
 );
-UPDATE public.appointments SET status = 'cancelled' WHERE id = '77777777-7777-7777-7777-777777777777';
+UPDATE public.appointments SET status = 'cancelled' WHERE id = 'e7777777-7777-7777-7777-777777777777';
 RESET ROLE;
 SELECT extensions.is(
-    (SELECT status FROM public.appointments WHERE id = '77777777-7777-7777-7777-777777777777'),
+    (SELECT status FROM public.appointments WHERE id = 'e7777777-7777-7777-7777-777777777777'),
     'confirmed'::public.appointment_status,
     'Admin A cannot modify Clinic B appointment'
 );
@@ -109,10 +109,10 @@ RESET ROLE;
 -- TEST: Staff cannot update clinic
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000003", "role": "authenticated"}';
 SET LOCAL role authenticated;
-UPDATE public.clinics SET name = 'Hacked Clinic' WHERE id = '33333333-3333-3333-3333-333333333333';
+UPDATE public.clinics SET name = 'Hacked Clinic' WHERE id = 'e3333333-3333-3333-3333-333333333333';
 RESET ROLE;
 SELECT extensions.is(
-    (SELECT name FROM public.clinics WHERE id = '33333333-3333-3333-3333-333333333333'),
+    (SELECT name FROM public.clinics WHERE id = 'e3333333-3333-3333-3333-333333333333'),
     'Clinic A'::text,
     'Normal staff cannot modify clinic details'
 );
@@ -120,10 +120,10 @@ SELECT extensions.is(
 -- TEST: Admin CAN update clinic
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000009", "role": "authenticated"}';
 SET LOCAL role authenticated;
-UPDATE public.clinics SET name = 'Updated Clinic' WHERE id = '33333333-3333-3333-3333-333333333333';
+UPDATE public.clinics SET name = 'Updated Clinic' WHERE id = 'e3333333-3333-3333-3333-333333333333';
 RESET ROLE;
 SELECT extensions.is(
-    (SELECT name FROM public.clinics WHERE id = '33333333-3333-3333-3333-333333333333'),
+    (SELECT name FROM public.clinics WHERE id = 'e3333333-3333-3333-3333-333333333333'),
     'Updated Clinic'::text,
     'Admin can modify their own clinic details'
 );

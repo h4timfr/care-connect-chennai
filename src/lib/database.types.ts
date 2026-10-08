@@ -207,6 +207,12 @@ export type Database = {
           fee_range: number[] | null;
           id: string;
           is_demo: boolean;
+          clinic_verification_state: string;
+          is_published: boolean;
+          patient_contact_permission: string;
+          patient_contact_permission_at: string | null;
+          patient_contact_permission_by: string | null;
+          booking_enabled: boolean;
           languages: string[] | null;
           lat: number | null;
           lng: number | null;
@@ -229,6 +235,12 @@ export type Database = {
           fee_range?: number[] | null;
           id?: string;
           is_demo?: boolean;
+          clinic_verification_state?: string;
+          is_published?: boolean;
+          patient_contact_permission?: string;
+          patient_contact_permission_at?: string | null;
+          patient_contact_permission_by?: string | null;
+          booking_enabled?: boolean;
           languages?: string[] | null;
           lat?: number | null;
           lng?: number | null;
@@ -251,6 +263,12 @@ export type Database = {
           fee_range?: number[] | null;
           id?: string;
           is_demo?: boolean;
+          clinic_verification_state?: string;
+          is_published?: boolean;
+          patient_contact_permission?: string;
+          patient_contact_permission_at?: string | null;
+          patient_contact_permission_by?: string | null;
+          booking_enabled?: boolean;
           languages?: string[] | null;
           lat?: number | null;
           lng?: number | null;
@@ -957,28 +975,42 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      admin_set_clinic_publication_state: {
+        Args: {
+          p_booking_enabled: boolean;
+          p_clinic_id: string;
+          p_contact_permission: string;
+          p_is_published: boolean;
+          p_verification_state: string;
+        };
+        Returns: undefined;
+      };
+      admin_list_clinics: {
+        Args: Record<string, never>;
+        Returns: Database["public"]["Tables"]["clinics"]["Row"][];
+      };
+      get_my_clinic_contacts: {
+        Args: Record<string, never>;
+        Returns: {
+          clinic_id: string;
+          email: string;
+          phone: string;
+        }[];
+      };
       get_doctor_availability: {
         Args: { p_date: string; p_doctor_id: string };
         Returns: {
           available_time: string;
         }[];
       };
-      get_doctor_slots:
-        | {
-            Args: { p_date: string; p_doctor_id: string };
-            Returns: {
-              available: boolean;
-              slot_time: string;
-            }[];
-          }
-        | {
-            // Clinic-aware overload added in migration 00047 (the one the app calls).
-            Args: { p_clinic_id: string; p_date: string; p_doctor_id: string };
-            Returns: {
-              available: boolean;
-              slot_time: string;
-            }[];
-          };
+      get_doctor_slots: {
+        // The legacy two-argument overload is removed by migration 00058.
+        Args: { p_clinic_id: string; p_date: string; p_doctor_id: string };
+        Returns: {
+          available: boolean;
+          slot_time: string;
+        }[];
+      };
       // Doctor portal functions from migration 00055 (local, not yet deployed).
       admin_review_doctor_application: {
         Args: {

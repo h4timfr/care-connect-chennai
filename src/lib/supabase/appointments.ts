@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
+import { useAuth } from "./auth";
 import { codeOf, describeDataError, isNetworkError, messageOf } from "./errors";
 import type { Database } from "@/lib/database.types";
 import { isoDate } from "@/lib/format";
@@ -26,9 +27,10 @@ function mapAppointment(a: AppointmentRow, patientName: string): Appointment {
 }
 
 export function usePatientAppointments(patientId?: string, options?: { enabled?: boolean }) {
+  const { user } = useAuth();
   return useQuery({
-    enabled: (options?.enabled ?? true) && !!patientId,
-    queryKey: ["appointments", "patient", patientId],
+    enabled: (options?.enabled ?? true) && !!user && !!patientId,
+    queryKey: ["appointments", "patient", user?.id, patientId],
     queryFn: async () => {
       if (!patientId) return [];
       const { data, error } = await supabase
@@ -44,9 +46,10 @@ export function usePatientAppointments(patientId?: string, options?: { enabled?:
 }
 
 export function useClinicAppointments(clinicIds: string[], options?: { enabled?: boolean }) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["appointments", "clinic", clinicIds],
-    enabled: (options?.enabled ?? true) && clinicIds.length > 0,
+    queryKey: ["appointments", "clinic", user?.id, clinicIds],
+    enabled: (options?.enabled ?? true) && !!user && clinicIds.length > 0,
     queryFn: async () => {
       if (clinicIds.length === 0) return [];
       const { data, error } = await supabase

@@ -14,7 +14,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
-import { useClinics } from "@/lib/supabase/queries";
+import { useAdminClinics } from "@/lib/supabase/queries";
 import {
   useDoctorApplicationsForReview,
   useReviewDoctorApplication,
@@ -30,6 +30,7 @@ import {
   usePlatformAdmin,
   useReviewApplication,
   useSetLinkState,
+  useSetClinicPublicationState,
   useSetMembershipActive,
   type Membership,
   type ProviderApplication,
@@ -55,6 +56,7 @@ function AdminPage() {
           <TabsTrigger value="applications">{t("admin.tab.applications")}</TabsTrigger>
           <TabsTrigger value="doctor-applications">{t("admin.tab.doctorApplications")}</TabsTrigger>
           <TabsTrigger value="doctors">{t("admin.tab.doctors")}</TabsTrigger>
+          <TabsTrigger value="publication">{t("admin.tab.publication")}</TabsTrigger>
           <TabsTrigger value="teams">{t("admin.tab.teams")}</TabsTrigger>
         </TabsList>
         <TabsContent value="applications" className="mt-5">
@@ -65,6 +67,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="doctors" className="mt-5">
           <DoctorsPanel />
+        </TabsContent>
+        <TabsContent value="publication" className="mt-5">
+          <ClinicPublicationPanel />
         </TabsContent>
         <TabsContent value="teams" className="mt-5">
           <TeamsPanel />
@@ -88,6 +93,143 @@ function AdminPage() {
       </div>
       <div className="mt-6">{body}</div>
     </PatientShell>
+  );
+}
+
+function ClinicPublicationPanel() {
+  const { t } = useI18n();
+  const clinics = useAdminClinics();
+  const update = useSetClinicPublicationState();
+  if (clinics.isLoading || clinics.error)
+    return <PanelState query={clinics} errorTitle={t("admin.loadError")} />;
+  const realClinics = (clinics.data ?? []).filter((c) => !c.isSample);
+
+  const change = async (
+    clinic: (typeof realClinics)[number],
+    patch: Partial<{
+      verificationState: "pending" | "verified" | "rejected";
+      isPublished: boolean;
+      contactPermission: "not_granted" | "granted" | "revoked";
+      bookingEnabled: boolean;
+    }>,
+  ) => {
+    const next = {
+      verificationState: patch.verificationState ?? clinic.verificationState,
+      isPublished: patch.isPublished ?? clinic.isPublished,
+      contactPermission: patch.contactPermission ?? clinic.patientContactPermission,
+      bookingEnabled: patch.bookingEnabled ?? clinic.bookingEnabled,
+    };
+    if (next.verificationState !== "verified") {
+      next.isPublished = false;
+      next.contactPermission = "not_granted";
+      next.bookingEnabled = false;
+    } else if (!next.isPublished) {
+      next.contactPermission = "not_granted";
+      next.bookingEnabled = false;
+    }
+    try {
+      await update.mutateAsync({ clinicId: clinic.id, ...next });
+      toast.success(t("admin.publicationSaved"));
+    } catch (err) {
+      toast.error(t(describeDataError(err)));
+    }
+  };
+
+  return (
+    <section aria-label={t("admin.tab.publication")} className="space-y-4">
+      <InfoNotice className="text-sm">{t("admin.publicationHelp")}</InfoNotice>
+      {realClinics.length === 0 ? (
+        <EmptyState icon={ShieldCheck} title={t("admin.noPublicationClinics")} />
+      ) : (
+        <ul className="space-y-4">
+          {realClinics.map((clinic) => (
+            <li key={clinic.id} className="surface-card space-y-4 p-5">
+              <div>
+                <h3 className="font-semibold [overflow-wrap:anywhere]">{clinic.name}</h3>
+                <p className="text-sm text-muted-foreground">{clinic.area}</p>
+              </div>
+              <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-muted-foreground">{t("admin.clinicVerification")}</dt>
+                  <dd>{t(`admin.state.${clinic.verificationState}`)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{t("admin.publication")}</dt>
+                  <dd>{clinic.isPublished ? t("admin.enabled") : t("admin.disabled")}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{t("admin.patientContact")}</dt>
+                  <dd>{t(`admin.contact.${clinic.patientContactPermission}`)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{t("admin.onlineBooking")}</dt>
+                  <dd>{clinic.bookingEnabled ? t("admin.enabled") : t("admin.disabled")}</dd>
+                </div>
+              </dl>
+              <div className="flex flex-wrap gap-2 border-t pt-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={update.isPending}
+                  onClick={() =>
+                    void change(clinic, {
+                      verificationState:
+                        clinic.verificationState === "verified" ? "pending" : "verified",
+                    })
+                  }
+                >
+                  {clinic.verificationState === "verified"
+                    ? t("admin.markPending")
+                    : t("admin.verifyClinic")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={update.isPending || clinic.verificationState !== "verified"}
+                  onClick={() => void change(clinic, { isPublished: !clinic.isPublished })}
+                >
+                  {clinic.isPublished ? t("admin.unpublish") : t("admin.publish")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={
+                    update.isPending ||
+                    !clinic.isPublished ||
+                    clinic.verificationState !== "verified"
+                  }
+                  onClick={() =>
+                    void change(clinic, {
+                      contactPermission:
+                        clinic.patientContactPermission === "granted" ? "revoked" : "granted",
+                    })
+                  }
+                >
+                  {clinic.patientContactPermission === "granted"
+                    ? t("admin.revokeContact")
+                    : t("admin.grantContact")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={
+                    update.isPending ||
+                    !clinic.isPublished ||
+                    clinic.verificationState !== "verified"
+                  }
+                  onClick={() => void change(clinic, { bookingEnabled: !clinic.bookingEnabled })}
+                >
+                  {clinic.bookingEnabled ? t("admin.disableBooking") : t("admin.enableBooking")}
+                </Button>
+              </div>
+              {clinic.patientContactPermission !== "granted" ? (
+                <p className="text-xs text-muted-foreground">{t("admin.contactConsentReminder")}</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -501,7 +643,7 @@ function DoctorsPanel() {
 function TeamsPanel() {
   const { t } = useI18n();
   const memberships = useAllMemberships(true);
-  const clinics = useClinics();
+  const clinics = useAdminClinics();
   const add = useAddClinicMember();
   const setActive = useSetMembershipActive();
   const [clinicId, setClinicId] = useState("");

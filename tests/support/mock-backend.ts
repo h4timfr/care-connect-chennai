@@ -6,10 +6,11 @@ import type { Page, Request, Route } from "@playwright/test";
  * websocket) is answered here; nothing is forwarded to a real project. Requests the mock does
  * not understand are answered with 501 and recorded in `unhandled` so tests can fail on them.
  *
- * All fixture records below are synthetic and exist only inside the test process.
+ * All fixture records below are synthetic and exist only inside the test process. Run this suite
+ * with VITE_SUPABASE_URL=https://careconnect-test.invalid so it cannot contact a real project.
  */
 
-export const PROJECT_REF = "bqijgbmhlwtslhrtszsj";
+export const PROJECT_REF = "careconnect-test";
 
 export const ids = {
   user: "00000000-0000-4000-8000-000000000001",
@@ -28,6 +29,8 @@ export const TEST_NAME = "Test Patient";
 type Row = Record<string, unknown>;
 
 export interface MockState {
+  authUserId: string;
+  authEmail: string;
   patients: Row[] | "error";
   memberships: Row[] | "error";
   clinics: Row[];
@@ -230,6 +233,12 @@ const clinic = (id: string, name: string, area: string): Row => ({
   review_count: 0,
   photo_tone: null,
   is_demo: true,
+  clinic_verification_state: "pending",
+  is_published: false,
+  patient_contact_permission: "not_granted",
+  patient_contact_permission_at: null,
+  patient_contact_permission_by: null,
+  booking_enabled: false,
   lat: null,
   lng: null,
   created_at: "2026-01-01T00:00:00Z",
@@ -259,6 +268,8 @@ const doctor = (id: string, name: string, clinicId: string, verified: boolean): 
 
 export function defaultState(): MockState {
   return {
+    authUserId: ids.user,
+    authEmail: TEST_EMAIL,
     patients: [
       {
         id: ids.patient,
@@ -323,6 +334,34 @@ export function defaultState(): MockState {
   };
 }
 
+/** Marks a synthetic test fixture as an explicitly enabled provider; never used with real data. */
+export function enablePatientContact(state: MockState, clinicId: string, booking = false) {
+  const clinic = state.clinics.find((row) => row["id"] === clinicId);
+  if (clinic) {
+    Object.assign(clinic, {
+      is_demo: false,
+      clinic_verification_state: "verified",
+      is_published: true,
+      patient_contact_permission: "granted",
+      booking_enabled: booking,
+    });
+  }
+  for (const doc of state.doctors) {
+    if (doc["clinic_doctors"] && Array.isArray(doc["clinic_doctors"])) {
+      const links = doc["clinic_doctors"] as Row[];
+      for (const link of links) {
+        if (
+          link["clinic_id"] === clinicId &&
+          link["verification_state"] === "verified" &&
+          link["active"]
+        ) {
+          doc["is_demo"] = false;
+        }
+      }
+    }
+  }
+}
+
 /** A 1x1 PNG, served as the stored profile photo. */
 const PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -334,30 +373,30 @@ function base64Url(value: object) {
 }
 
 /** A syntactically valid, unsigned JWT. The mock never verifies it; production would reject it. */
-export function fakeAccessToken() {
+export function fakeAccessToken(userId = ids.user, email = TEST_EMAIL) {
   const exp = Math.floor(Date.now() / 1000) + 3600;
   return `${base64Url({ alg: "HS256", typ: "JWT" })}.${base64Url({
-    sub: ids.user,
+    sub: userId,
     role: "authenticated",
     aud: "authenticated",
-    email: TEST_EMAIL,
+    email,
     exp,
   })}.test-signature`;
 }
 
-function sessionPayload(expired = false) {
+function sessionPayload(expired = false, userId = ids.user, email = TEST_EMAIL) {
   const expiresAt = Math.floor(Date.now() / 1000) + (expired ? -3600 : 3600);
   return {
-    access_token: fakeAccessToken(),
+    access_token: fakeAccessToken(userId, email),
     token_type: "bearer",
     expires_in: 3600,
     expires_at: expiresAt,
     refresh_token: "test-refresh-token",
     user: {
-      id: ids.user,
+      id: userId,
       aud: "authenticated",
       role: "authenticated",
-      email: TEST_EMAIL,
+      email,
       app_metadata: { provider: "email" },
       user_metadata: { full_name: TEST_NAME },
       identities: [],
@@ -389,6 +428,9 @@ export async function mockBackend(
     state: overrides = {},
   }: { signedIn?: boolean; expiredSession?: boolean; state?: Partial<MockState> } = {},
 ): Promise<MockBackend> {
+  if (process.env.VITE_SUPABASE_URL !== "https://careconnect-test.invalid") {
+    throw new Error("Mocked Playwright tests require the isolated careconnect-test.invalid URL.");
+  }
   const state: MockState = { ...defaultState(), ...overrides };
   const backend: MockBackend = {
     state,
@@ -399,7 +441,7 @@ export async function mockBackend(
   };
 
   if (signedIn) {
-    const session = sessionPayload(expiredSession);
+    const session = sessionPayload(expiredSession, state.authUserId, state.authEmail);
     await page.addInitScript(
       ([key, value]) => {
         // Only seed once per test, so a sign-out inside the test is not undone on reload.
@@ -418,9 +460,10 @@ export async function mockBackend(
   }
 
   // Realtime: accept the socket but never connect it to anything.
-  await page.routeWebSocket(/supabase\.co/, () => {});
+  await page.routeWebSocket(/careconnect-test\.invalid/, () => {});
 
-  await page.route(/https:\/\/[^/]*supabase\.co\//, async (route: Route, request: Request) => {
+  const mockUrl = /https:\/\/careconnect-test\.invalid\//;
+  await page.route(mockUrl, async (route: Route, request: Request) => {
     const url = new URL(request.url());
     const method = request.method();
     let body: unknown = null;
@@ -445,12 +488,13 @@ export async function mockBackend(
     const path = url.pathname;
 
     // ---- Auth
-    if (path === "/auth/v1/user") return json(route, 200, sessionPayload().user);
+    if (path === "/auth/v1/user")
+      return json(route, 200, sessionPayload(false, state.authUserId, state.authEmail).user);
     if (path === "/auth/v1/token") {
       if (state.tokenResponse) {
         return json(route, state.tokenResponse.status, state.tokenResponse.body);
       }
-      return json(route, 200, sessionPayload());
+      return json(route, 200, sessionPayload(false, state.authUserId, state.authEmail));
     }
     if (path === "/auth/v1/signup" && state.signupResponse) {
       return json(route, state.signupResponse.status, state.signupResponse.body);
@@ -511,6 +555,52 @@ export async function mockBackend(
 
     // ---- RPC
     if (path === "/rest/v1/rpc/get_doctor_slots") return json(route, 200, state.slots);
+    if (path === "/rest/v1/rpc/admin_list_clinics") {
+      if (state.platformAdmin !== true) {
+        return json(route, 403, { code: "42501", message: "Platform admins only." });
+      }
+      return json(route, 200, state.clinics);
+    }
+    if (path === "/rest/v1/rpc/get_my_clinic_contacts") {
+      const contacts = Array.isArray(state.memberships)
+        ? state.memberships
+            .filter((membership) => membership["active"] === true)
+            .flatMap((membership) => {
+              const clinic = state.clinics.find((row) => row["id"] === membership["clinic_id"]);
+              return clinic
+                ? [
+                    {
+                      clinic_id: clinic["id"],
+                      phone: clinic["phone"],
+                      email: clinic["email"],
+                    },
+                  ]
+                : [];
+            })
+        : [];
+      return json(route, 200, contacts);
+    }
+    if (path === "/rest/v1/rpc/admin_set_clinic_publication_state") {
+      if (state.platformAdmin !== true) {
+        return json(route, 403, { code: "42501", message: "Unauthorized: platform admins only." });
+      }
+      const args = (body ?? {}) as Row;
+      const clinic = state.clinics.find((row) => row["id"] === args["p_clinic_id"]);
+      if (!clinic || clinic["is_demo"] === true) {
+        return json(route, 400, { code: "23514", message: "Clinic cannot be enabled." });
+      }
+      Object.assign(clinic, {
+        clinic_verification_state: args["p_verification_state"],
+        is_published: args["p_is_published"],
+        patient_contact_permission: args["p_contact_permission"],
+        patient_contact_permission_at:
+          args["p_contact_permission"] === "granted" ? new Date().toISOString() : null,
+        patient_contact_permission_by:
+          args["p_contact_permission"] === "granted" ? state.authUserId : null,
+        booking_enabled: args["p_booking_enabled"],
+      });
+      return route.fulfill({ status: 204, headers: corsHeaders() });
+    }
     if (path === "/rest/v1/rpc/book_appointment") {
       if (state.bookResult) return json(route, state.bookResult.status, state.bookResult.body);
       const args = (body ?? {}) as Row;
@@ -632,25 +722,37 @@ export async function mockBackend(
       case "clinics":
         return respond(state.clinics);
       case "doctors": {
+        const withClinicState = (row: Row): Row => ({
+          ...row,
+          clinic_doctors: ((row["clinic_doctors"] as Row[] | undefined) ?? []).map((link) => {
+            const clinic = state.clinics.find((c) => c["id"] === link["clinic_id"]);
+            return {
+              ...link,
+              clinics: clinic
+                ? {
+                    name: clinic["name"],
+                    clinic_verification_state: clinic["clinic_verification_state"],
+                    is_published: clinic["is_published"],
+                    patient_contact_permission: clinic["patient_contact_permission"],
+                    booking_enabled: clinic["booking_enabled"],
+                  }
+                : null,
+            };
+          }),
+        });
         const userFilter = url.searchParams.get("user_id")?.replace(/^eq\./, "");
         if (userFilter) {
           // RLS: only the signed-in account's own doctor row is returned for this lookup.
           const own = state.doctors
-            .filter((d) => d["user_id"] === userFilter && userFilter === ids.user)
-            .map((d) => ({
-              ...d,
-              clinic_doctors: ((d["clinic_doctors"] as Row[] | undefined) ?? []).map((l) => ({
-                ...l,
-                clinics: {
-                  name: state.clinics.find((c) => c["id"] === l["clinic_id"])?.["name"] ?? "",
-                },
-              })),
-            }));
+            .filter((d) => d["user_id"] === userFilter && userFilter === state.authUserId)
+            .map(withClinicState);
           return respond(own);
         }
         if (method === "PATCH") {
           const id = url.searchParams.get("id")?.replace(/^eq\./, "");
-          const row = state.doctors.find((d) => d["id"] === id && d["user_id"] === ids.user);
+          const row = state.doctors.find(
+            (d) => d["id"] === id && d["user_id"] === state.authUserId,
+          );
           if (!row) return json(route, 406, { code: "PGRST116" });
           const update = body as Row;
           if ("name" in update || "registration_note" in update || "is_demo" in update) {
@@ -671,9 +773,9 @@ export async function mockBackend(
           if (state.doctorSearchDelayMs) {
             await new Promise((resolve) => setTimeout(resolve, state.doctorSearchDelayMs));
           }
-          return respond(state.doctorSearch);
+          return respond(state.doctorSearch.map(withClinicState));
         }
-        return respond(state.doctors);
+        return respond(state.doctors.map(withClinicState));
       }
       case "clinic_doctors": {
         // Built from the doctors' embedded links, embedding doctors and clinics like PostgREST.
@@ -1021,9 +1123,35 @@ export async function mockBackend(
           });
         }
         if (method === "POST") {
+          const input = body as Row;
+          const clinic = state.clinics.find((c) => c["id"] === input["clinic_id"]);
+          const participatingDoctor = state.doctors.some(
+            (doc) =>
+              doc["is_demo"] !== true &&
+              ((doc["clinic_doctors"] as Row[] | undefined) ?? []).some(
+                (link) =>
+                  link["clinic_id"] === input["clinic_id"] &&
+                  link["active"] === true &&
+                  link["verification_state"] === "verified" &&
+                  (!input["doctor_id"] || doc["id"] === input["doctor_id"]),
+              ),
+          );
+          if (
+            !clinic ||
+            clinic["is_demo"] === true ||
+            clinic["clinic_verification_state"] !== "verified" ||
+            clinic["is_published"] !== true ||
+            clinic["patient_contact_permission"] !== "granted" ||
+            !participatingDoctor
+          ) {
+            return json(route, 403, {
+              code: "42501",
+              message: "new row violates row-level security policy for table conversations",
+            });
+          }
           const created = {
             id: ids.conversation,
-            ...(body as Row),
+            ...input,
             created_at: new Date().toISOString(),
             unread_for_patient: 0,
             unread_for_clinic: 0,

@@ -1,9 +1,18 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./client";
 import { watchPasswordRecovery } from "./recovery";
+import { clearPrivateQueryCache } from "./private-query-cache";
 
 // Must run before React mounts so the one-off PASSWORD_RECOVERY event can't be missed.
 watchPasswordRecovery();
@@ -21,18 +30,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const principalId = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    let authEventReceived = false;
+
+    const applySession = (nextSession: Session | null) => {
+      if (cancelled) return;
+      const nextPrincipalId = nextSession?.user.id ?? null;
+      if (principalId.current !== nextPrincipalId) {
+        // A direct A -> B SIGNED_IN event does not pass through a signed-out state.
+        clearPrivateQueryCache(queryClient);
+        principalId.current = nextPrincipalId;
+      }
+      setSession(nextSession);
+      setLoading(false);
+    };
 
     supabase.auth
       .getSession()
       .then(({ data }) => {
-        if (!cancelled) setSession(data.session);
+        // INITIAL_SESSION/SIGNED_IN can arrive before getSession resolves; never restore an older
+        // principal over the newer auth event.
+        if (!authEventReceived) applySession(data.session);
       })
       .catch(() => {
-        // An unreadable stored session is treated as signed out.
-        if (!cancelled) setSession(null);
+        if (!authEventReceived) applySession(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -41,10 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      // Drop every cached private query when the user signs out or the session ends.
-      if (!nextSession) queryClient.removeQueries({ predicate: isPrivateQuery });
-      setLoading(false);
+      authEventReceived = true;
+      applySession(nextSession);
     });
 
     return () => {
@@ -55,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    queryClient.removeQueries({ predicate: isPrivateQuery });
+    clearPrivateQueryCache(queryClient);
   }, [queryClient]);
 
   return (
@@ -63,18 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-const PUBLIC_QUERY_ROOTS = new Set([
-  "clinics",
-  "doctors",
-  "doctor-search",
-  "clinic-search",
-  "availability",
-]);
-
-function isPrivateQuery(query: { queryKey: readonly unknown[] }) {
-  return !PUBLIC_QUERY_ROOTS.has(String(query.queryKey[0]));
 }
 
 export function useAuth() {

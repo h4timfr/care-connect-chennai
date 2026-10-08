@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
+import { useAuth } from "./auth";
 import type { Database } from "@/lib/database.types";
 import type { MessageKey } from "@/lib/i18n";
 import type { AppointmentStatus } from "@/lib/types";
@@ -89,9 +90,10 @@ export interface DoctorAppointment {
 }
 
 export function useDoctorAppointments(enabled: boolean) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["doctor_appointments"],
-    enabled,
+    queryKey: ["doctor_appointments", user?.id],
+    enabled: enabled && !!user,
     retry: false,
     queryFn: async (): Promise<DoctorAppointment[]> => {
       const { data, error } = await supabase.rpc("doctor_appointments");
@@ -126,9 +128,10 @@ export interface DoctorConversation {
 }
 
 export function useDoctorConversations(enabled: boolean) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["doctor_conversations"],
-    enabled,
+    queryKey: ["doctor_conversations", user?.id],
+    enabled: enabled && !!user,
     retry: false,
     queryFn: async (): Promise<DoctorConversation[]> => {
       const { data, error } = await supabase.rpc("doctor_conversations");
@@ -292,9 +295,10 @@ export function useSubmitDoctorApplication() {
 }
 
 export function useDoctorApplicationsForReview(enabled: boolean) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["doctor_applications", "all"],
-    enabled,
+    queryKey: ["doctor_applications", "all", user?.id],
+    enabled: enabled && !!user,
     retry: false,
     queryFn: async () => {
       const { data, error } = await supabase

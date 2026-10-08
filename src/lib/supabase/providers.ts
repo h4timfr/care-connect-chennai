@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
+import { useAuth } from "./auth";
 import type { Database } from "@/lib/database.types";
 import type { MessageKey } from "@/lib/i18n";
 
@@ -142,9 +143,10 @@ export function useWithdrawApplication() {
 // ---- Platform admin
 
 export function useApplicationsForReview(enabled: boolean) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["provider_applications", "all"],
-    enabled,
+    queryKey: ["provider_applications", "all", user?.id],
+    enabled: enabled && !!user,
     retry: false,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -234,9 +236,10 @@ function mapLink(row: LinkRow): DoctorLink {
 
 /** Doctor–clinic links awaiting a decision. */
 export function usePendingDoctorLinks(enabled: boolean) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["clinic_doctors", "pending"],
-    enabled,
+    queryKey: ["clinic_doctors", "pending", user?.id],
+    enabled: enabled && !!user,
     retry: false,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -271,6 +274,35 @@ export function useSetLinkState() {
   });
 }
 
+export function useSetClinicPublicationState() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      clinicId: string;
+      verificationState: "pending" | "verified" | "rejected";
+      isPublished: boolean;
+      contactPermission: "not_granted" | "granted" | "revoked";
+      bookingEnabled: boolean;
+    }) => {
+      const { error } = await supabase.rpc("admin_set_clinic_publication_state", {
+        p_clinic_id: args.clinicId,
+        p_verification_state: args.verificationState,
+        p_is_published: args.isPublished,
+        p_contact_permission: args.contactPermission,
+        p_booking_enabled: args.bookingEnabled,
+      });
+      if (error) throw error;
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["clinics"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "clinics"] });
+      queryClient.invalidateQueries({ queryKey: ["doctors"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor-search"] });
+      queryClient.invalidateQueries({ queryKey: ["clinic-search"] });
+    },
+  });
+}
+
 export interface Membership {
   id: string;
   clinicId: string;
@@ -281,9 +313,10 @@ export interface Membership {
 }
 
 export function useAllMemberships(enabled: boolean) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["clinic_memberships", "all"],
-    enabled,
+    queryKey: ["clinic_memberships", "all", user?.id],
+    enabled: enabled && !!user,
     retry: false,
     queryFn: async (): Promise<Membership[]> => {
       const { data, error } = await supabase
@@ -345,9 +378,10 @@ export function useSetMembershipActive() {
 
 /** Every doctor linked to a clinic, including those still awaiting verification. */
 export function useClinicDoctorLinks(clinicId: string | undefined) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["clinic_doctors", "clinic", clinicId],
-    enabled: !!clinicId,
+    queryKey: ["clinic_doctors", "clinic", clinicId, user?.id],
+    enabled: !!clinicId && !!user,
     queryFn: async () => {
       if (!clinicId) return [];
       const { data, error } = await supabase
@@ -408,9 +442,10 @@ export interface Schedule {
 }
 
 export function useClinicSchedules(clinicId: string | undefined) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["doctor_schedules", clinicId],
-    enabled: !!clinicId,
+    queryKey: ["doctor_schedules", clinicId, user?.id],
+    enabled: !!clinicId && !!user,
     queryFn: async (): Promise<Schedule[]> => {
       if (!clinicId) return [];
       const { data, error } = await supabase

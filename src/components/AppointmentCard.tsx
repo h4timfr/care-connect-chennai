@@ -18,6 +18,7 @@ import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { useApp } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
 import { describeCancelError, isCancellable } from "@/lib/supabase/appointments";
+import { doctorCanPatientContact } from "@/lib/supabase/queries";
 import type { Appointment } from "@/lib/types";
 
 export function AppointmentCard({ appointment }: { appointment: Appointment }) {
@@ -87,6 +88,7 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
           clinicId={appointment.clinicId}
           doctorId={appointment.doctorId}
           appointmentId={appointment.id}
+          contactable={doctor ? doctorCanPatientContact(doctor, appointment.clinicId) : false}
         />
         {isCancellable(appointment) ? <CancelAppointmentButton appointment={appointment} /> : null}
       </div>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
+import { useAuth } from "./auth";
 import type { Database } from "@/lib/database.types";
 
 /*
@@ -79,9 +80,10 @@ export interface CandidateCatalogue {
 
 /** The whole candidate catalogue (tens of rows), filtered in the browser. */
 export function useCandidateCatalogue(enabled: boolean) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["candidates"],
-    enabled,
+    queryKey: ["candidates", user?.id],
+    enabled: enabled && !!user,
     retry: false,
     queryFn: async (): Promise<CandidateCatalogue> => {
       const [facilities, doctors, relationships] = await Promise.all([
@@ -119,9 +121,10 @@ export function useCandidateDetail(
   id: string | undefined,
   relationshipIds: string[],
 ) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["candidates", kind, id, relationshipIds.join(",")],
-    enabled: !!id,
+    queryKey: ["candidates", user?.id, kind, id, relationshipIds.join(",")],
+    enabled: !!id && !!user,
     retry: false,
     queryFn: async (): Promise<CandidateDetail> => {
       if (!id) throw new Error("No candidate selected.");

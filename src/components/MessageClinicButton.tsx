@@ -20,6 +20,7 @@ export function MessageClinicButton({
   variant = "outline",
   size = "sm",
   className,
+  contactable,
 }: {
   clinicId: string;
   doctorId?: string;
@@ -27,6 +28,7 @@ export function MessageClinicButton({
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
   className?: string;
+  contactable: boolean;
 }) {
   const { user } = useAuth();
   const { patient, isLoadingPatient, ensureConversation } = useApp();
@@ -59,6 +61,7 @@ export function MessageClinicButton({
     }
   };
 
+  if (!contactable) return null;
   return (
     <Button
       variant={variant}

@@ -146,20 +146,38 @@ export function NotBookableBadge({ className }: { className?: string | undefined
   );
 }
 
+export function ContactUnavailableBadge({ className }: { className?: string | undefined }) {
+  const { t } = useI18n();
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground",
+        className,
+      )}
+      title={t("common.contactUnavailableNote")}
+    >
+      {t("common.contactUnavailable")}
+    </span>
+  );
+}
+
 /**
  * The one truthful status for a listing: sample content, verified for online booking (a verified,
  * active clinic–doctor link — the rule book_appointment enforces), or listed but not yet bookable.
  */
 export function ListingStatus({
   isSample,
+  contactable,
   bookable,
   className,
 }: {
   isSample: boolean;
+  contactable: boolean;
   bookable: boolean;
   className?: string | undefined;
 }) {
   if (isSample) return <SampleBadge className={className} />;
+  if (!contactable) return <ContactUnavailableBadge className={className} />;
   if (bookable) return <VerifiedBadge className={className} />;
   return <NotBookableBadge className={className} />;
 }

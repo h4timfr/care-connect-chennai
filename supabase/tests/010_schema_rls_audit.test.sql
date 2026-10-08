@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(7);
+SELECT extensions.plan(9);
 
 -- Schema-wide invariants, so a future migration can't quietly reintroduce RLS recursion (42P17),
 -- an RLS-less table or an unsafe SECURITY DEFINER helper.
@@ -17,13 +17,22 @@ SELECT extensions.is(
 );
 SELECT extensions.is(
     (SELECT coalesce(array_agg(p.oid::regprocedure::text ORDER BY 1), '{}') FROM pg_proc p
-     WHERE p.pronamespace = 'private'::regnamespace AND has_function_privilege('anon', p.oid, 'EXECUTE')),
-    '{}'::text[], 'anon cannot execute any private helper'
+     WHERE p.pronamespace = 'private'::regnamespace AND has_function_privilege('anon', p.oid, 'EXECUTE')
+       AND p.oid <> 'private.is_public_provider_link(uuid,uuid)'::regprocedure),
+    '{}'::text[], 'anon can execute only the narrow public-relationship predicate among private helpers'
 );
 SELECT extensions.is(
     (SELECT coalesce(array_agg(DISTINCT p.proname::text ORDER BY p.proname::text), '{}') FROM pg_proc p
      WHERE p.prosecdef AND p.pronamespace = 'public'::regnamespace AND has_function_privilege('anon', p.oid, 'EXECUTE')),
     ARRAY['get_doctor_slots'], 'anon can execute only the public slot lookup among definer functions'
+);
+SELECT extensions.is(
+    to_regprocedure('public.get_doctor_slots(uuid,date)') IS NULL,
+    true, 'legacy two-argument slot RPC has been removed'
+);
+SELECT extensions.is(
+    has_function_privilege('anon', 'private.is_public_provider_link(uuid,uuid)', 'EXECUTE'),
+    true, 'anon can evaluate the narrow predicate required by publication RLS'
 );
 
 -- Reading every public table as each kind of caller must never recurse. Permission errors are the

@@ -51,11 +51,20 @@ Registering as a clinic or doctor creates (or uses) an ordinary account and subm
    council registration. `clinic_propose_doctor` creates a **new** doctor with a **pending** link.
    It can never attach an existing doctor record.
 4. **Platform admin verifies the doctor** (`/admin` → Doctor verification) after checking the
-   registration, for example with TNMC or NMC. Only now is the doctor publicly listed.
-5. **Clinic sets opening hours** (`/clinic/doctors` → Edit hours), allowed only for doctors verified
-   at that clinic. Once hours exist, patients can book. `book_appointment` re-checks verification,
-   the schedule window and slot alignment on every booking.
-6. **Teams**: platform admins add members by the email of an existing account (`/admin` → Clinic
+   registration, for example with TNMC or NMC. A verified doctor–clinic link alone does not publish
+   the clinic, allow patient messages, or enable booking.
+5. **Platform admin controls provider capabilities** (`/admin` → Provider publishing), separately:
+   verify the clinic, publish its directory listing, grant patient-contact permission only after
+   confirming clinic consent, and enable online booking only when that booking process is live.
+   New clinics start pending, unpublished, non-contactable, and not bookable. Samples cannot be
+   enabled. Clinic users and patients cannot change these states.
+6. **Clinic sets opening hours** (`/clinic/doctors` → Edit hours), allowed only for doctors verified
+   at that clinic. Hours alone do not enable booking. `get_doctor_slots` and `book_appointment`
+   re-check clinic verification, publication, the independent booking flag, the active verified
+   non-sample doctor relationship, and the schedule on every request. Only the clinic-aware
+   `get_doctor_slots(uuid, uuid, date)` overload remains; migration 00058 removes the legacy
+   two-argument RPC because it could reveal availability without the clinic publication state.
+7. **Teams**: platform admins add members by the email of an existing account (`/admin` → Clinic
    teams), choosing staff or admin, and can deactivate or reactivate members.
 
 ## Doctor onboarding and the doctor portal (migration 00055)
@@ -96,12 +105,39 @@ consultation fee used for bookings at every clinic. 00054:
 - **Doctor trust fields:** `is_demo`, `registration_note`, ratings and the cross-clinic fee can't be
   changed by clinics. The fee can be changed only by the doctor's own account or a platform admin.
 - **Clinic trust fields:** `is_demo` and ratings can't be changed by clinic admins.
-- **Listings:** only sample doctors and doctors with a verified, active link are publicly listed.
-  Clinic members still see their own clinic's pending doctors.
+- **Listings:** 00054 by itself still allows sample doctors and verified active links to be read.
+  Migration 00058 supersedes that policy: public reads require a real doctor linked through an
+  active verified relationship to a verified, published real clinic. Clinic members retain access
+  to their own clinic's pending doctors.
 - **Schedules:** can only be written for doctors verified at that clinic.
 
 **Until 00054 is deployed the vulnerability remains in production.** Do not give clinic
 memberships to anyone you do not fully trust before then.
+
+## Publication, patient contact and booking (migration 00057)
+
+These are distinct states on `clinics`, all default-deny:
+
+- `clinic_verification_state`: `pending`, `verified` or `rejected`;
+- `is_published`: separate permission for directory publication;
+- `patient_contact_permission`: `not_granted`, `granted` or `revoked`, with the platform-admin
+  actor and timestamp recorded when it changes;
+- `booking_enabled`: separate online-appointment capability.
+
+The patient conversation INSERT policy checks ownership, clinic verification/publication, explicit
+contact permission, a real active verified doctor–clinic relationship, and any supplied
+appointment's patient/clinic/doctor match. Existing participant read policies are unchanged, so
+revoking future contact does not erase access to an already-authorized conversation. Candidate
+tables are outside the check and are not valid clinic IDs.
+
+Migrations 00057–00059 and SQL tests 006, 010 and 015 are local/reviewable only. They have not been
+validated on hosted Supabase or deployed. Migration 00059 is required for the final provider
+publication/read/contact/schedule boundaries: it restricts direct clinic reads to safe columns,
+provides authorized contact-detail RPCs, and limits anonymous schedule reads to published provider
+links. The shared migration history and live schema must be reconciled before any deployment.
+Migration 00058 makes provider publication database-enforced, forces protected clinic state through
+the audited SECURITY DEFINER RPC, preserves permission-actor UUIDs as historical snapshots, and
+removes the legacy `get_doctor_slots(uuid, date)` overload.
 
 ## What is ready and what needs the database update
 
@@ -112,7 +148,7 @@ memberships to anyone you do not fully trust before then.
 | Clinic portal: doctor verification status, opening hours editor  | Works now (existing policies); after 00054 it is limited to verified doctors                                 |
 | `/clinic/signup` clinic applications                             | **Needs 00054.** Until then it says applications aren't open yet.                                            |
 | Proposing doctors                                                | **Needs 00054.** Until then it says the update isn't deployed.                                               |
-| `/admin` console                                                 | **Needs 00052 and 00054.** Until then it fails closed.                                                       |
+| `/admin` console                                                 | **Needs 00052, 00054, 00057, 00058 and 00059.** Until then it fails closed or reports publication controls unavailable. |
 | `/clinic/login`, `/doctor/login`, provider entrances on `/login` | Frontend only. Ready (authorization uses existing tables).                                                   |
 | Doctor applications in `/admin`                                  | **Needs 00055.** Until then the tab says the update isn't deployed.                                          |
 | `/doctor/signup` (doctor applications)                           | **Needs 00055.** Until then it says applications aren't open.                                                |
@@ -123,12 +159,22 @@ memberships to anyone you do not fully trust before then.
 
 Nothing here is applied automatically.
 
-1. Apply in order to a **staging** project first: `00052`, `00053`, `00054`, `00055`, `00056`.
-2. Run the pgTAP suite there (`001`–`013`). In a PGlite replay of the deployed migrations plus
-   00052–00055, all 12 files passed (283 assertions), and 00055 re-applied cleanly; `013` (00056)
-   passed 46/46 in the same harness. They have not yet run on a real Supabase stack.
-3. Apply the same migrations to production.
-4. Grant the first platform admin from the SQL editor, as the database owner:
+1. Establish and verify the complete shared migration history and live schema before applying
+   anything. The intended local sequence is `00052` → `00053` → `00054` → `00055` → `00056` →
+   `00057` → `00058` → `00059`. Validate the applicable pending changes on **staging**, including
+   00059. Do not blindly run `db push` or reapply a migration based only on its local file.
+   Migration 00055 has local edits; reconcile whether it was already applied elsewhere and compare
+   its deployed definition before deciding whether a forward migration is needed.
+2. Run the SQL/security suite on staging through test `015` (suite `001`–`015`), including test
+   015 against the schema after 00059. No hosted Supabase validation is claimed here. Earlier
+   PGlite results cover only their stated migration/test inputs; the recorded 00055 replay is not
+   evidence of its shared deployment status or permission to reapply it.
+3. Do not deploy to production until its actual shared migration records and live schema—including
+   historical migrations absent from this repository—have been reconciled, staging validation is
+   complete, and production deployment is explicitly approved. Staging success does not authorize
+   production execution.
+4. Grant the first platform admin from the SQL editor, as the database owner, only in the approved
+   target environment:
    ```sql
    INSERT INTO public.user_roles (user_id, role)
    VALUES ('<auth user id of the administrator>', 'platform_admin');
@@ -160,15 +206,16 @@ verification_pending → verified / rejected`. Admins can change only review sta
 A verified candidate is still **not** a provider. Onboarding a real provider remains the
 application → approval → proposed doctor → verified link flow above.
 
-The import is a generated SQL file run by the database owner; see
-[research/README.md](../research/README.md). **The research catalogue has not been added to the
-repository yet**, so nothing has been imported.
+The private research catalogue contains 100 facilities, 399 doctors, 418 relationships and 917
+sources. Its generated import is a separate owner-run SQL action; see
+[research/README.md](../research/README.md). The catalogue never becomes patient-facing provider
+data by import alone.
 
 ## Sample listings
 
 The current clinics and doctors are sample records (`is_demo = true`). They are labelled "Sample
-listing" everywhere, their ratings are hidden, and their links are pending, so they can't be
-booked. Rules:
+listing" everywhere, their ratings are hidden, and clinics default to unpublished,
+non-contactable and not bookable, so they cannot be messaged or booked. Rules:
 
 - **Never verify a sample doctor.** The admin console hides sample links from the verification queue.
 - **Never edit a sample row into a "real" provider.** Real providers enter only through an approved

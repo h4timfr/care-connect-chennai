@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(46);
+SELECT extensions.plan(65);
 
 -- Contract
 SELECT extensions.ok(
@@ -30,6 +30,7 @@ INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
 ('00000000-0000-0000-0000-0000000006d1', 'doc1@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000006d2', 'doc2@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000006d3', 'doc3@test.com', now(), now()),
+('00000000-0000-0000-0000-0000000006d4', 'doc4@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000006e1', 'pat1@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000006e2', 'pat2@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000006f1', 'app1@test.com', now(), now()),
@@ -44,6 +45,7 @@ INSERT INTO public.doctors (id, user_id, name, specialty_id, consultation_fee, i
 ('00000000-0000-0000-0000-0000000006b1', '00000000-0000-0000-0000-0000000006d1', 'Dr Six One', 'general', 500, false, 'TNMC 1'),
 ('00000000-0000-0000-0000-0000000006b2', '00000000-0000-0000-0000-0000000006d2', 'Dr Six Two', 'general', 500, false, 'TNMC 2'),
 ('00000000-0000-0000-0000-0000000006b3', '00000000-0000-0000-0000-0000000006d3', 'Dr Six Three', 'general', 500, false, 'TNMC 3'),
+('00000000-0000-0000-0000-0000000006b4', '00000000-0000-0000-0000-0000000006d4', 'Dr Six Four', 'general', 500, false, 'TNMC 4'),
 ('00000000-0000-0000-0000-0000000006b9', NULL, 'Dr Sample Six', 'general', 500, true, NULL);
 -- Only a platform admin may store 'verified' (check_clinic_doctor_update downgrades anyone else).
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000006a1", "role": "authenticated"}';
@@ -51,8 +53,22 @@ INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_st
 ('00000000-0000-0000-0000-0000000006c1', '00000000-0000-0000-0000-0000000006b1', true, 'verified'),
 ('00000000-0000-0000-0000-0000000006c2', '00000000-0000-0000-0000-0000000006b1', true, 'pending'),
 ('00000000-0000-0000-0000-0000000006c1', '00000000-0000-0000-0000-0000000006b2', true, 'verified'),
-('00000000-0000-0000-0000-0000000006c2', '00000000-0000-0000-0000-0000000006b3', true, 'pending');
+('00000000-0000-0000-0000-0000000006c2', '00000000-0000-0000-0000-0000000006b2', false, 'verified'),
+('00000000-0000-0000-0000-0000000006c2', '00000000-0000-0000-0000-0000000006b3', true, 'pending'),
+('00000000-0000-0000-0000-0000000006c1', '00000000-0000-0000-0000-0000000006b4', true, 'verified'),
+('00000000-0000-0000-0000-0000000006c2', '00000000-0000-0000-0000-0000000006b4', true, 'pending');
 RESET request.jwt.claims;
+-- A linked doctor can also be clinic staff; that role must not bypass doctor-specific scheduling.
+INSERT INTO public.clinic_memberships (clinic_id, user_id, role, active) VALUES
+('00000000-0000-0000-0000-0000000006c1', '00000000-0000-0000-0000-0000000006d4', 'clinic_staff', true),
+('00000000-0000-0000-0000-0000000006c2', '00000000-0000-0000-0000-0000000006d4', 'clinic_staff', true);
+-- Existing rows must remain protected if a relationship becomes pending or inactive.
+INSERT INTO public.doctor_schedules (doctor_id, clinic_id, day_of_week, start_time, end_time, slot_minutes) VALUES
+('00000000-0000-0000-0000-0000000006b1', '00000000-0000-0000-0000-0000000006c1', 0, '09:00', '12:00', 30),
+('00000000-0000-0000-0000-0000000006b1', '00000000-0000-0000-0000-0000000006c2', 0, '09:00', '12:00', 30),
+('00000000-0000-0000-0000-0000000006b2', '00000000-0000-0000-0000-0000000006c1', 0, '09:00', '12:00', 30),
+('00000000-0000-0000-0000-0000000006b2', '00000000-0000-0000-0000-0000000006c2', 0, '09:00', '12:00', 30),
+('00000000-0000-0000-0000-0000000006b4', '00000000-0000-0000-0000-0000000006c2', 0, '09:00', '12:00', 30);
 INSERT INTO public.appointments (id, patient_id, clinic_id, doctor_id, date, time, status, fee) VALUES
 ('00000000-0000-0000-0000-000000000611',
  (SELECT id FROM public.patients WHERE user_id = '00000000-0000-0000-0000-0000000006e1'),
@@ -151,6 +167,37 @@ SELECT extensions.lives_ok(
     $$ INSERT INTO public.doctor_schedules (doctor_id, clinic_id, day_of_week, start_time, end_time, slot_minutes) VALUES ('00000000-0000-0000-0000-0000000006b1', '00000000-0000-0000-0000-0000000006c1', 3, '09:00', '12:00', 30) $$,
     'a doctor can set hours at a clinic where they are verified'
 );
+SELECT extensions.is((SELECT count(*)::int FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c1'), 2, 'doctor can select own verified schedules');
+SELECT extensions.is((SELECT count(*)::int FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c2'), 0, 'doctor cannot select pending clinic schedule');
+SELECT extensions.is((SELECT count(*)::int FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b2'), 0, 'doctor cannot select another doctor schedule');
+SELECT extensions.results_eq(
+    $$ WITH u AS (UPDATE public.doctor_schedules SET end_time = '13:00' WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c1' AND day_of_week = 3 RETURNING 1) SELECT count(*)::int FROM u $$,
+    $$ VALUES (1) $$, 'doctor can update own verified schedule'
+);
+SELECT extensions.throws_ok(
+    $$ UPDATE public.doctor_schedules SET clinic_id = '00000000-0000-0000-0000-0000000006c2' WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c1' AND day_of_week = 3 $$,
+    '42501', NULL, 'doctor cannot move a verified schedule into a pending clinic'
+);
+SELECT extensions.results_eq(
+    $$ WITH u AS (UPDATE public.doctor_schedules SET end_time = '13:00' WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c2' RETURNING 1) SELECT count(*)::int FROM u $$,
+    $$ VALUES (0) $$, 'doctor cannot update an existing pending schedule'
+);
+SELECT extensions.results_eq(
+    $$ WITH d AS (DELETE FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c2' RETURNING 1) SELECT count(*)::int FROM d $$,
+    $$ VALUES (0) $$, 'doctor cannot delete an existing pending schedule'
+);
+SELECT extensions.results_eq(
+    $$ WITH u AS (UPDATE public.doctor_schedules SET end_time = '13:00' WHERE doctor_id = '00000000-0000-0000-0000-0000000006b2' AND clinic_id = '00000000-0000-0000-0000-0000000006c1' RETURNING 1) SELECT count(*)::int FROM u $$,
+    $$ VALUES (0) $$, 'doctor cannot update another doctor schedule'
+);
+SELECT extensions.results_eq(
+    $$ WITH d AS (DELETE FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b2' AND clinic_id = '00000000-0000-0000-0000-0000000006c1' RETURNING 1) SELECT count(*)::int FROM d $$,
+    $$ VALUES (0) $$, 'doctor cannot delete another doctor schedule'
+);
+SELECT extensions.results_eq(
+    $$ WITH d AS (DELETE FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c1' AND day_of_week = 3 RETURNING 1) SELECT count(*)::int FROM d $$,
+    $$ VALUES (1) $$, 'doctor can delete own verified schedule'
+);
 SELECT extensions.throws_ok(
     $$ INSERT INTO public.doctor_schedules (doctor_id, clinic_id, day_of_week, start_time, end_time, slot_minutes) VALUES ('00000000-0000-0000-0000-0000000006b1', '00000000-0000-0000-0000-0000000006c2', 3, '09:00', '12:00', 30) $$,
     '42501', NULL, 'a doctor cannot set hours where they are only pending'
@@ -163,6 +210,46 @@ SELECT extensions.throws_ok(
     $$ INSERT INTO public.doctor_applications (full_name, specialty_id, qualifications, registration_council, registration_number, experience_years, contact_phone, contact_email)
        VALUES ('Dr Six One', 'general', 'MBBS', 'TNMC', '1', 5, '9840000000', 'doc1@test.com') $$,
     'P0001', NULL, 'an account already linked to a doctor cannot apply again'
+);
+RESET role;
+
+-- Doctor d2: verified at C1, inactive at C2.
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000006d2", "role": "authenticated"}';
+SET LOCAL role authenticated;
+SELECT extensions.is((SELECT count(*)::int FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b2' AND clinic_id = '00000000-0000-0000-0000-0000000006c2'), 0, 'inactive link cannot select its schedule');
+SELECT extensions.throws_ok(
+    $$ INSERT INTO public.doctor_schedules (doctor_id, clinic_id, day_of_week, start_time, end_time, slot_minutes) VALUES ('00000000-0000-0000-0000-0000000006b2', '00000000-0000-0000-0000-0000000006c2', 3, '09:00', '12:00', 30) $$,
+    '42501', NULL, 'inactive link cannot insert schedules'
+);
+SELECT extensions.results_eq(
+    $$ WITH u AS (UPDATE public.doctor_schedules SET end_time = '13:00' WHERE doctor_id = '00000000-0000-0000-0000-0000000006b2' AND clinic_id = '00000000-0000-0000-0000-0000000006c2' RETURNING 1) SELECT count(*)::int FROM u $$,
+    $$ VALUES (0) $$, 'inactive link cannot update schedules'
+);
+SELECT extensions.results_eq(
+    $$ WITH d AS (DELETE FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b2' AND clinic_id = '00000000-0000-0000-0000-0000000006c2' RETURNING 1) SELECT count(*)::int FROM d $$,
+    $$ VALUES (0) $$, 'inactive link cannot delete schedules'
+);
+RESET role;
+
+-- Doctor d4 is also staff at both clinics. Staff's permissive policy must not widen doctor rights.
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000006d4", "role": "authenticated"}';
+SET LOCAL role authenticated;
+SELECT extensions.is((SELECT count(*)::int FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1'), 0, 'dual-role doctor cannot select another doctor schedule as staff');
+SELECT extensions.throws_ok(
+    $$ INSERT INTO public.doctor_schedules (doctor_id, clinic_id, day_of_week, start_time, end_time, slot_minutes) VALUES ('00000000-0000-0000-0000-0000000006b1', '00000000-0000-0000-0000-0000000006c1', 5, '09:00', '12:00', 30) $$,
+    '42501', NULL, 'dual-role doctor cannot insert another doctor schedule as staff'
+);
+SELECT extensions.results_eq(
+    $$ WITH u AS (UPDATE public.doctor_schedules SET end_time = '13:00' WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c1' RETURNING 1) SELECT count(*)::int FROM u $$,
+    $$ VALUES (0) $$, 'dual-role doctor cannot update another doctor schedule as staff'
+);
+SELECT extensions.results_eq(
+    $$ WITH d AS (DELETE FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b1' AND clinic_id = '00000000-0000-0000-0000-0000000006c1' RETURNING 1) SELECT count(*)::int FROM d $$,
+    $$ VALUES (0) $$, 'dual-role doctor cannot delete another doctor schedule as staff'
+);
+SELECT extensions.results_eq(
+    $$ WITH d AS (DELETE FROM public.doctor_schedules WHERE doctor_id = '00000000-0000-0000-0000-0000000006b4' AND clinic_id = '00000000-0000-0000-0000-0000000006c2' RETURNING 1) SELECT count(*)::int FROM d $$,
+    $$ VALUES (0) $$, 'dual-role doctor cannot delete own pending schedule as staff'
 );
 RESET role;
 

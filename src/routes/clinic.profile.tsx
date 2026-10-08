@@ -44,7 +44,7 @@ function ClinicProfileDetails() {
   // Completeness covers what patients see on the public clinic page, nothing more.
   const missing = details.filter((d) => !d.value.trim()).map((d) => d.label);
   const done = details.length - missing.length;
-  // The same rule booking enforces: a doctor here with a verified, active link.
+  // Mirrors the clinic-aware booking RPC, including clinic publication and explicit booking state.
   const bookable = clinicHasBookableDoctor(activeClinic.id, doctorsOfClinic(activeClinic.id));
 
   const status: { label: string; value: string; good: boolean | null }[] = [

@@ -1,13 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  CalendarX,
-  GraduationCap,
-  Languages,
-  MapPin,
-  Phone,
-  SearchX,
-} from "lucide-react";
+import { ArrowLeft, CalendarX, GraduationCap, Languages, MapPin, SearchX } from "lucide-react";
 import { useState } from "react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import {
@@ -22,11 +14,11 @@ import {
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { DateStrip, SlotGrid } from "@/components/SlotPicker";
 import { Button } from "@/components/ui/button";
-import { isoDate, telHref } from "@/lib/format";
-import { Trans, useI18n } from "@/lib/i18n";
+import { isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { describeDataError } from "@/lib/supabase/errors";
-import { bookableClinicIds } from "@/lib/supabase/queries";
+import { bookableClinicIds, doctorCanPatientContact } from "@/lib/supabase/queries";
 
 export const Route = createFileRoute("/doctors/$doctorId")({
   head: () => ({ meta: [{ title: "Doctor profile — CareConnect" }] }),
@@ -110,7 +102,11 @@ function DoctorProfile() {
                 <span className="rounded-full bg-muted px-3 py-1 font-medium">
                   {t("common.consultationFee", { fee: fmt.inr(doctor.consultationFee) })}
                 </span>
-                <ListingStatus isSample={doctor.isSample} bookable={bookable.size > 0} />
+                <ListingStatus
+                  isSample={doctor.isSample}
+                  contactable={doctorCanPatientContact(doctor)}
+                  bookable={bookable.size > 0}
+                />
               </div>
             </div>
             {bookable.size ? (
@@ -121,7 +117,7 @@ function DoctorProfile() {
               </Button>
             ) : null}
           </div>
-          {/* Booking opens automatically once a clinic link is verified (bookableClinicIds). */}
+          {/* Booking is an independent, platform-controlled capability. */}
           {!bookable.size ? (
             <div
               className="mt-5 flex items-start gap-3 rounded-lg border bg-muted/50 p-4 text-sm"
@@ -205,7 +201,11 @@ function DoctorProfile() {
                             {clinic.address}
                           </p>
                         </div>
-                        <MessageClinicButton clinicId={clinic.id} doctorId={doctor.id} />
+                        <MessageClinicButton
+                          clinicId={clinic.id}
+                          doctorId={doctor.id}
+                          contactable={doctorCanPatientContact(doctor, clinic.id)}
+                        />
                       </div>
                       {bookable.has(clinic.id) ? (
                         <SlotGrid
@@ -223,26 +223,6 @@ function DoctorProfile() {
                       ) : (
                         <InfoNotice>
                           {t("doctor.notBookableAt", { clinic: clinic.name })}
-                          {telHref(clinic.phone) ? (
-                            <>
-                              {" "}
-                              <Trans
-                                k="doctor.callToBook"
-                                values={{
-                                  phone: (
-                                    <a
-                                      href={telHref(clinic.phone) ?? undefined}
-                                      dir="ltr"
-                                      className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-2 hover:underline"
-                                    >
-                                      <Phone className="h-3 w-3" aria-hidden />
-                                      {clinic.phone}
-                                    </a>
-                                  ),
-                                }}
-                              />
-                            </>
-                          ) : null}
                         </InfoNotice>
                       )}
                     </li>

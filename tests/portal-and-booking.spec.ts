@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { defaultState, ids } from "./support/mock-backend";
+import { defaultState, enablePatientContact, ids } from "./support/mock-backend";
 import { expect, test } from "./support/fixtures";
 
 // Booking availability honesty, and clinic-portal visibility driven by real memberships.
@@ -15,12 +15,13 @@ test.describe("Online booking availability", () => {
     await expect(notice).toContainText("Online booking unavailable");
     await expect(notice).toContainText("not currently accepting online appointments");
     await expect(page.getByRole("link", { name: "Book appointment" })).toHaveCount(0);
-    // The clinic can still be contacted.
-    await expect(page.getByRole("button", { name: "Message clinic" })).toBeVisible();
+    // A pending clinic link does not create a patient-contact affordance.
+    await expect(page.getByRole("button", { name: "Message clinic" })).toHaveCount(0);
   });
 
   test("a verified doctor offers booking and no unavailable notice", async ({ page, backend }) => {
-    await backend({}, { signedIn: false });
+    const mock = await backend({}, { signedIn: false });
+    enablePatientContact(mock.state, ids.clinicA, true);
     await page.goto(`/doctors/${ids.doctorVerified}`);
     await expect(page.getByRole("link", { name: "Book appointment" })).toBeVisible();
     await expect(page.getByTestId("booking-unavailable")).toHaveCount(0);
@@ -35,6 +36,43 @@ test.describe("Online booking availability", () => {
     await expect(page.getByText(/isn't accepting online bookings right now/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Request appointment" })).toHaveCount(0);
     expect(mock.callsTo("POST", "/rpc/book_appointment")).toHaveLength(0);
+  });
+});
+
+test.describe("Provider publication controls", () => {
+  test("publication, patient permission, and booking are independent admin actions", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({ platformAdmin: true });
+    mock.state.clinics[0]!["is_demo"] = false;
+    mock.state.doctors[0]!["is_demo"] = false;
+    await page.goto("/admin");
+    await page.getByRole("tab", { name: "Provider publishing" }).click();
+    const row = page.locator("li").filter({ hasText: "Test Clinic A" });
+    await expect(row).toContainText("Pending");
+    await expect(row).toContainText("Not granted");
+    await expect(row).toContainText("Disabled");
+
+    await row.getByRole("button", { name: "Verify clinic" }).click();
+    await expect(row).toContainText("Verified");
+    expect(
+      mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state").at(-1)?.body,
+    ).toMatchObject({
+      p_verification_state: "verified",
+      p_is_published: false,
+      p_contact_permission: "not_granted",
+      p_booking_enabled: false,
+    });
+
+    await row.getByRole("button", { name: "Publish listing" }).click();
+    expect(
+      mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state").at(-1)?.body,
+    ).toMatchObject({
+      p_is_published: true,
+      p_contact_permission: "not_granted",
+      p_booking_enabled: false,
+    });
   });
 });
 
@@ -102,6 +140,8 @@ test.describe("Truthful listing status", () => {
   const realListings = () => {
     const state = defaultState();
     for (const row of [...state.clinics, ...state.doctors]) row["is_demo"] = false;
+    enablePatientContact(state, ids.clinicA, true);
+    enablePatientContact(state, ids.clinicB, true);
     return { clinics: state.clinics, doctors: state.doctors };
   };
   const card = (page: Page, name: string) => page.locator("article").filter({ hasText: name });
@@ -113,7 +153,7 @@ test.describe("Truthful listing status", () => {
     const pending = card(page, "Dr. Pending Tester");
     await expect(verified.getByText("Verified", { exact: true })).toBeVisible();
     await expect(verified.getByText("Not yet bookable")).toHaveCount(0);
-    await expect(pending.getByText("Not yet bookable")).toBeVisible();
+    await expect(pending.getByText("Patient enquiries unavailable")).toBeVisible();
     await expect(pending.getByText("Verified", { exact: true })).toHaveCount(0);
   });
 
@@ -125,15 +165,15 @@ test.describe("Truthful listing status", () => {
     await page.goto("/discover?tab=clinics");
     await expect(card(page, "Test Clinic A").getByText("Verified", { exact: true })).toBeVisible();
     const clinicB = card(page, "Test Clinic B");
-    await expect(clinicB.getByText("Not yet bookable")).toBeVisible();
+    await expect(clinicB.getByText("Patient enquiries unavailable")).toBeVisible();
     await expect(clinicB.getByText("Verified", { exact: true })).toHaveCount(0);
 
     await page.goto(`/clinics/${ids.clinicB}`);
     await expect(page.getByRole("heading", { level: 1, name: "Test Clinic B" })).toBeVisible();
-    await expect(page.getByText("Not yet bookable").first()).toBeVisible();
+    await expect(page.getByText("Patient enquiries unavailable").first()).toBeVisible();
     await page.goto(`/doctors/${ids.doctorPending}`);
     await expect(page.getByRole("heading", { level: 1, name: "Dr. Pending Tester" })).toBeVisible();
-    await expect(page.getByText("Not yet bookable").first()).toBeVisible();
+    await expect(page.getByText("Patient enquiries unavailable").first()).toBeVisible();
   });
 
   test("sample listings are never shown as verified", async ({ page, backend }) => {

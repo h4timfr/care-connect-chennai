@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Initials, ListingStatus, Rating } from "@/components/common";
 import { useApp } from "@/lib/store";
 import { useI18n } from "@/lib/i18n";
-import { bookableClinicIds } from "@/lib/supabase/queries";
+import { bookableClinicIds, doctorCanPatientContact } from "@/lib/supabase/queries";
 import { describeDataError } from "@/lib/supabase/errors";
 import { cn } from "@/lib/utils";
 import type { Doctor } from "@/lib/types";
@@ -77,7 +77,11 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
         <span className="font-medium text-foreground">{fmt.inr(doctor.consultationFee)}</span>
         <span>{t.plural("common.experience", doctor.experienceYears)}</span>
         <Rating value={doctor.rating} count={doctor.reviewCount} sample={doctor.isSample} />
-        <ListingStatus isSample={doctor.isSample} bookable={canBookOnline} />
+        <ListingStatus
+          isSample={doctor.isSample}
+          contactable={doctorCanPatientContact(doctor)}
+          bookable={canBookOnline}
+        />
       </div>
 
       {!compact && doctor.languages.length ? (
