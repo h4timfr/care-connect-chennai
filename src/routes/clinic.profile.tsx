@@ -1,10 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircle2, Circle } from "lucide-react";
 import { ClinicShell } from "@/components/layout/ClinicShell";
-import { InfoNotice } from "@/components/common";
+import { ErrorState, InfoNotice, PageLoader } from "@/components/common";
 import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/supabase/auth";
+import { describeDataError } from "@/lib/supabase/errors";
 import { useI18n, type MessageKey } from "@/lib/i18n";
-import { clinicHasBookableDoctor, type MemberClinic } from "@/lib/supabase/queries";
+import {
+  clinicHasBookableDoctor,
+  type MemberClinic,
+  useMyClinicContacts,
+} from "@/lib/supabase/queries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/clinic/profile")({
@@ -19,19 +25,41 @@ function roleKey(role: MemberClinic["memberRole"]): MessageKey {
 
 function ClinicProfileDetails() {
   const { activeClinic, doctorsOfClinic, catalog } = useApp();
+  const { user } = useAuth();
+  const contacts = useMyClinicContacts(user?.id, { enabled: !!activeClinic });
   const { t, fmt } = useI18n();
   const title = t("clinicProfile.title");
 
   // ClinicShell shows the loading / no-access states until a clinic is active.
   if (!activeClinic) return <ClinicShell title={title}>{null}</ClinicShell>;
+  if (contacts.isPending) {
+    return (
+      <ClinicShell title={title} description={t("clinicProfile.subtitle")}>
+        <PageLoader />
+      </ClinicShell>
+    );
+  }
+  if (contacts.error) {
+    return (
+      <ClinicShell title={title} description={t("clinicProfile.subtitle")}>
+        <ErrorState
+          title={title}
+          message={t(describeDataError(contacts.error))}
+          onRetry={() => void contacts.refetch()}
+        />
+      </ClinicShell>
+    );
+  }
+
+  const clinicContact = contacts.data?.find((contact) => contact.clinic_id === activeClinic.id);
 
   const details: { label: string; value: string; ltr?: boolean }[] = [
     { label: t("clinicProfile.name"), value: activeClinic.name },
     { label: t("clinicProfile.description"), value: activeClinic.about },
     { label: t("common.address"), value: activeClinic.address },
     { label: t("common.area"), value: activeClinic.area },
-    { label: t("common.phone"), value: activeClinic.phone, ltr: true },
-    { label: t("common.email"), value: activeClinic.email, ltr: true },
+    { label: t("common.phone"), value: clinicContact?.phone ?? "", ltr: true },
+    { label: t("common.email"), value: clinicContact?.email ?? "", ltr: true },
     {
       label: t("common.specialties"),
       value: activeClinic.specialtyIds.map(fmt.specialty).join(", "),

@@ -545,27 +545,33 @@ export function useAuthorizedClinics(userId?: string, options?: { enabled?: bool
     enabled: (options?.enabled ?? true) && !!userId,
     queryFn: async (): Promise<MemberClinic[]> => {
       if (!userId) return [];
-      const [{ data, error }, { data: contacts, error: contactsError }] = await Promise.all([
-        supabase
-          .from("clinic_memberships")
-          .select(`clinic_id, role, clinics!inner(${CLINIC_COLUMNS})` as const)
-          .eq("user_id", userId)
-          .eq("active", true),
-        supabase.rpc("get_my_clinic_contacts"),
-      ]);
+      const { data, error } = await supabase
+        .from("clinic_memberships")
+        .select(`clinic_id, role, clinics!inner(${CLINIC_COLUMNS})` as const)
+        .eq("user_id", userId)
+        .eq("active", true);
 
       if (error) throw error;
-      if (contactsError) throw contactsError;
-      const contactsByClinic = new Map(contacts.map((contact) => [contact.clinic_id, contact]));
       return data
         .map((row) => ({
-          ...mapClinic(
-            Array.isArray(row.clinics) ? row.clinics[0] : row.clinics,
-            contactsByClinic.get(row.clinic_id) ?? { phone: "", email: "" },
-          ),
+          ...mapClinic(Array.isArray(row.clinics) ? row.clinics[0] : row.clinics),
           memberRole: row.role,
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
+    },
+  });
+}
+
+/** Private clinic contact details are fetched only on the authorized clinic profile page. */
+export function useMyClinicContacts(userId?: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["my_clinic_contacts", userId],
+    enabled: (options?.enabled ?? true) && !!userId,
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data, error } = await supabase.rpc("get_my_clinic_contacts");
+      if (error) throw error;
+      return data;
     },
   });
 }

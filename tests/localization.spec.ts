@@ -65,9 +65,27 @@ test.describe("Language selection", () => {
       );
       expect(overflow, path).toBeLessThanOrEqual(1);
     }
-    // Phone numbers and email addresses stay left-to-right inside Urdu text.
+    // Public clinic projections never expose direct contact details.
     await page.goto(`/clinics/${ids.clinicA}`);
+    await expect(page.getByText("+91 00000 00000")).toHaveCount(0);
+    await expect(page.getByText("clinic@test.invalid")).toHaveCount(0);
+  });
+
+  test("clinic member contact details stay left-to-right in Urdu", async ({ page, backend }) => {
+    const mock = await backend();
+    mock.state.memberships = [
+      {
+        id: "membership-a",
+        clinic_id: ids.clinicA,
+        role: "clinic_staff",
+        active: true,
+        clinics: mock.state.clinics[0],
+      },
+    ];
+    await setLanguageCookie(page, "ur");
+    await page.goto("/clinic/profile");
     await expect(page.getByText("+91 00000 00000")).toHaveAttribute("dir", "ltr");
+    await expect(page.getByText("clinic@test.invalid")).toHaveAttribute("dir", "ltr");
   });
 
   test("an unsupported stored language falls back to the browser's language", async ({

@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { appointmentRow, conversationRow, ids, mockBackend } from "./support/mock-backend";
+import {
+  appointmentRow,
+  conversationRow,
+  enablePatientContact,
+  ids,
+  mockBackend,
+} from "./support/mock-backend";
 
 // Request budget per route on a cold load (mocked backend, signed in as a clinic member so every
 // route renders its full content). Guards against duplicate fetches and data loaded globally
@@ -24,7 +30,7 @@ const EXPECTED: Record<string, string[]> = {
   "/clinic/patients": [...SHARED, "appointments"],
   "/clinic/doctors": [...SHARED, "clinic_doctors", "doctor_schedules"],
   "/clinic/messages": [...SHARED, "conversations"],
-  "/clinic/profile": SHARED,
+  "/clinic/profile": [...SHARED, "rpc/get_my_clinic_contacts"],
 };
 
 test("each route requests only what it shows, once", async ({ page }) => {
@@ -35,7 +41,15 @@ test("each route requests only what it shows, once", async ({ page }) => {
       conversations: [conversationRow([{ from: "clinic", body: "Hello" }])],
     },
   });
-  mock.state.memberships = [{ clinic_id: ids.clinicA, clinics: mock.state.clinics[0] }];
+  mock.state.memberships = [
+    {
+      clinic_id: ids.clinicA,
+      role: "clinic_admin",
+      active: true,
+      clinics: mock.state.clinics[0],
+    },
+  ];
+  enablePatientContact(mock.state, ids.clinicA, true);
 
   const actual: Record<string, string[]> = {};
   for (const route of Object.keys(EXPECTED)) {

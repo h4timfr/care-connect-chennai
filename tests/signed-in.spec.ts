@@ -192,6 +192,7 @@ test.describe("Discover URL state", () => {
     backend,
   }) => {
     const mock = await backend();
+    enablePatientContact(mock.state, ids.clinicA, true);
     for (const query of ["date=garbage&time=25:99&clinicId=x", "date=2099-02-30&time=12:60"]) {
       await page.goto(`/book/${ids.doctorVerified}?${query}`);
       await expect(page.getByRole("button", { name: "9:30 AM" })).toBeVisible();
@@ -509,6 +510,7 @@ test.describe("Booking", () => {
     backend,
   }) => {
     const mock = await backend();
+    enablePatientContact(mock.state, ids.clinicA, true);
     await page.goto(`/doctors/${ids.doctorVerified}`);
     await page.waitForLoadState("networkidle");
     await page.getByRole("link", { name: "Book appointment" }).click();
@@ -540,7 +542,8 @@ test.describe("Booking", () => {
     backend,
   }) => {
     const seen: string[] = [];
-    await backend({ delays: { appointments: 800 } });
+    const mock = await backend({ delays: { appointments: 800 } });
+    enablePatientContact(mock.state, ids.clinicA, true);
     await page.exposeFunction("recordText", (text: string) => seen.push(text));
     await page.addInitScript(() => {
       new MutationObserver(() => {
@@ -566,7 +569,7 @@ test.describe("Booking", () => {
     page,
     backend,
   }) => {
-    await backend({
+    const mock = await backend({
       bookResult: {
         status: 400,
         body: {
@@ -575,6 +578,7 @@ test.describe("Booking", () => {
         },
       },
     });
+    enablePatientContact(mock.state, ids.clinicA, true);
     await page.goto(`/book/${ids.doctorVerified}`);
     await page.getByRole("button", { name: "9:30 AM" }).click();
     await page.getByRole("button", { name: "Request appointment" }).click();
@@ -660,7 +664,7 @@ test.describe("Messages", () => {
       new MutationObserver(() => {
         const text = document.body?.innerText ?? "";
         const record = (window as unknown as { recordText: (t: string) => void }).recordText;
-        if (text.includes("isn't available")) record("unavailable");
+        if (text.includes("That conversation isn't available.")) record("unavailable");
         if (text.includes("No conversations yet")) record("empty");
       }).observe(document, { childList: true, subtree: true, characterData: true });
     });

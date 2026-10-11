@@ -473,8 +473,9 @@ test.describe("Portal status is truthful", () => {
     await expect(status.getByText("Clinic staff")).toBeVisible();
     // The test clinic is sample data, so it says so instead of posing as a real provider.
     await expect(status.getByText("Sample listing, not shown as a real provider")).toBeVisible();
-    // Dr. Verified Tester has a verified, active link here, so booking really is open.
-    await expect(status.getByText("Available", { exact: true })).toBeVisible();
+    // A verified sample doctor still cannot make a sample clinic bookable.
+    await expect(status.getByText("Not yet available", { exact: true })).toBeVisible();
+    await expect(status.getByText("Available", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Verified", { exact: true })).toHaveCount(0);
     // Opening hours are empty in the fixture: counted as missing, not invented.
     const completeness = page.getByRole("region", { name: "Profile completeness" });
