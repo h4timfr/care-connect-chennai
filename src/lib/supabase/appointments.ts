@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
 import { useAuth } from "./auth";
+import { patientAppointmentsQueryKey } from "./query-keys";
 import { codeOf, describeDataError, isNetworkError, messageOf } from "./errors";
 import type { Database } from "@/lib/database.types";
 import { isoDate } from "@/lib/format";
@@ -30,7 +31,7 @@ export function usePatientAppointments(patientId?: string, options?: { enabled?:
   const { user } = useAuth();
   return useQuery({
     enabled: (options?.enabled ?? true) && !!user && !!patientId,
-    queryKey: ["appointments", "patient", user?.id, patientId],
+    queryKey: patientAppointmentsQueryKey(user?.id, patientId),
     queryFn: async () => {
       if (!patientId) return [];
       const { data, error } = await supabase
@@ -99,6 +100,7 @@ export interface BookingRequest {
 
 export function useBookAppointment() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     // The RPC derives the patient from auth.uid(), looks up the authoritative fee and validates the
@@ -118,7 +120,7 @@ export function useBookAppointment() {
       // Add the row the RPC returned to a cached list right away, so the appointment page we
       // navigate to doesn't report it missing while the list revalidates.
       queryClient.setQueryData<Appointment[]>(
-        ["appointments", "patient", appointment.patientId],
+        patientAppointmentsQueryKey(user?.id, appointment.patientId),
         (previous) =>
           previous ? [appointment, ...previous.filter((a) => a.id !== appointment.id)] : previous,
       );
