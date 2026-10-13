@@ -9,6 +9,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit --incremental false",
+    "validate:frontend": "npm run lint && npm run typecheck && npm run build",
     "format": "prettier --write .",
     "candidates:seed": "tsx scripts/candidates/build-seed.ts"
   },

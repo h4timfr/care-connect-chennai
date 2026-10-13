@@ -83,12 +83,13 @@ SELECT extensions.is(
     'Fee should be strictly derived from doctor profile, ignoring client'
 );
 
--- Test: Double Booking is rejected (the RPC pre-check raises first; the unique index is the race-time backstop)
+-- Test: A second sequential request for an occupied slot is rejected. This is
+-- not a concurrency test; the unique index remains the race-time backstop.
 SELECT extensions.throws_ok(
-    $$ SELECT public.book_appointment('e5555555-5555-5555-5555-555555555555', 'e3333333-3333-3333-3333-333333333333', CURRENT_DATE + 1, '10:00', 'Parallel attempt') $$,
+    $$ SELECT public.book_appointment('e5555555-5555-5555-5555-555555555555', 'e3333333-3333-3333-3333-333333333333', CURRENT_DATE + 1, '10:00', 'Duplicate attempt') $$,
     'P0001',
     'Validation Failed: That time slot is no longer available.',
-    'Double booking should be rejected'
+    'A second sequential booking for the occupied slot should be rejected'
 );
 
 -- Test: 5 Active Bookings Limit

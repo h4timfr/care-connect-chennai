@@ -32,32 +32,35 @@ npm run dev            # http://localhost:8080
 - Builds require an explicit project URL and publishable key. Missing values fail the build.
 - Vercel Preview builds require an explicitly configured staging target and URL. There is no
   production fallback. Keep Preview disabled until a separate staging project is available.
-- `npx playwright test` uses the reserved `careconnect-test.invalid` URL and excludes the live
-  project smoke test by default; browser fixtures intercept every mock request.
+- `npx playwright test` builds with the reserved `careconnect-test.invalid` URL and excludes the
+  live project smoke test by default. Mocked tests reject `PLAYWRIGHT_BASE_URL`
+  values, block hosted Supabase HTTP/WebSocket requests, and do not reuse an existing server.
 
 ## Scripts
 
-| Command               | Purpose                                                        |
-| --------------------- | -------------------------------------------------------------- |
-| `npm run dev`         | Start the dev server                                           |
-| `npm run build`       | Production build                                               |
-| `npm run lint`        | ESLint + Prettier checks                                       |
-| `npx tsc --noEmit`    | Type check                                                     |
-| `npx playwright test` | Browser tests in `tests/*.spec.ts` (builds and serves the app) |
+| Command                       | Purpose                                                               |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `npm run dev`                 | Start the dev server                                                  |
+| `npm run build`               | Production build (requires configured Supabase build variables)      |
+| `npm run lint`                | ESLint + Prettier checks                                              |
+| `npm run typecheck`           | Type check                                                            |
+| `npm run validate:frontend`   | Lint, type check and production build; does not run SQL tests         |
+| `npx playwright test`         | Mocked browser suite; builds and serves the app with dummy credentials |
 
 `npm install` uses `package-lock.json`, which is the maintained lockfile. `bun.lock` is kept for the
 Lovable pipeline and was regenerated with the TanStack Start upgrade.
 
 ## Tests
 
-`npx playwright test` builds the app for Node and serves the production build on port 4173, and
-**reuses any server already listening there** — make sure it is CareConnect. To test a specific
-server, set `PLAYWRIGHT_BASE_URL` (e.g. `http://localhost:8080` for `npm run dev`, or a production
-build started with `PORT=4273 node .output/server/index.mjs`).
+`npx playwright test` builds the app for Node and serves that build on port 4173. It always starts
+its own server; mocked mode rejects `PLAYWRIGHT_BASE_URL`, so it cannot attach to a build that may
+contain real project settings. The fixture blocks and fails on hosted Supabase HTTP or WebSocket
+requests. `PLAYWRIGHT_LIVE_SMOKE=1` selects `tests/app.spec.ts` and builds with `.env`; that mode
+can contact the configured Supabase project. Do not enable live smoke mode against production.
 
 | File                                                       | Backend                                     | Covers                                                                    |
 | ---------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------- |
-| `tests/app.spec.ts`                                        | the project in `.env` — **read-only** calls | public pages, search, sign-in errors, headers, CSP                        |
+| `tests/app.spec.ts`                                        | configured project; live smoke mode only | public pages, search, sign-in errors, headers, CSP                        |
 | `tests/signed-in.spec.ts`                                  | fully mocked (`tests/support/mock-backend`) | profile, booking, cancelling, messages, clinic portal                     |
 | `tests/responsive.spec.ts`                                 | fully mocked                                | every page at 375 / 390 / 768 / 1280 px                                   |
 | `tests/localization.spec.ts`                               | fully mocked                                | language choice, persistence, RTL, every page in every language, greeting |
@@ -65,12 +68,13 @@ build started with `PORT=4273 node .output/server/index.mjs`).
 | `tests/portal-and-booking.spec.ts`                         | fully mocked                                | booking availability, clinic portal visibility and roles                  |
 | `tests/i18n.spec.ts`, `format.spec.ts`, `redirect.spec.ts` | none                                        | dictionaries, formatting, open-redirect validation                        |
 
-The mocked suites answer every Supabase request in the test process, so signed-in flows are tested
-without accounts or data in any real project. The mock reports any request it does not recognise.
+The mocked suites use synthetic in-process records and the reserved `.invalid` host. They do not
+need accounts or data in a real project. Unrecognised mock requests and attempts to reach hosted
+Supabase endpoints fail the tests.
 
-SQL tests in `supabase/tests/` (pgTAP, `supabase test db`) cover grants, RLS, booking rules, the
-`user_roles`/`audit_logs` policies (008), avatar storage policies (009) and a schema-wide audit
-(010: RLS on every table, no 42P17 for any caller, definer functions pin `search_path`).
+SQL tests in `supabase/tests/` are pgTAP checks for grants, RLS, booking, messaging, provider
+onboarding, candidate isolation and publication/contactability boundaries. They require a compatible
+isolated Supabase/Postgres test database; the frontend validation command does not execute them.
 
 `tests/security.test.ts` is a manual abuse-test script. It **creates real accounts** in whichever
 project `.env` points to, so it is excluded from the Playwright suite and refuses to run unless

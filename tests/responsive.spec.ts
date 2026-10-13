@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures";
 import { appointmentRow, conversationRow, ids, mockBackend } from "./support/mock-backend";
 
 // Layout check for every page at phone, tablet and desktop widths, against the mocked backend

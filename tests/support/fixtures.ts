@@ -13,6 +13,7 @@ export const test = base.extend<{
     options?: { signedIn?: boolean; expiredSession?: boolean },
   ) => Promise<MockBackend>;
   consoleErrors: string[];
+  externalSupabaseRequests: string[];
 }>({
   consoleErrors: [
     async ({ page }, provide) => {
@@ -27,6 +28,30 @@ export const test = base.extend<{
       await provide(errors);
       // No React warnings, unhandled rejections or app errors in any signed-in flow.
       expect(errors).toEqual([]);
+    },
+    { auto: true },
+  ],
+  externalSupabaseRequests: [
+    async ({ page }, provide) => {
+      const attempted: string[] = [];
+      const context = page.context();
+      const hostedSupabaseHttp = /^https?:\/\/[^/]+\.supabase\.co(?:\/|$)/i;
+      const hostedSupabaseSocket = /^wss:\/\/[^/]+\.supabase\.co(?:\/|$)/i;
+
+      await context.route(hostedSupabaseHttp, async (route) => {
+        attempted.push(route.request().url());
+        await route.abort();
+      });
+      await context.routeWebSocket(hostedSupabaseSocket, async (socket) => {
+        attempted.push(socket.url());
+        await socket.close({
+          code: 1008,
+          reason: "Hosted Supabase access is blocked in mocked tests.",
+        });
+      });
+
+      await provide(attempted);
+      expect(attempted).toEqual([]);
     },
     { auto: true },
   ],

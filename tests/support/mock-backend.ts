@@ -2,9 +2,10 @@ import type { Page, Request, Route } from "@playwright/test";
 
 /**
  * In-test stand-in for the Supabase backend, used to exercise signed-in flows without any
- * production account or data. Every request to *.supabase.co (REST, RPC, Auth and the realtime
- * websocket) is answered here; nothing is forwarded to a real project. Requests the mock does
- * not understand are answered with 501 and recorded in `unhandled` so tests can fail on them.
+ * production account or data. Requests use the reserved `.invalid` host and are answered here.
+ * The shared Playwright fixture blocks and records any attempted request to a hosted
+ * `*.supabase.co` endpoint. Requests the mock does not understand are answered with 501 and
+ * recorded in `unhandled` so tests can fail on them.
  *
  * All fixture records below are synthetic and exist only inside the test process. Run this suite
  * with VITE_SUPABASE_URL=https://careconnect-test.invalid so it cannot contact a real project.

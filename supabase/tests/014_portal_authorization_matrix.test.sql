@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(30);
+SELECT extensions.plan(36);
 
 -- Portal security acceptance, enforced by RLS (the frontend's route guards are only UX):
 --   a patient cannot reach clinic or doctor data or make themselves a provider;
@@ -64,18 +64,44 @@ SELECT extensions.throws_ok(
     $$ INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES ('00000000-0000-0000-0000-0000000014c2', '00000000-0000-0000-0000-0000000014d3', true, 'verified') $$,
     '42501', NULL, 'patient: cannot create a doctor–clinic link'
 );
+SELECT extensions.throws_ok(
+    $$ UPDATE public.appointments SET fee = 1 WHERE id = '00000000-0000-0000-0000-0000000014a1' $$,
+    'P0001', 'Patients cannot modify core appointment details', 'patient: cannot alter the booked fee'
+);
+SELECT extensions.throws_ok(
+    $$ UPDATE public.appointments SET status = 'arrived' WHERE id = '00000000-0000-0000-0000-0000000014a1' $$,
+    'P0001', 'Patients can only cancel appointments', 'patient: cannot mark an appointment arrived'
+);
+SELECT extensions.lives_ok(
+    $$ UPDATE public.appointments SET status = 'cancelled' WHERE id = '00000000-0000-0000-0000-0000000014a1' $$,
+    'patient: can cancel their own non-terminal appointment'
+);
 SELECT extensions.results_eq(
     $$ WITH u AS (UPDATE public.doctors SET user_id = '00000000-0000-0000-0000-0000000014e1' WHERE id = '00000000-0000-0000-0000-0000000014d3' RETURNING 1) SELECT count(*)::int FROM u $$,
     $$ VALUES (0) $$, 'patient: cannot claim an unlinked doctor profile'
 );
 SELECT extensions.is((SELECT count(*)::int FROM public.doctors WHERE id = '00000000-0000-0000-0000-0000000014d3'), 0, 'patient: cannot see a pending, unlisted doctor');
 RESET role;
+SET LOCAL request.jwt.claims TO '{}';
+UPDATE public.appointments SET status = 'confirmed' WHERE id = '00000000-0000-0000-0000-0000000014a1';
 
 -- ---- CLINIC STAFF at A (e3)
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000014e3", "role": "authenticated"}';
 SET LOCAL role authenticated;
 SELECT extensions.is((SELECT count(*)::int FROM public.appointments WHERE clinic_id = '00000000-0000-0000-0000-0000000014c2'), 0, 'clinic staff: sees no appointments of another clinic');
 SELECT extensions.is((SELECT count(*)::int FROM public.appointments WHERE clinic_id = '00000000-0000-0000-0000-0000000014c1'), 1, 'clinic staff: sees their own clinic''s appointment');
+SELECT extensions.throws_ok(
+    $$ UPDATE public.appointments SET fee = 1 WHERE id = '00000000-0000-0000-0000-0000000014a1' $$,
+    'P0001', 'Staff cannot mass-assign scheduling details', 'clinic staff: cannot change appointment fee'
+);
+SELECT extensions.lives_ok(
+    $$ UPDATE public.appointments SET status = 'arrived' WHERE id = '00000000-0000-0000-0000-0000000014a1' $$,
+    'clinic staff: can move a confirmed appointment to arrived'
+);
+SELECT extensions.throws_ok(
+    $$ UPDATE public.appointments SET status = 'confirmed' WHERE id = '00000000-0000-0000-0000-0000000014a1' $$,
+    'P0001', 'Arrived appointments can only be marked completed', 'clinic staff: cannot reverse arrived to confirmed'
+);
 SELECT extensions.is((SELECT count(*)::int FROM public.conversations WHERE clinic_id = '00000000-0000-0000-0000-0000000014c2'), 0, 'clinic staff: sees no conversations of another clinic');
 SELECT extensions.is((SELECT count(*)::int FROM public.clinic_memberships WHERE clinic_id = '00000000-0000-0000-0000-0000000014c2'), 0, 'clinic staff: sees no memberships of another clinic');
 SELECT extensions.is((SELECT count(*)::int FROM public.patients WHERE id = '00000000-0000-0000-0000-0000000014f2'), 0, 'clinic staff: cannot read a patient with no link to their clinic');

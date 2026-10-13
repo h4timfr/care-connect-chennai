@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures";
 import { appointmentRow, conversationRow, ids, mockBackend } from "./support/mock-backend";
 
 // Structural accessibility checks on every page (mocked backend, see tests/support/mock-backend.ts):
