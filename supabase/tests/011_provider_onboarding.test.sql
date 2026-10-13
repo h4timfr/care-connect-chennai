@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(38);
+SELECT extensions.plan(39);
 
 -- Contract
 SELECT extensions.ok(
@@ -46,12 +46,21 @@ INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_st
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005d1', true, 'verified'),
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005d2', true, 'pending'),
 ('00000000-0000-0000-0000-0000000005c2', '00000000-0000-0000-0000-0000000005d3', true, 'verified');
+SET LOCAL role anon;
+SELECT extensions.is(
+    (SELECT count(*)::int FROM public.doctors WHERE id = '00000000-0000-0000-0000-0000000005d1'),
+    0, 'a verified doctor link remains private while its clinic is unpublished'
+);
+RESET role;
+SET LOCAL role authenticated;
+SELECT public.admin_set_clinic_publication_state('00000000-0000-0000-0000-0000000005c1', 'verified', true, 'not_granted', false);
+RESET role;
 RESET request.jwt.claims;
 INSERT INTO public.clinic_memberships (clinic_id, user_id, role) VALUES
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005a2', 'clinic_admin'),
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005a3', 'clinic_staff');
 
--- Anonymous visitors: only sample or verified doctors are listed
+-- Anonymous visitors: doctors are listed only through verified links at published clinics.
 SET LOCAL role anon;
 SELECT extensions.is((SELECT count(*)::int FROM public.doctors WHERE id = '00000000-0000-0000-0000-0000000005d1'), 1, 'a verified doctor is publicly listed');
 SELECT extensions.is((SELECT count(*)::int FROM public.doctors WHERE id = '00000000-0000-0000-0000-0000000005d2'), 0, 'an unverified, non-sample doctor is not publicly listed');

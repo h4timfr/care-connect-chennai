@@ -28,13 +28,11 @@ SELECT extensions.is(
   (SELECT count(id)::int FROM public.clinics WHERE NOT is_demo AND clinic_verification_state = 'pending'
     AND NOT is_published AND patient_contact_permission = 'not_granted' AND NOT booking_enabled),
   6, 'all real clinic rows start pending, unpublished, non-contactable, and not bookable');
-INSERT INTO public.doctors (id, name, consultation_fee, is_demo) VALUES
-('00000000-0000-0000-0000-000000005fd1', 'Dr Contactable', 500, false),
-('00000000-0000-0000-0000-000000005fd2', 'Dr Other clinic', 500, false),
-('00000000-0000-0000-0000-000000005fd3', 'Dr Pending', 500, false),
-('00000000-0000-0000-0000-000000005fd4', 'Dr Sample', 500, true);
-UPDATE public.doctors SET user_id = '00000000-0000-0000-0000-000000005f05'
-WHERE id = '00000000-0000-0000-0000-000000005fd2';
+INSERT INTO public.doctors (id, name, consultation_fee, is_demo, user_id) VALUES
+('00000000-0000-0000-0000-000000005fd1', 'Dr Contactable', 500, false, NULL),
+('00000000-0000-0000-0000-000000005fd2', 'Dr Other clinic', 500, false, '00000000-0000-0000-0000-000000005f05'),
+('00000000-0000-0000-0000-000000005fd3', 'Dr Pending', 500, false, NULL),
+('00000000-0000-0000-0000-000000005fd4', 'Dr Sample', 500, true, NULL);
 
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000005f09", "role": "authenticated"}';
 INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES

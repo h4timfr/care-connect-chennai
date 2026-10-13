@@ -9,9 +9,15 @@ SELECT extensions.is(
     ARRAY['image/jpeg', 'image/png', 'image/webp'],
     'avatars accept only JPEG, PNG and WebP'
 );
-SELECT extensions.is(
-    (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname LIKE 'avatars\_%'),
-    4, 'avatars has exactly the four owner policies'
+SELECT extensions.ok(
+    (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname LIKE 'avatars\_%') = 4
+    AND EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'storage' AND tablename = 'objects'
+          AND policyname = 'avatars_delete_own' AND cmd = 'DELETE'
+          AND roles = ARRAY['authenticated']::name[]
+          AND qual LIKE '%auth.uid%' AND qual LIKE '%/avatar%'
+    ), 'avatars has four owner policies including an owner-scoped delete policy'
 );
 SELECT extensions.is(
     (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname LIKE 'avatars\_%' AND roles <> ARRAY['authenticated']::name[]),
@@ -52,9 +58,9 @@ SELECT extensions.lives_ok(
     $$ UPDATE storage.objects SET metadata = '{"replaced": true}' WHERE name = '00000000-0000-0000-0000-0000000000f1/avatar' $$,
     'a user can replace their own avatar'
 );
--- Another account's object is invisible to UPDATE/DELETE, so nothing happens to it
+-- Another account's object is invisible to UPDATE. Do not issue direct SQL DELETE:
+-- Supabase Storage requires object deletion through its API, not storage.objects DML.
 UPDATE storage.objects SET metadata = '{"tampered": true}' WHERE name = '00000000-0000-0000-0000-0000000000f2/avatar';
-DELETE FROM storage.objects WHERE name = '00000000-0000-0000-0000-0000000000f2/avatar';
 RESET role;
 SELECT extensions.is(
     (SELECT count(*)::int FROM storage.objects WHERE name = '00000000-0000-0000-0000-0000000000f2/avatar' AND metadata IS NULL),
@@ -63,11 +69,12 @@ SELECT extensions.is(
 
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000000f1", "role": "authenticated"}';
 SET LOCAL role authenticated;
-SELECT extensions.lives_ok(
+SELECT extensions.throws_ok(
     $$ DELETE FROM storage.objects WHERE name = '00000000-0000-0000-0000-0000000000f1/avatar' $$,
-    'a user can remove their own avatar'
+    NULL, 'Direct deletion from storage tables is not allowed. Use the Storage API instead.',
+    'direct SQL cannot remove a Storage object; deletion must use the Storage API'
 );
-SELECT extensions.is((SELECT count(*)::int FROM storage.objects WHERE bucket_id = 'avatars'), 0, 'after removal the user has no avatar');
+SELECT extensions.is((SELECT count(*)::int FROM storage.objects WHERE bucket_id = 'avatars'), 1, 'guarded direct SQL deletion leaves the user avatar intact');
 RESET role;
 
 -- Signed in without a user id: nothing
