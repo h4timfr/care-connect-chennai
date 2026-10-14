@@ -122,10 +122,16 @@ SELECT extensions.results_eq(
     $$ WITH u AS (UPDATE public.clinic_doctors SET verification_state = 'verified' WHERE doctor_id = '00000000-0000-0000-0000-0000000005d2' RETURNING 1) SELECT count(*)::int FROM u $$,
     $$ VALUES (0) $$, 'a clinic admin cannot verify their own doctor'
 );
+RESET role;
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000005a6", "role": "authenticated"}';
+SET LOCAL role authenticated;
 SELECT extensions.throws_ok(
     $$ UPDATE public.clinics SET is_demo = true WHERE id = '00000000-0000-0000-0000-0000000005c2' $$,
     'P0001', NULL, 'a clinic admin cannot change an unpublished clinic''s sample status'
 );
+RESET role;
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000005a2", "role": "authenticated"}';
+SET LOCAL role authenticated;
 SELECT extensions.lives_ok(
     $$ SELECT public.clinic_propose_doctor('00000000-0000-0000-0000-0000000005c1', 'Dr Proposed', 'pediatrics', 'female', 8, 600, ARRAY['MBBS'], ARRAY['Tamil'], 'TNMC 55555', NULL) $$,
     'a clinic admin can propose a new doctor'
