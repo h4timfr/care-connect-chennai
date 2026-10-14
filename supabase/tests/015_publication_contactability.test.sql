@@ -154,7 +154,8 @@ SELECT extensions.is((SELECT count(*)::int FROM public.doctors WHERE id = '00000
 SELECT extensions.is((SELECT count(*)::int FROM public.clinic_doctors WHERE clinic_id IN (
   '00000000-0000-0000-0000-000000005fc1', '00000000-0000-0000-0000-000000005fc2',
   '00000000-0000-0000-0000-000000005fc3', '00000000-0000-0000-0000-000000005fc4',
-  '00000000-0000-0000-0000-000000005fc5', '00000000-0000-0000-0000-000000005fc6')),
+  '00000000-0000-0000-0000-000000005fc5', '00000000-0000-0000-0000-000000005fc6',
+  '00000000-0000-0000-0000-000000005fc7')),
   10, 'platform admin can inspect every fixture relationship');
 SELECT extensions.is((SELECT count(*)::int FROM public.admin_list_clinics()
   WHERE id = '00000000-0000-0000-0000-000000005fc3' AND phone = '000' AND email = 'unpublished@test.com'),
@@ -167,7 +168,9 @@ SELECT extensions.lives_ok(
   'platform admin can publish a verified clinic through the controlled RPC');
 RESET role;
 SELECT extensions.is((SELECT count(*)::int FROM public.audit_logs WHERE target_id = '00000000-0000-0000-0000-000000005fc3'
-  AND action_type = 'clinic_publication_state_changed'), 1, 'controlled transition creates an audit record');
+  AND action_type = 'clinic_publication_state_changed'
+  AND metadata ->> 'is_published' = 'true'),
+  1, 'publishing through the controlled transition creates a matching audit record');
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000005f09", "role": "authenticated"}';
 SET LOCAL role authenticated;
 SELECT extensions.throws_ok(
@@ -196,22 +199,30 @@ SELECT extensions.is((SELECT count(*)::int FROM public.doctor_schedules
 SELECT extensions.throws_ok(
   $$ UPDATE public.clinics SET is_published = true, patient_contact_permission = 'granted' WHERE id = '00000000-0000-0000-0000-000000005fc2' $$,
   '42501', NULL, 'clinic administrator reaches the legacy update policy but trigger denies protected state');
-SELECT extensions.is((WITH u AS (UPDATE public.clinics SET name = 'Updated authorized clinic profile'
-  WHERE id = '00000000-0000-0000-0000-000000005fc5' RETURNING 1) SELECT count(*)::int FROM u),
-  1, 'permitted non-sensitive clinic profile update still works');
+SELECT extensions.results_eq(
+  $$ WITH u AS (UPDATE public.clinics SET name = 'Updated authorized clinic profile'
+    WHERE id = '00000000-0000-0000-0000-000000005fc5' RETURNING 1)
+    SELECT count(*)::int FROM u $$,
+  $$ VALUES (1) $$, 'permitted non-sensitive clinic profile update still works');
 RESET role;
 
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000005f01", "role": "authenticated"}';
 SET LOCAL role authenticated;
-SELECT extensions.is((WITH u AS (UPDATE public.clinics SET is_published = true WHERE id = '00000000-0000-0000-0000-000000005fc2' RETURNING 1)
-  SELECT count(*)::int FROM u), 0, 'patient has no clinic update path');
+SELECT extensions.results_eq(
+  $$ WITH u AS (UPDATE public.clinics SET is_published = true
+    WHERE id = '00000000-0000-0000-0000-000000005fc2' RETURNING 1)
+    SELECT count(*)::int FROM u $$,
+  $$ VALUES (0) $$, 'patient has no clinic update path');
 RESET role;
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000005f05", "role": "authenticated"}';
 SET LOCAL role authenticated;
 SELECT extensions.is((SELECT count(*)::int FROM public.clinic_doctors WHERE doctor_id = '00000000-0000-0000-0000-000000005fd2'),
   2, 'doctor can inspect only their own unpublished and inactive clinic links');
-SELECT extensions.is((WITH u AS (UPDATE public.clinics SET booking_enabled = true WHERE id = '00000000-0000-0000-0000-000000005fc2' RETURNING 1)
-  SELECT count(*)::int FROM u), 0, 'doctor has no clinic update path');
+SELECT extensions.results_eq(
+  $$ WITH u AS (UPDATE public.clinics SET booking_enabled = true
+    WHERE id = '00000000-0000-0000-0000-000000005fc2' RETURNING 1)
+    SELECT count(*)::int FROM u $$,
+  $$ VALUES (0) $$, 'doctor has no clinic update path');
 SELECT extensions.is((SELECT count(*)::int FROM public.doctor_schedules
   WHERE doctor_id = '00000000-0000-0000-0000-000000005fd2' AND clinic_id = '00000000-0000-0000-0000-000000005fc3'),
   1, 'authorized doctor retains own schedule access at an unpublished clinic');

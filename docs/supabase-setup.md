@@ -22,6 +22,22 @@ throwaway development project). To run against the existing CareConnect project 
    VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
    ```
 
+## Vercel Preview configuration
+
+Set these variables in the Vercel **Preview** environment, not as shared Production/Preview values:
+
+```env
+VITE_SUPABASE_TARGET=staging
+VITE_SUPABASE_STAGING_URL=https://your-staging-project.supabase.co
+VITE_SUPABASE_STAGING_PUBLISHABLE_KEY=your-staging-publishable-key
+```
+
+The application validates the staging URL against the approved CareConnect staging project. Use
+the publishable key from that same project. Preview builds fail when either staging value is
+missing, the URL points elsewhere, or the staging key matches the configured Production key.
+Production continues to use `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Never use a
+secret or `service_role` key in any `VITE_` variable.
+
 ## 3. Apply Migrations
 
 You need to apply the database schema, enums, and Row Level Security policies.

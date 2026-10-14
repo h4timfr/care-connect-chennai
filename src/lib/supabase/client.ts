@@ -1,12 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../database.types";
+import { isPrivilegedSupabaseKey, resolveSupabaseConfig } from "./config";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-// VITE_SUPABASE_ANON_KEY is the legacy name for the same browser-safe key; still accepted so older
-// local .env files keep working.
-const supabaseKey = (
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
-)?.trim();
+const config = resolveSupabaseConfig(import.meta.env);
+const supabaseUrl = config.ok ? config.url : undefined;
+const supabaseKey = config.ok ? config.key : undefined;
 
 /** Raised by every Supabase request when the browser client has no usable configuration. */
 export class SupabaseConfigError extends Error {
@@ -16,24 +14,10 @@ export class SupabaseConfigError extends Error {
   }
 }
 
-function isPrivilegedKey(key: string) {
-  if (key.startsWith("sb_secret_")) return true;
-  // Legacy JWT keys: refuse a service_role key so it can never ship in the browser bundle.
-  const payload = key.split(".")[1];
-  if (!payload) return false;
-  try {
-    const claims = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as {
-      role?: unknown;
-    };
-    return claims.role === "service_role";
-  } catch {
-    return false;
-  }
-}
-
 function getConfigError(): string | null {
+  if (!config.ok) return config.error;
   if (!supabaseUrl || !supabaseKey) {
-    return "VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are not set. Copy .env.example to .env, fill in your project values and restart the dev server.";
+    return "Supabase URL and publishable key are missing for the selected target.";
   }
   let url: URL;
   try {
@@ -51,7 +35,7 @@ function getConfigError(): string | null {
   ) {
     return "VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY still contain the placeholder values from .env.example. Replace them with your project's values and restart the dev server.";
   }
-  if (isPrivilegedKey(supabaseKey)) {
+  if (isPrivilegedSupabaseKey(supabaseKey)) {
     return "The configured Supabase key is a secret/service-role key. Only the publishable (anon) key may be used in the browser.";
   }
   return null;

@@ -18,11 +18,13 @@ npm run dev            # http://localhost:8080
 
 ### Environment
 
-| Variable                        | Description                                                         |
-| ------------------------------- | ------------------------------------------------------------------- |
-| `VITE_SUPABASE_URL`             | Project URL, e.g. `https://<project-ref>.supabase.co`               |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | The project's **publishable** (anon) key. Safe to ship to browsers. |
-| `VITE_SUPABASE_TARGET`          | On Vercel, set `production` for Production and `staging` for Preview. |
+| Variable                                | Description                                                         |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `VITE_SUPABASE_URL`                     | Production/local project URL.                                       |
+| `VITE_SUPABASE_PUBLISHABLE_KEY`         | Production/local publishable (anon) key; browser-safe.              |
+| `VITE_SUPABASE_TARGET`                  | On Vercel, `production` for Production and `staging` for Preview.   |
+| `VITE_SUPABASE_STAGING_URL`             | Required for Preview; must be the approved CareConnect staging URL. |
+| `VITE_SUPABASE_STAGING_PUBLISHABLE_KEY` | Required Preview key from that same staging project.                |
 
 `VITE_SUPABASE_ANON_KEY` is still accepted as a legacy name for the publishable key.
 
@@ -30,22 +32,23 @@ npm run dev            # http://localhost:8080
   browser build. The client refuses to start with one.
 - `.env` is git-ignored. Restart the dev server after changing it.
 - Builds require an explicit project URL and publishable key. Missing values fail the build.
-- Vercel Preview builds require an explicitly configured staging target and URL. There is no
-  production fallback. Keep Preview disabled until a separate staging project is available.
+- Vercel Preview builds require `VITE_SUPABASE_TARGET=staging` plus staging-specific URL and key
+  variables. Preview never falls back to the Production URL/key, and the URL is restricted to the
+  approved staging project. Configure these values in the Preview environment only.
 - `npx playwright test` builds with the reserved `careconnect-test.invalid` URL and excludes the
   live project smoke test by default. Mocked tests reject `PLAYWRIGHT_BASE_URL`
   values, block hosted Supabase HTTP/WebSocket requests, and do not reuse an existing server.
 
 ## Scripts
 
-| Command                       | Purpose                                                               |
-| ----------------------------- | --------------------------------------------------------------------- |
-| `npm run dev`                 | Start the dev server                                                  |
-| `npm run build`               | Production build (requires configured Supabase build variables)      |
-| `npm run lint`                | ESLint + Prettier checks                                              |
-| `npm run typecheck`           | Type check                                                            |
-| `npm run validate:frontend`   | Lint, type check and production build; does not run SQL tests         |
-| `npx playwright test`         | Mocked browser suite; builds and serves the app with dummy credentials |
+| Command                     | Purpose                                                                |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `npm run dev`               | Start the dev server                                                   |
+| `npm run build`             | Production build (requires configured Supabase build variables)        |
+| `npm run lint`              | ESLint + Prettier checks                                               |
+| `npm run typecheck`         | Type check                                                             |
+| `npm run validate:frontend` | Lint, type check and production build; does not run SQL tests          |
+| `npx playwright test`       | Mocked browser suite; builds and serves the app with dummy credentials |
 
 `npm install` uses `package-lock.json`, which is the maintained lockfile. `bun.lock` is kept for the
 Lovable pipeline and was regenerated with the TanStack Start upgrade.
@@ -60,7 +63,7 @@ can contact the configured Supabase project. Do not enable live smoke mode again
 
 | File                                                       | Backend                                     | Covers                                                                    |
 | ---------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------- |
-| `tests/app.spec.ts`                                        | configured project; live smoke mode only | public pages, search, sign-in errors, headers, CSP                        |
+| `tests/app.spec.ts`                                        | configured project; live smoke mode only    | public pages, search, sign-in errors, headers, CSP                        |
 | `tests/signed-in.spec.ts`                                  | fully mocked (`tests/support/mock-backend`) | profile, booking, cancelling, messages, clinic portal                     |
 | `tests/responsive.spec.ts`                                 | fully mocked                                | every page at 375 / 390 / 768 / 1280 px                                   |
 | `tests/localization.spec.ts`                               | fully mocked                                | language choice, persistence, RTL, every page in every language, greeting |

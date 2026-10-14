@@ -25,13 +25,15 @@ SELECT extensions.ok(
 );
 
 -- Fixtures (as the migration owner, outside RLS):
---   a1 platform admin, a2 clinic admin of C1, a3 clinic staff of C1, a4 applicant, a5 unrelated user.
+--   a1 platform admin, a2 clinic admin of C1, a3 clinic staff of C1, a4 applicant,
+--   a5 unrelated user, a6 clinic admin of C2.
 INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
 ('00000000-0000-0000-0000-0000000005a1', 'platform@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000005a2', 'clinicadmin@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000005a3', 'staff@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000005a4', 'applicant@test.com', now(), now()),
-('00000000-0000-0000-0000-0000000005a5', 'other@test.com', now(), now());
+('00000000-0000-0000-0000-0000000005a5', 'other@test.com', now(), now()),
+('00000000-0000-0000-0000-0000000005a6', 'clinicadmin2@test.com', now(), now());
 INSERT INTO public.user_roles (user_id, role) VALUES ('00000000-0000-0000-0000-0000000005a1', 'platform_admin');
 INSERT INTO public.clinics (id, name, address, phone, email, is_demo) VALUES
 ('00000000-0000-0000-0000-0000000005c1', 'Clinic One', '1 Road', '000', 'c1@test.com', false),
@@ -58,6 +60,7 @@ RESET role;
 RESET request.jwt.claims;
 INSERT INTO public.clinic_memberships (clinic_id, user_id, role) VALUES
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005a2', 'clinic_admin'),
+('00000000-0000-0000-0000-0000000005c2', '00000000-0000-0000-0000-0000000005a6', 'clinic_admin'),
 ('00000000-0000-0000-0000-0000000005c1', '00000000-0000-0000-0000-0000000005a3', 'clinic_staff');
 
 -- Anonymous visitors: doctors are listed only through verified links at published clinics.
@@ -120,8 +123,8 @@ SELECT extensions.results_eq(
     $$ VALUES (0) $$, 'a clinic admin cannot verify their own doctor'
 );
 SELECT extensions.throws_ok(
-    $$ UPDATE public.clinics SET is_demo = true WHERE id = '00000000-0000-0000-0000-0000000005c1' $$,
-    'P0001', NULL, 'a clinic admin cannot change their clinic''s sample status'
+    $$ UPDATE public.clinics SET is_demo = true WHERE id = '00000000-0000-0000-0000-0000000005c2' $$,
+    'P0001', NULL, 'a clinic admin cannot change an unpublished clinic''s sample status'
 );
 SELECT extensions.lives_ok(
     $$ SELECT public.clinic_propose_doctor('00000000-0000-0000-0000-0000000005c1', 'Dr Proposed', 'pediatrics', 'female', 8, 600, ARRAY['MBBS'], ARRAY['Tamil'], 'TNMC 55555', NULL) $$,
