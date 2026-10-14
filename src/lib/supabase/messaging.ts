@@ -34,7 +34,9 @@ export function useConversations(patientId?: string, clinicIds: string[] = [], e
     queryFn: async (): Promise<Conversation[]> => {
       let query = supabase
         .from("conversations")
-        .select("*, messages(*), patients(full_name, user_id)");
+        .select(
+          "id, clinic_id, doctor_id, patient_id, kind, appointment_id, created_at, messages(id, conversation_id, sender_id, body, created_at), patients(full_name, user_id)",
+        );
 
       if (clinicIds.length > 0 && patientId) {
         query = query.or(`patient_id.eq.${patientId},clinic_id.in.(${clinicIdsKey})`);
@@ -83,14 +85,11 @@ export function useSendMessage() {
       senderId: string;
       body: string;
     }) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("messages")
-        .insert({ conversation_id: conversationId, sender_id: senderId, body })
-        .select()
-        .single();
+        .insert({ conversation_id: conversationId, sender_id: senderId, body });
 
       if (error) throw error;
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });

@@ -9,8 +9,21 @@ import type { Appointment, AppointmentStatus } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n";
 
 type AppointmentRow = Database["public"]["Tables"]["appointments"]["Row"];
+type AppointmentListRow = Pick<
+  AppointmentRow,
+  | "id"
+  | "doctor_id"
+  | "clinic_id"
+  | "patient_id"
+  | "date"
+  | "time"
+  | "reason"
+  | "status"
+  | "fee"
+  | "created_at"
+>;
 
-function mapAppointment(a: AppointmentRow, patientName: string): Appointment {
+function mapAppointment(a: AppointmentListRow, patientName: string): Appointment {
   return {
     id: a.id,
     doctorId: a.doctor_id,
@@ -36,7 +49,7 @@ export function usePatientAppointments(patientId?: string, options?: { enabled?:
       if (!patientId) return [];
       const { data, error } = await supabase
         .from("appointments")
-        .select("*")
+        .select("id, doctor_id, clinic_id, patient_id, date, time, reason, status, fee, created_at")
         .eq("patient_id", patientId)
         .order("date", { ascending: false });
 
@@ -55,7 +68,9 @@ export function useClinicAppointments(clinicIds: string[], options?: { enabled?:
       if (clinicIds.length === 0) return [];
       const { data, error } = await supabase
         .from("appointments")
-        .select("*, patients ( full_name )")
+        .select(
+          "id, doctor_id, clinic_id, patient_id, date, time, reason, status, fee, created_at, patients ( full_name )",
+        )
         .in("clinic_id", clinicIds)
         .order("date", { ascending: false });
 
@@ -173,7 +188,7 @@ export function useCancelAppointment() {
         .from("appointments")
         .update({ status: "cancelled" })
         .eq("id", id)
-        .select()
+        .select("doctor_id")
         .single();
 
       if (error) throw error;
@@ -204,7 +219,7 @@ export function useUpdateAppointmentStatus() {
         .update({ status })
         .eq("id", id)
         .eq("clinic_id", clinicId) // enforce clinic ownership implicitly
-        .select()
+        .select("doctor_id")
         .single();
 
       if (error) throw error;

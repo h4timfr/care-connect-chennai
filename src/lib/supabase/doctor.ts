@@ -235,10 +235,31 @@ export interface DoctorApplication {
   createdAt: string;
 }
 
-const DOCTOR_APPLICATION_SELECT = "*, clinic:clinics(name)" as const;
+const DOCTOR_APPLICATION_SELECT =
+  "id, full_name, specialty_id, qualifications, registration_council, registration_number, experience_years, consultation_fee, clinic_id, clinic_note, contact_phone, contact_email, message, status, review_note, created_at, clinic:clinics(name)" as const;
+
+type DoctorApplicationListRow = Pick<
+  DoctorApplicationRow,
+  | "id"
+  | "full_name"
+  | "specialty_id"
+  | "qualifications"
+  | "registration_council"
+  | "registration_number"
+  | "experience_years"
+  | "consultation_fee"
+  | "clinic_id"
+  | "clinic_note"
+  | "contact_phone"
+  | "contact_email"
+  | "message"
+  | "status"
+  | "review_note"
+  | "created_at"
+>;
 
 function mapDoctorApplication(
-  row: DoctorApplicationRow & { clinic?: { name: string } | { name: string }[] | null },
+  row: DoctorApplicationListRow & { clinic?: { name: string } | { name: string }[] | null },
 ): DoctorApplication {
   const clinic = Array.isArray(row.clinic) ? row.clinic[0] : row.clinic;
   return {

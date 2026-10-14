@@ -49,7 +49,30 @@ export interface ProviderApplication {
   createdAt: string;
 }
 
-function mapApplication(row: ApplicationRow): ProviderApplication {
+const APPLICATION_SELECT =
+  "id, clinic_name, area, address, contact_name, contact_role, contact_phone, contact_email, registration_details, doctor_count, message, status, review_note, reviewed_at, clinic_id, created_at" as const;
+
+type ApplicationListRow = Pick<
+  ApplicationRow,
+  | "id"
+  | "clinic_name"
+  | "area"
+  | "address"
+  | "contact_name"
+  | "contact_role"
+  | "contact_phone"
+  | "contact_email"
+  | "registration_details"
+  | "doctor_count"
+  | "message"
+  | "status"
+  | "review_note"
+  | "reviewed_at"
+  | "clinic_id"
+  | "created_at"
+>;
+
+function mapApplication(row: ApplicationListRow): ProviderApplication {
   return {
     id: row.id,
     clinicName: row.clinic_name,
@@ -102,7 +125,7 @@ export function useMyApplications(userId: string | undefined) {
       if (!userId) return [];
       const { data, error } = await supabase
         .from("provider_applications")
-        .select("*")
+        .select(APPLICATION_SELECT)
         .eq("applicant_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -118,7 +141,7 @@ export function useSubmitApplication() {
       const { data, error } = await supabase
         .from("provider_applications")
         .insert(input)
-        .select("*")
+        .select(APPLICATION_SELECT)
         .single();
       if (error) throw error;
       return mapApplication(data);
@@ -151,7 +174,7 @@ export function useApplicationsForReview(enabled: boolean) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("provider_applications")
-        .select("*")
+        .select(APPLICATION_SELECT)
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;

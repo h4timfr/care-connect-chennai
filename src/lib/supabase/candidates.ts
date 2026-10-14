@@ -11,12 +11,68 @@ import type { Database } from "@/lib/database.types";
  */
 
 type Tables = Database["public"]["Tables"];
-export type FacilityCandidate = Tables["candidate_facilities"]["Row"];
-export type DoctorCandidate = Tables["candidate_doctors"]["Row"];
-export type CandidateRelationship = Tables["candidate_relationships"]["Row"];
-export type CandidateSource = Tables["candidate_sources"]["Row"];
-export type CandidateEvidence = Tables["candidate_evidence"]["Row"];
-export type CandidateContact = Tables["candidate_contacts"]["Row"];
+type FacilityCandidateRow = Tables["candidate_facilities"]["Row"];
+type DoctorCandidateRow = Tables["candidate_doctors"]["Row"];
+type CandidateRelationshipRow = Tables["candidate_relationships"]["Row"];
+type CandidateSourceRow = Tables["candidate_sources"]["Row"];
+type CandidateEvidenceRow = Tables["candidate_evidence"]["Row"];
+type CandidateContactRow = Tables["candidate_contacts"]["Row"];
+
+export type FacilityCandidate = Pick<
+  FacilityCandidateRow,
+  | "id"
+  | "research_id"
+  | "name"
+  | "facility_type"
+  | "address"
+  | "locality"
+  | "website"
+  | "specialties"
+  | "source_confidence"
+  | "unresolved_issues"
+  | "researched_on"
+  | "review_status"
+  | "permission_status"
+  | "notes"
+>;
+export type DoctorCandidate = Pick<
+  DoctorCandidateRow,
+  | "id"
+  | "research_id"
+  | "full_name"
+  | "specialty"
+  | "qualifications"
+  | "registration_info"
+  | "registration_status"
+  | "source_confidence"
+  | "unresolved_issues"
+  | "researched_on"
+  | "review_status"
+  | "permission_status"
+  | "notes"
+>;
+export type CandidateRelationship = Pick<
+  CandidateRelationshipRow,
+  | "id"
+  | "doctor_candidate_id"
+  | "facility_candidate_id"
+  | "research_status"
+  | "confidence"
+  | "unresolved_issues"
+  | "careconnect_status"
+>;
+export type CandidateSource = Pick<
+  CandidateSourceRow,
+  "id" | "relationship_id" | "url" | "source_type" | "supports" | "researched_on" | "confidence"
+>;
+export type CandidateEvidence = Pick<
+  CandidateEvidenceRow,
+  "id" | "relationship_id" | "evidence_type" | "value" | "source" | "recorded_at"
+>;
+export type CandidateContact = Pick<
+  CandidateContactRow,
+  "id" | "contacted_on" | "method" | "outcome" | "permission_status" | "notes"
+>;
 export type ReviewStatus = FacilityCandidate["review_status"];
 export type PermissionStatus = FacilityCandidate["permission_status"];
 export type EvidenceType = CandidateEvidence["evidence_type"];
@@ -87,9 +143,26 @@ export function useCandidateCatalogue(enabled: boolean) {
     retry: false,
     queryFn: async (): Promise<CandidateCatalogue> => {
       const [facilities, doctors, relationships] = await Promise.all([
-        supabase.from("candidate_facilities").select("*").order("research_id").limit(1000),
-        supabase.from("candidate_doctors").select("*").order("research_id").limit(1000),
-        supabase.from("candidate_relationships").select("*").limit(5000),
+        supabase
+          .from("candidate_facilities")
+          .select(
+            "id, research_id, name, facility_type, address, locality, website, specialties, source_confidence, unresolved_issues, researched_on, review_status, permission_status, notes",
+          )
+          .order("research_id")
+          .limit(1000),
+        supabase
+          .from("candidate_doctors")
+          .select(
+            "id, research_id, full_name, specialty, qualifications, registration_info, registration_status, source_confidence, unresolved_issues, researched_on, review_status, permission_status, notes",
+          )
+          .order("research_id")
+          .limit(1000),
+        supabase
+          .from("candidate_relationships")
+          .select(
+            "id, doctor_candidate_id, facility_candidate_id, research_status, confidence, unresolved_issues, careconnect_status",
+          )
+          .limit(5000),
       ]);
       if (facilities.error) throw facilities.error;
       if (doctors.error) throw doctors.error;
@@ -133,11 +206,29 @@ export function useCandidateDetail(
         ? relationshipIds
         : ["00000000-0000-0000-0000-000000000000"];
       const [sources, evidence, contacts, relSources, relEvidence] = await Promise.all([
-        supabase.from("candidate_sources").select("*").eq(col, id).order("researched_on"),
-        supabase.from("candidate_evidence").select("*").eq(col, id).order("recorded_at"),
-        supabase.from("candidate_contacts").select("*").eq(col, id).order("contacted_on"),
-        supabase.from("candidate_sources").select("*").in("relationship_id", rel),
-        supabase.from("candidate_evidence").select("*").in("relationship_id", rel),
+        supabase
+          .from("candidate_sources")
+          .select("id, relationship_id, url, source_type, supports, researched_on, confidence")
+          .eq(col, id)
+          .order("researched_on"),
+        supabase
+          .from("candidate_evidence")
+          .select("id, relationship_id, evidence_type, value, source, recorded_at")
+          .eq(col, id)
+          .order("recorded_at"),
+        supabase
+          .from("candidate_contacts")
+          .select("id, contacted_on, method, outcome, permission_status, notes")
+          .eq(col, id)
+          .order("contacted_on"),
+        supabase
+          .from("candidate_sources")
+          .select("id, relationship_id, url, source_type, supports, researched_on, confidence")
+          .in("relationship_id", rel),
+        supabase
+          .from("candidate_evidence")
+          .select("id, relationship_id, evidence_type, value, source, recorded_at")
+          .in("relationship_id", rel),
       ]);
       for (const r of [sources, evidence, contacts, relSources, relEvidence])
         if (r.error) throw r.error;

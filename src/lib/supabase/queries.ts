@@ -508,7 +508,9 @@ export function usePatient(
       if (!userId) return null;
       const { data, error } = await supabase
         .from("patients")
-        .select("*, user:users(email, phone)")
+        .select(
+          "id, user_id, full_name, date_of_birth, gender, preferred_language, area, saved_doctor_ids, saved_clinic_ids, user:users(email, phone)",
+        )
         .eq("user_id", userId)
         .maybeSingle();
 
