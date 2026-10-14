@@ -80,3 +80,5 @@ jobs:
           path: test-artifacts/
           if-no-files-found: warn
           retention-days: 7
+
+# Re-run isolated SQL validation after Supabase query optimizations
