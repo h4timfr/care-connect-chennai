@@ -10,7 +10,7 @@ export interface SupabaseEnvironment {
 export type SupabaseConfigResult =
   { ok: true; url: string; key: string } | { ok: false; error: string };
 
-const STAGING_SUPABASE_ORIGIN = "https://aqwzrpwiqbrykorlqow.supabase.co";
+const STAGING_SUPABASE_ORIGIN = "https://aqwzrpwiqbrykorlqwow.supabase.co";
 
 function fail(error: string): SupabaseConfigResult {
   return { ok: false, error };

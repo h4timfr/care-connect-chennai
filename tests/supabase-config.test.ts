@@ -4,7 +4,7 @@ import { resolveSupabaseConfig } from "../src/lib/supabase/config";
 
 const productionUrl = "https://careconnect-production.supabase.co";
 const productionKey = "sb_publishable_production-test";
-const stagingUrl = "https://aqwzrpwiqbrykorlqow.supabase.co";
+const stagingUrl = "https://aqwzrpwiqbrykorlqwow.supabase.co";
 const stagingKey = "sb_publishable_staging-test";
 
 test("Preview selects the staging URL and key even when Production values are present", () => {
