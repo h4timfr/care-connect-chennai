@@ -14,7 +14,15 @@ SELECT extensions.is(
 );
 
 -- anon: read-only access to the four tables behind public browsing, nothing else
-SELECT extensions.table_privs_are('public', 'clinics', 'anon', ARRAY['SELECT'], 'anon reads clinics');
+SELECT extensions.ok(
+    NOT has_table_privilege('anon', 'public.clinics', 'SELECT')
+    AND has_column_privilege('anon', 'public.clinics', 'id', 'SELECT')
+    AND has_column_privilege('anon', 'public.clinics', 'name', 'SELECT')
+    AND has_column_privilege('anon', 'public.clinics', 'address', 'SELECT')
+    AND NOT has_column_privilege('anon', 'public.clinics', 'phone', 'SELECT')
+    AND NOT has_column_privilege('anon', 'public.clinics', 'email', 'SELECT'),
+    'anon reads only the safe clinic projection, not contact fields'
+);
 SELECT extensions.table_privs_are('public', 'doctors', 'anon', ARRAY['SELECT'], 'anon reads doctors');
 SELECT extensions.table_privs_are('public', 'clinic_doctors', 'anon', ARRAY['SELECT'], 'anon reads clinic_doctors');
 SELECT extensions.table_privs_are('public', 'doctor_schedules', 'anon', ARRAY['SELECT'], 'anon reads doctor_schedules');
@@ -29,7 +37,16 @@ SELECT extensions.table_privs_are('public', 'user_roles', 'anon', ARRAY[]::text[
 SELECT extensions.table_privs_are('public', 'audit_logs', 'anon', ARRAY[]::text[], 'anon has no access to audit_logs');
 
 -- authenticated: only the operations that have an RLS policy behind them (never TRUNCATE / REFERENCES / TRIGGER)
-SELECT extensions.table_privs_are('public', 'clinics', 'authenticated', ARRAY['SELECT', 'UPDATE'], 'authenticated on clinics');
+SELECT extensions.ok(
+    has_table_privilege('authenticated', 'public.clinics', 'UPDATE')
+    AND NOT has_table_privilege('authenticated', 'public.clinics', 'SELECT')
+    AND has_column_privilege('authenticated', 'public.clinics', 'id', 'SELECT')
+    AND has_column_privilege('authenticated', 'public.clinics', 'name', 'SELECT')
+    AND has_column_privilege('authenticated', 'public.clinics', 'address', 'SELECT')
+    AND NOT has_column_privilege('authenticated', 'public.clinics', 'phone', 'SELECT')
+    AND NOT has_column_privilege('authenticated', 'public.clinics', 'email', 'SELECT'),
+    'authenticated can update clinics and read only the safe clinic projection'
+);
 SELECT extensions.table_privs_are('public', 'doctors', 'authenticated', ARRAY['SELECT', 'UPDATE'], 'authenticated on doctors');
 SELECT extensions.table_privs_are('public', 'clinic_doctors', 'authenticated', ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE'], 'authenticated on clinic_doctors');
 SELECT extensions.table_privs_are('public', 'doctor_schedules', 'authenticated', ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE'], 'authenticated on doctor_schedules');

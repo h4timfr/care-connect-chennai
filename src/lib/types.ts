@@ -1,6 +1,5 @@
-﻿// Conceptual data model for CareConnect.
-// Shapes mirror a future PostgreSQL schema so a real backend can be swapped in
-// without changing the UI layer.
+﻿// Frontend domain model for CareConnect. Rows from Supabase are mapped into these shapes in
+// src/lib/supabase/*.ts so components never depend on raw column names.
 
 export type UserRole = "patient" | "doctor" | "clinic";
 
@@ -20,7 +19,7 @@ export interface Patient {
   email: string;
   phone: string;
   dateOfBirth: string;
-  gender: "male" | "female" | "other";
+  gender: "male" | "female" | "other" | null;
   preferredLanguage: string;
   area: string;
   savedDoctorIds: string[];
@@ -49,15 +48,33 @@ export interface Clinic {
   feeRange: [number, number];
   rating: number;
   reviewCount: number;
-  photoTone: string;
+  /** Mirrors `clinics.is_demo`: the record is sample content, not a real provider. */
+  isSample: boolean;
+  verificationState: "pending" | "verified" | "rejected";
+  isPublished: boolean;
+  patientContactPermission: "not_granted" | "granted" | "revoked";
+  bookingEnabled: boolean;
+}
+
+/** A doctor's association with a clinic (`clinic_doctors`). */
+export interface ClinicLink {
+  clinicId: string;
+  active: boolean;
+  /** Link verification is distinct from clinic publication and booking permission. */
+  verified: boolean;
+  clinicVerified: boolean;
+  clinicPublished: boolean;
+  clinicContactPermission: "not_granted" | "granted" | "revoked";
+  clinicBookingEnabled: boolean;
 }
 
 export interface Doctor {
   id: string;
   name: string;
-  gender: "male" | "female";
+  gender: "male" | "female" | "other" | null;
   specialtyId: string;
   clinicIds: string[];
+  clinicLinks: ClinicLink[];
   qualifications: string[];
   experienceYears: number;
   languages: string[];
@@ -67,6 +84,8 @@ export interface Doctor {
   rating: number;
   reviewCount: number;
   registrationNote: string;
+  /** Mirrors `doctors.is_demo`: the record is sample content, not a real provider. */
+  isSample: boolean;
 }
 
 export type DayPart = "morning" | "afternoon" | "evening";
@@ -120,8 +139,6 @@ export interface Conversation {
   patientName: string;
   kind: ConversationKind;
   appointmentId?: string | undefined;
-  unreadForPatient: number;
-  unreadForClinic: number;
   messages: Message[];
 }
 
