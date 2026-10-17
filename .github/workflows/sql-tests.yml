@@ -10,6 +10,8 @@ on:
       - "supabase/migrations/**"
       - "supabase/tests/**"
       - "scripts/test-booking-concurrency.mjs"
+      - "scripts/run-sql-ci-step*.mjs"
+      - "scripts/local-sql-test-target*.mjs"
   workflow_dispatch:
 
 permissions:
@@ -33,6 +35,9 @@ jobs:
         with:
           version: 2.117.0
 
+      - name: Test the allow-listed CI summaries and local target guard
+        run: node --test scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs
+
       - name: Assert this job is unlinked and has no remote credentials
         shell: bash
         run: |
@@ -49,46 +54,43 @@ jobs:
       - name: Start disposable local Supabase stack
         shell: bash
         run: |
-          mkdir -p test-artifacts
-          raw_log="$RUNNER_TEMP/careconnect-supabase-start.raw.log"
-          set +e
-          supabase start >"$raw_log" 2>&1
-          start_status=$?
-          set -e
-          sed -E 's/([[:space:]]*(JWT secret|anon key|service_role key|publishable key|secret key|DB URL|S3 Access Key|S3 Secret Key):).*/\1 [REDACTED]/I' "$raw_log" \
-            | tee test-artifacts/supabase-start.log
-          if [ "$start_status" -ne 0 ]; then
-            exit "$start_status"
-          fi
+          set -euo pipefail
+          umask 077
+          node scripts/run-sql-ci-step.mjs startup
 
       - name: Record local migration ledger
         shell: bash
         run: |
-          set -o pipefail
-          supabase migration list --local 2>&1 | tee test-artifacts/migration-list.log
+          set -euo pipefail
+          node scripts/run-sql-ci-step.mjs ledger
 
       - name: Run SQL tests against the local database
         shell: bash
         run: |
-          set -o pipefail
-          supabase test db supabase/tests/*.test.sql --local 2>&1 | tee test-artifacts/pgtap.log
+          set -euo pipefail
+          node scripts/run-sql-ci-step.mjs pgtap
 
       - name: Run two-session booking limit regression against local database
         shell: bash
         run: |
           set -euo pipefail
-          if ! command -v psql >/dev/null 2>&1; then
+          if [ ! -x /usr/bin/psql ]; then
             sudo apt-get update
             sudo apt-get install --yes postgresql-client
           fi
-          node scripts/test-booking-concurrency.mjs 2>&1 | tee test-artifacts/booking-concurrency.log
+          test -x /usr/bin/psql
+          node scripts/run-sql-ci-step.mjs concurrency
 
       - name: Preserve migration and test output
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: careconnect-sql-test-logs-${{ github.run_id }}
-          path: test-artifacts/
+          path: |
+            test-artifacts/startup.log
+            test-artifacts/ledger.log
+            test-artifacts/pgtap.log
+            test-artifacts/concurrency.log
           if-no-files-found: warn
           retention-days: 7
 

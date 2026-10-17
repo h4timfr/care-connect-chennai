@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(8);
+SELECT extensions.plan(14);
 
 -- Create Fixtures
 INSERT INTO auth.users (id, email, created_at, updated_at) VALUES 
@@ -81,6 +81,37 @@ SELECT extensions.is(
     (SELECT fee FROM public.appointments WHERE patient_id = 'e1111111-1111-1111-1111-111111111111' LIMIT 1),
     500::numeric,
     'Fee should be strictly derived from doctor profile, ignoring client'
+);
+
+SELECT extensions.throws_ok(
+    $$ SELECT public.book_appointment('e5555555-5555-5555-5555-555555555555', 'e3333333-3333-3333-3333-333333333333', CURRENT_DATE + 1, '08:30', 'Before opening') $$,
+    'P0001', 'Validation Failed: That time slot is not available for this doctor.',
+    'A booking before the schedule opening time is rejected'
+);
+SELECT extensions.throws_ok(
+    $$ SELECT public.book_appointment('e5555555-5555-5555-5555-555555555555', 'e3333333-3333-3333-3333-333333333333', CURRENT_DATE + 1, '17:00', 'At closing') $$,
+    'P0001', 'Validation Failed: That time slot is not available for this doctor.',
+    'A booking at the schedule closing boundary is rejected'
+);
+SELECT extensions.throws_ok(
+    $$ SELECT public.book_appointment('e5555555-5555-5555-5555-555555555555', 'e3333333-3333-3333-3333-333333333333', CURRENT_DATE + 1, '10:15', 'Unaligned') $$,
+    'P0001', 'Validation Failed: That time slot is not available for this doctor.',
+    'A booking that is not aligned to the clinic slot interval is rejected'
+);
+SELECT extensions.throws_ok(
+    $$ SELECT public.book_appointment('e5555555-5555-5555-5555-555555555555', 'e3333333-3333-3333-3333-333333333333', CURRENT_DATE + 1, '10:00:01', 'Fractional seconds') $$,
+    'P0001', 'Validation Failed: That time slot is not available for this doctor.',
+    'A booking with non-zero seconds is rejected'
+);
+SELECT extensions.lives_ok(
+    $$ SELECT public.book_appointment('e5555555-5555-5555-5555-555555555555', 'e3333333-3333-3333-3333-333333333333', CURRENT_DATE + 1, '16:30', 'Last complete slot') $$,
+    'The final slot that ends exactly at closing time is bookable'
+);
+SELECT extensions.lives_ok(
+    $$ UPDATE public.appointments SET status = 'cancelled'
+       WHERE patient_id = 'e1111111-1111-1111-1111-111111111111'
+         AND date = CURRENT_DATE + 1 AND time = '16:30' $$,
+    'The patient can cancel the boundary fixture so the booking-limit checks remain isolated'
 );
 
 -- Test: A second sequential request for an occupied slot is rejected. This is

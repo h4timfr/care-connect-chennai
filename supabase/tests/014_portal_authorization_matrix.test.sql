@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(36);
+SELECT extensions.plan(38);
 
 -- Portal security acceptance, enforced by RLS (the frontend's route guards are only UX):
 --   a patient cannot reach clinic or doctor data or make themselves a provider;
@@ -44,7 +44,9 @@ UPDATE public.patients SET id = '00000000-0000-0000-0000-0000000014f1' WHERE use
 UPDATE public.patients SET id = '00000000-0000-0000-0000-0000000014f2' WHERE user_id = '00000000-0000-0000-0000-0000000014e2';
 INSERT INTO public.appointments (id, patient_id, doctor_id, clinic_id, date, time, status, fee) VALUES
 ('00000000-0000-0000-0000-0000000014a1', '00000000-0000-0000-0000-0000000014f1', '00000000-0000-0000-0000-0000000014d1', '00000000-0000-0000-0000-0000000014c1', CURRENT_DATE + 3, '10:00', 'confirmed', 500),
-('00000000-0000-0000-0000-0000000014a2', '00000000-0000-0000-0000-0000000014f2', '00000000-0000-0000-0000-0000000014d2', '00000000-0000-0000-0000-0000000014c2', CURRENT_DATE + 3, '11:00', 'confirmed', 500);
+('00000000-0000-0000-0000-0000000014a2', '00000000-0000-0000-0000-0000000014f2', '00000000-0000-0000-0000-0000000014d2', '00000000-0000-0000-0000-0000000014c2', CURRENT_DATE + 3, '11:00', 'confirmed', 500),
+('00000000-0000-0000-0000-0000000014a3', '00000000-0000-0000-0000-0000000014f1', '00000000-0000-0000-0000-0000000014d1', '00000000-0000-0000-0000-0000000014c1', CURRENT_DATE + 4, '10:00', 'arrived', 500),
+('00000000-0000-0000-0000-0000000014a4', '00000000-0000-0000-0000-0000000014f1', '00000000-0000-0000-0000-0000000014d1', '00000000-0000-0000-0000-0000000014c1', CURRENT_DATE - 1, '10:00', 'confirmed', 500);
 INSERT INTO public.conversations (id, patient_id, clinic_id, doctor_id, kind) VALUES
 ('00000000-0000-0000-0000-0000000014b1', '00000000-0000-0000-0000-0000000014f1', '00000000-0000-0000-0000-0000000014c1', '00000000-0000-0000-0000-0000000014d1', 'general'),
 ('00000000-0000-0000-0000-0000000014b2', '00000000-0000-0000-0000-0000000014f2', '00000000-0000-0000-0000-0000000014c2', '00000000-0000-0000-0000-0000000014d2', 'general');
@@ -75,6 +77,16 @@ SELECT extensions.throws_ok(
 SELECT extensions.lives_ok(
     $$ UPDATE public.appointments SET status = 'cancelled' WHERE id = '00000000-0000-0000-0000-0000000014a1' $$,
     'patient: can cancel their own non-terminal appointment'
+);
+SELECT extensions.throws_ok(
+    $$ UPDATE public.appointments SET status = 'cancelled' WHERE id = '00000000-0000-0000-0000-0000000014a3' $$,
+    'P0001', 'Patients may cancel only pending or confirmed appointments.',
+    'patient: cannot cancel an appointment that has already arrived'
+);
+SELECT extensions.throws_ok(
+    $$ UPDATE public.appointments SET status = 'cancelled' WHERE id = '00000000-0000-0000-0000-0000000014a4' $$,
+    'P0001', 'Patients cannot cancel appointments in the past.',
+    'patient: cannot cancel an appointment on a past date'
 );
 SELECT extensions.results_eq(
     $$ WITH u AS (UPDATE public.doctors SET user_id = '00000000-0000-0000-0000-0000000014e1' WHERE id = '00000000-0000-0000-0000-0000000014d3' RETURNING 1) SELECT count(*)::int FROM u $$,

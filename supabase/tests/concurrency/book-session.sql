@@ -1,9 +1,22 @@
 \set ON_ERROR_STOP on
 SET ROLE authenticated;
-SET request.jwt.claims = '{"sub":"f7600000-0000-4000-8000-000000000001","role":"authenticated"}';
+SELECT pg_catalog.set_config(
+  'request.jwt.claims',
+  pg_catalog.jsonb_build_object('sub', :'patient_user_id', 'role', 'authenticated')::text,
+  false
+);
+SELECT pg_catalog.set_config('careconnect.booking_race_run_id', :'run_id', false);
+
+DO $isolation$
+BEGIN
+  IF pg_catalog.current_setting('transaction_isolation') <> 'read committed' THEN
+    RAISE EXCEPTION 'Concurrency runner requires READ COMMITTED isolation.';
+  END IF;
+END;
+$isolation$;
 
 INSERT INTO public.__careconnect_booking_race_barrier (run_id, session_id)
-VALUES ('f7600000-0000-4000-8000-000000000006', :'session_id');
+VALUES (:'run_id'::uuid, :'session_id');
 
 DO $barrier$
 DECLARE
@@ -11,7 +24,7 @@ DECLARE
 BEGIN
   FOR attempt IN 1..400 LOOP
     IF (SELECT count(*) FROM public.__careconnect_booking_race_barrier
-        WHERE run_id = 'f7600000-0000-4000-8000-000000000006') = 2 THEN
+        WHERE run_id = pg_catalog.current_setting('careconnect.booking_race_run_id')::uuid) = 2 THEN
       RETURN;
     END IF;
     PERFORM pg_catalog.pg_sleep(0.025);
@@ -21,9 +34,9 @@ END;
 $barrier$;
 
 SELECT public.book_appointment(
-  'f7600000-0000-4000-8000-000000000005',
-  'f7600000-0000-4000-8000-000000000004',
+  :'doctor_id'::uuid,
+  :'clinic_id'::uuid,
   :'booking_date'::date,
   :'slot_time'::time,
-  'Disposable concurrent booking test'
+  :'reason'
 );
