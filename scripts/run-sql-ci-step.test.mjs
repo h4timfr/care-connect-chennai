@@ -82,33 +82,52 @@ for (const [raw, expected] of [
 
 test("ledger reconstructs only repository migration names", () => {
   const summary = summarize(
-    `LOCAL | REMOTE | TIME (UTC)\n | 00001 | ${canaries[4]}\n | 00060 | ${canaries[2]}\n${table}`,
+    [
+      "  LOCAL      │     REMOTE     │     TIME (UTC)",
+      `  \u001b[32m\`00001\`\u001b[0m   │   \`00001\`        │ \`00001\``,
+      "  `00060`     │   `00060`        │ `00060`",
+    ].join("\n"),
     { kind: "ledger", exitCode: 0, migrationFiles },
   );
   safe(summary);
+  assert.match(summary, /CLI local migration entries recognized: 2/);
   assert.match(summary, /database migration entries recognized: 2/);
   assert.match(summary, /Local migration ledger gate: PASS/);
+  assert.match(summary, /Local database ledger: 00001_initial_schema.sql/);
+  assert.match(summary, /Local database ledger: 00060_serialize_patient_booking_limit.sql/);
 });
 
-test("ledger reads only the local database column from Unicode and ANSI CLI tables", () => {
+test("ledger compares database versions from REMOTE, not the repository LOCAL column", () => {
   const summary = summarize(
-    `LOCAL      │     REMOTE     │ TIME (UTC)\n  \u001b[32m00001\u001b[0m  │                │ ${canaries[4]}\n              │ 00060          │ ${canaries[2]}`,
+    [
+      "  LOCAL      │     REMOTE     │     TIME (UTC)",
+      "  `00001`     │   `00001`        │ `00001`",
+      "  `00060`     │   `00059`        │ `00059`",
+    ].join("\n"),
     { kind: "ledger", exitCode: 0, migrationFiles },
   );
   safe(summary);
-  assert.match(summary, /database migration entries recognized: 1/);
-  assert.match(summary, /Local database ledger: 00060_serialize_patient_booking_limit.sql/);
-  assert.doesNotMatch(summary, /00001_initial_schema.sql/);
+  assert.match(summary, /CLI local migration entries recognized: 2/);
+  assert.match(summary, /database migration entries recognized: 2/);
+  assert.match(summary, /Local database ledger: 00001_initial_schema.sql/);
+  assert.doesNotMatch(summary, /Local database ledger: 00060_serialize_patient_booking_limit.sql/);
   assert.match(summary, /Local migration ledger gate: FAIL/);
 });
 
-test("ledger with a missing target-side version fails closed", () => {
-  const summary = summarize("LOCAL | REMOTE | TIME (UTC)\n | 00001 | 2026-01-01 00:00:00", {
-    kind: "ledger",
-    exitCode: 0,
-    migrationFiles,
-  });
-  assert.match(summary, /Local migration ledger gate: FAIL/);
+test("ledger fails closed for duplicate, malformed, incomplete, or unexpected versions", () => {
+  const header = "LOCAL │ REMOTE │ TIME (UTC)";
+  const invalidTables = [
+    `${header}\n\`00001\` │ \`00001\` │ \`00001\`\n\`00060\` │ \`00001\` │ \`00001\``,
+    `${header}\n\`00001\` │ \`00001\` │ \`00001\`\n\`00060\` │ \`BAD\` │ \`00060\``,
+    `${header}\n\`00001\` │ \`00001\` │ \`00001\``,
+    `${header}\n\`00001\` │ \`00001\` │ \`00001\`\n\`00059\` │ \`00059\` │ \`00059\``,
+  ];
+
+  for (const raw of invalidTables) {
+    const summary = summarize(raw, { kind: "ledger", exitCode: 0, migrationFiles });
+    safe(summary);
+    assert.match(summary, /Local migration ledger gate: FAIL/);
+  }
 });
 
 test("the executable wrapper converts a zero-exit migration-ledger mismatch into a failing step", () => {

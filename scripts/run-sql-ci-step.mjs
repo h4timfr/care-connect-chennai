@@ -101,30 +101,23 @@ export function summarize(
       .filter((file) => /^\d{5}_[a-z0-9_]+\.sql$/.test(file))
       .map((file) => file.slice(0, 5))
       .sort();
-    const lines = raw.split(/\r?\n/).map((line) => line.trim());
-    const headerIndex = lines.findIndex((line) => /LOCAL/i.test(line) && /REMOTE/i.test(line));
-    const headers =
-      headerIndex < 0
-        ? []
-        : lines[headerIndex].split(/[|│]/).map((cell) => cell.trim().toUpperCase());
-    const databaseColumn = headers.indexOf("REMOTE");
-    const recorded = new Set();
-    if (databaseColumn >= 0) {
-      for (const line of lines.slice(headerIndex + 1)) {
-        const cells = line.split(/[|│]/).map((cell) => cell.trim());
-        const version = cells[databaseColumn];
-        if (/^\d{5}$/.test(version ?? "")) recorded.add(version);
-      }
-    }
-    const recordedVersions = [...recorded].sort();
+    const parsedLedger = parseMigrationLedger(raw);
+    const localVersions = [...parsedLedger.localVersions].sort();
+    const recordedVersions = [...parsedLedger.remoteVersions].sort();
+    const localMatches = sameVersions(expected, localVersions);
+    const databaseMatches = sameVersions(expected, recordedVersions);
     const ledgerMatches =
-      expected.length > 0 &&
-      expected.length === recordedVersions.length &&
-      expected.every((version, index) => version === recordedVersions[index]);
+      expected.length > 0 && parsedLedger.valid && localMatches && databaseMatches;
+    output.push(`Repository migration versions expected: ${expected.length}.`);
+    output.push(`CLI local migration entries recognized: ${localVersions.length}.`);
     output.push(`Local database migration entries recognized: ${recordedVersions.length}.`);
+    if (!parsedLedger.valid) {
+      output.push("Local migration ledger format: malformed, duplicate, missing, or incomplete.");
+    }
     output.push(
       `Local migration ledger gate: ${ledgerMatches ? "PASS" : "FAIL (ledger differs from repository)"}.`,
     );
+    const recorded = new Set(recordedVersions);
     for (const file of migrationFiles.filter((name) => recorded.has(name.slice(0, 5)))) {
       output.push(`Local database ledger: ${file}.`);
     }
@@ -206,6 +199,75 @@ export function summarize(
   }
   output.push("Raw command output is confined to temporary runner storage and is not an artifact.");
   return `${output.join("\n")}\n`;
+}
+
+function sameVersions(expected, actual) {
+  return (
+    expected.length === actual.length &&
+    expected.every((version, index) => version === actual[index])
+  );
+}
+
+function normalizeLedgerCell(cell) {
+  const trimmed = cell.trim();
+  if (trimmed.startsWith("`") && trimmed.endsWith("`") && trimmed.length >= 2) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+function parseMigrationLedger(raw) {
+  const lines = raw.split(/\r?\n/);
+  const tableLines = lines.map((line) => line.split(/[|│]/).map(normalizeLedgerCell));
+  const headers = tableLines
+    .map((cells, index) => ({ cells, index }))
+    .filter(
+      ({ cells }) =>
+        cells.some((cell) => cell.toUpperCase() === "LOCAL") &&
+        cells.some((cell) => cell.toUpperCase() === "REMOTE"),
+    );
+
+  if (headers.length !== 1) {
+    return { localVersions: [], remoteVersions: [], valid: false };
+  }
+
+  const { cells: headerCells, index: headerIndex } = headers[0];
+  const localColumn = headerCells.findIndex((cell) => cell.toUpperCase() === "LOCAL");
+  const remoteColumn = headerCells.findIndex((cell) => cell.toUpperCase() === "REMOTE");
+  const versionPattern = /^\d{5}$/;
+  const localVersions = [];
+  const remoteVersions = [];
+  let valid = localColumn !== remoteColumn && localColumn >= 0 && remoteColumn >= 0;
+  let rows = 0;
+
+  for (const [offset, cells] of tableLines.slice(headerIndex + 1).entries()) {
+    if (!/[|│]/.test(lines[headerIndex + offset + 1] ?? "")) continue;
+    if (!cells.some((cell) => cell.length > 0)) continue;
+    if (cells.length !== headerCells.length) {
+      // Ignore only standalone renderer rules; any other malformed row fails closed.
+      if (cells.every((cell) => /^[\s─━┄┅-]*$/.test(cell))) continue;
+      valid = false;
+      continue;
+    }
+    if (cells.every((cell) => /^[\s─━┄┅-]*$/.test(cell))) continue;
+
+    const localVersion = cells[localColumn];
+    const remoteVersion = cells[remoteColumn];
+    if (!versionPattern.test(localVersion) || !versionPattern.test(remoteVersion)) {
+      valid = false;
+      continue;
+    }
+    localVersions.push(localVersion);
+    remoteVersions.push(remoteVersion);
+    rows += 1;
+  }
+
+  const hasDuplicates = (versions) => new Set(versions).size !== versions.length;
+  if (rows === 0 || hasDuplicates(localVersions) || hasDuplicates(remoteVersions)) {
+    valid = false;
+  }
+
+  return { localVersions, remoteVersions, valid };
 }
 
 export function runCapturedStep({ kind, command, args, rawRoot, artifactRoot, cwd = root }) {
