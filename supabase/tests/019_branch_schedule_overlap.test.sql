@@ -78,10 +78,13 @@ SELECT extensions.throws_ok(
     'a schedule with future active appointments cannot be deleted'
 );
 
+-- Model a legacy elapsed appointment so the test can target patient cancellation policy.
+ALTER TABLE public.appointments DISABLE TRIGGER trg_check_appointment_overlap;
 INSERT INTO public.appointments (patient_id, doctor_id, clinic_id, date, time, status, fee)
 VALUES ('00000000-0000-0000-0000-0000000019f1', '00000000-0000-0000-0000-0000000019d1',
         '00000000-0000-0000-0000-0000000019c1',
         (pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date, '00:00', 'confirmed', 500);
+ALTER TABLE public.appointments ENABLE TRIGGER trg_check_appointment_overlap;
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000019e1","role":"authenticated"}';
 SET LOCAL role authenticated;
 SELECT extensions.throws_ok(

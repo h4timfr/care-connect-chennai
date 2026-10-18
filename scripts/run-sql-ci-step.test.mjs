@@ -204,6 +204,33 @@ test("pgTAP harness failure summaries expose only known file counts and assertio
   assert.doesNotMatch(summary, /No plan found|Non-zero exit status|SYNTHETIC_PASSWORD/);
 });
 
+test("pgTAP SQL errors expose known files, line numbers and fixed categories only", () => {
+  const files = [
+    "012_doctor_portal.test.sql",
+    "014_portal_authorization_matrix.test.sql",
+    "019_branch_schedule_overlap.test.sql",
+  ];
+  const raw = [
+    "psql:supabase/tests/" + files[0] + ":78: ERROR: That time slot is no longer available. " + canaries[1],
+    "psql:supabase/tests/" + files[1] + ":49: ERROR: duplicate key value violates unique constraint " + canaries[4],
+    "psql:supabase/tests/" + files[2] + ":84: ERROR: " + canaries[5],
+    "Files=20, Tests=359",
+    "Result: FAIL",
+  ].join("\n");
+  const summary = summarize(raw, { kind: "pgtap", exitCode: 1, testFiles: files, expectedAssertionCount: 460 });
+  safe(summary);
+  assert.match(summary, /012_doctor_portal\\.test\\.sql: failed/);
+  assert.match(summary, /014_portal_authorization_matrix\\.test\\.sql: failed/);
+  assert.match(summary, /019_branch_schedule_overlap\\.test\\.sql: failed/);
+  assert.match(summary, /SQL error location: 012_doctor_portal\\.test\\.sql:78/);
+  assert.match(summary, /SQL error location: 014_portal_authorization_matrix\\.test\\.sql:49/);
+  assert.match(summary, /SQL error location: 019_branch_schedule_overlap\\.test\\.sql:84/);
+  assert.match(summary, /appointment-window validation rejected an active appointment fixture/);
+  assert.match(summary, /duplicate fixture key/);
+  assert.match(summary, /unclassified database exception/);
+  assert.match(summary, /Workflow gate: FAIL/);
+  assert.doesNotMatch(summary, /That time slot is no longer available|duplicate key value|SYNTHETIC_CANARY/);
+});
 test("unrecognized output never invents a test result", () => {
   const summary = summarize(table, {
     kind: "pgtap",

@@ -72,10 +72,10 @@ INSERT INTO public.doctor_schedules (doctor_id, clinic_id, day_of_week, start_ti
 INSERT INTO public.appointments (id, patient_id, clinic_id, doctor_id, date, time, status, fee) VALUES
 ('00000000-0000-0000-0000-000000000611',
  (SELECT id FROM public.patients WHERE user_id = '00000000-0000-0000-0000-0000000006e1'),
- '00000000-0000-0000-0000-0000000006c1', '00000000-0000-0000-0000-0000000006b1', '2099-02-02', '10:00', 'pending', 500),
+ '00000000-0000-0000-0000-0000000006c1', '00000000-0000-0000-0000-0000000006b1', ((pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date + 30), '10:00', 'pending', 500),
 ('00000000-0000-0000-0000-000000000612',
  (SELECT id FROM public.patients WHERE user_id = '00000000-0000-0000-0000-0000000006e1'),
- '00000000-0000-0000-0000-0000000006c1', '00000000-0000-0000-0000-0000000006b2', '2099-02-02', '10:00', 'pending', 500);
+ '00000000-0000-0000-0000-0000000006c1', '00000000-0000-0000-0000-0000000006b2', ((pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date + 30), '10:00', 'pending', 500);
 INSERT INTO public.conversations (id, clinic_id, patient_id, doctor_id, kind) VALUES
 ('00000000-0000-0000-0000-000000000621', '00000000-0000-0000-0000-0000000006c1',
  (SELECT id FROM public.patients WHERE user_id = '00000000-0000-0000-0000-0000000006e1'), '00000000-0000-0000-0000-0000000006b1', 'general'),

@@ -125,14 +125,20 @@ export function summarize(
   if (kind === "pgtap") {
     const knownTestFiles = testFiles.filter((file) => /^\d{3}_[a-z0-9_]+\.test\.sql$/.test(file));
     const failureSummaries = parsePgtapFailureSummaries(raw, knownTestFiles);
+    const sqlErrors = parsePgtapSqlErrors(raw, knownTestFiles);
     const statuses = [];
     for (const file of knownTestFiles) {
       const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const status = raw.match(new RegExp(`${escaped}[ .\\t]+(not ok|ok)\\b`));
       const failureSummary = failureSummaries.get(file);
-      const normalizedStatus = status?.[1] ?? (failureSummary?.problem ? "failed" : null);
+      const sqlError = sqlErrors.get(file);
+      const normalizedStatus = sqlError ? "failed" : status?.[1] ?? (failureSummary?.problem ? "failed" : null);
       statuses.push(normalizedStatus);
       output.push(`${file}: ${normalizedStatus ?? "result not recognized"}.`);
+      if (sqlError) {
+        output.push(`SQL error location: ${file}:${sqlError.line}.`);
+        output.push(`SQL error category: ${sqlError.category}.`);
+      }
       if (failureSummary?.problem) {
         output.push(
           `pgTAP file summary: ${file}: tests=${failureSummary.tests}, failed=${failureSummary.failed}.`,
@@ -155,11 +161,6 @@ export function summarize(
     const failures = [...raw.matchAll(/\bnot ok (\d{1,5})\b/g)].map((match) => Number(match[1]));
     if (failures.length)
       output.push(`Failed assertion ordinals: ${[...new Set(failures)].join(", ")}.`);
-    for (const file of testFiles.filter((file) => /^\d{3}_[a-z0-9_]+\.test\.sql$/.test(file))) {
-      const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const error = raw.match(new RegExp(`${escaped}:(\\d{1,6}):\\s*(?:ERROR|FATAL):`));
-      if (error) output.push(`SQL error location: ${file}:${Number(error[1])}.`);
-    }
     const gatePasses =
       Number.isInteger(expectedAssertionCount) &&
       statuses.length === testFiles.length &&
@@ -190,9 +191,17 @@ export function summarize(
     );
   }
   if (exitCode !== 0) {
-    const matched = diagnostics.filter(([pattern]) => pattern.test(raw));
+    const matched = kind === "pgtap" ? [] : diagnostics.filter(([pattern]) => pattern.test(raw));
     output.push(...matched.map(([, message]) => `Diagnostic: ${message}`));
-    if (!matched.length) output.push("Diagnostic: unrecognized failure; raw output was withheld.");
+    if (!matched.length) {
+      const hasPgTapDetail = output.some((line) =>
+        line.startsWith("SQL error category: ") ||
+        line.startsWith("pgTAP file summary: ") ||
+        line.startsWith("Failed assertion ordinals"),
+      );
+      if (kind !== "pgtap") output.push("Diagnostic: unrecognized failure; raw output was withheld.");
+      else if (!hasPgTapDetail) output.push("Diagnostic: unclassified pgTAP failure; raw output was withheld.");
+    }
     const states = [
       "42501",
       "23505",
@@ -340,6 +349,32 @@ function parsePgtapFailureSummaries(raw, testFiles) {
   return summaries;
 }
 
+function parsePgtapSqlErrors(raw, testFiles) {
+  const errors = new Map();
+  for (const file of testFiles) {
+      const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\export function runCapturedStep(");
+    const match = raw.match(new RegExp(escaped + ":(\\d{1,6}):\\s*(?:ERROR|FATAL):\\s*([^\\r\\n]*)", "i"));
+    if (!match) continue;
+    errors.set(file, { line: Number(match[1]), category: classifyPgtapSqlError(match[2]) });
+  }
+  return errors;
+}
+
+function classifyPgtapSqlError(message) {
+  const categories = [
+    [/that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i, "appointment-window validation rejected an active appointment fixture"],
+    [/duplicate key value violates unique constraint/i, "duplicate fixture key"],
+    [/violates foreign key constraint/i, "fixture foreign-key constraint failed"],
+    [/violates check constraint/i, "fixture check constraint failed"],
+    [/violates not-null constraint/i, "fixture required a missing value"],
+    [/row-level security policy/i, "row-level security rejected a fixture operation"],
+    [/permission denied/i, "database permission denied"],
+    [/syntax error/i, "SQL syntax error"],
+    [/does not exist/i, "database object or column missing"],
+    [/current transaction is aborted/i, "an earlier SQL statement aborted the test transaction"],
+  ];
+  return categories.find(([pattern]) => pattern.test(message))?.[1] ?? "unclassified database exception";
+}
 export function runCapturedStep({ kind, command, args, rawRoot, artifactRoot, cwd = root }) {
   if (!kinds.includes(kind) || !path.isAbsolute(rawRoot) || !path.isAbsolute(artifactRoot)) {
     throw new Error("Invalid capture configuration.");

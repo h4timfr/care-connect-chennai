@@ -8,7 +8,7 @@ WITH booking_definition AS (
 )
 SELECT extensions.ok(
   pg_catalog.strpos(body, 'FOR UPDATE') > 0
-  AND pg_catalog.strpos(body, 'FOR UPDATE') < pg_catalog.strpos(body, 'SELECT COUNT(*)'),
+  AND pg_catalog.strpos(body, 'FOR UPDATE') < pg_catalog.strpos(body, 'COUNT(*)'),
   'book_appointment locks the authenticated patient row before counting active bookings'
 )
 FROM booking_definition;
