@@ -153,7 +153,7 @@ test("the executable wrapper converts a zero-exit migration-ledger mismatch into
 });
 
 test("pgTAP summaries retain results/counts without assertion descriptions or arbitrary SQL", () => {
-  const raw = `./supabase/tests/${testFiles[0]} .. ok ${canaries[0]}\n./supabase/tests/${testFiles[1]} .. not ok\nnot ok 1 - ${canaries[1]}\npsql:${testFiles[1]}:17: ERROR: ${canaries[4]}\nFiles=18, Tests=439, 1 wallclock secs\nResult: FAIL\n${table}`;
+  const raw = `./supabase/tests/${testFiles[0]} .. ok ${canaries[0]}\n./supabase/tests/${testFiles[1]} .. not ok\nnot ok 1 - ${canaries[1]}\npsql:supabase/tests/${testFiles[1]}:17: ERROR: ${canaries[4]}\nFiles=18, Tests=439, 1 wallclock secs\nResult: FAIL\n${table}`;
   const summary = summarize(raw, {
     kind: "pgtap",
     exitCode: 1,
