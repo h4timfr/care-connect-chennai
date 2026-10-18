@@ -132,7 +132,9 @@ export function summarize(
       const status = raw.match(new RegExp(`${escaped}[ .\\t]+(not ok|ok)\\b`));
       const failureSummary = failureSummaries.get(file);
       const sqlError = sqlErrors.get(file);
-      const normalizedStatus = status?.[1] ?? (sqlError ? "SQL execution error" : failureSummary?.problem ? "failed" : null);
+      const normalizedStatus =
+        status?.[1] ??
+        (sqlError ? "SQL execution error" : failureSummary?.problem ? "failed" : null);
       statuses.push(normalizedStatus);
       output.push(`${file}: ${normalizedStatus ?? "result not recognized"}.`);
       if (sqlError) {
@@ -195,13 +197,16 @@ export function summarize(
     const matched = kind === "pgtap" ? [] : diagnostics.filter(([pattern]) => pattern.test(raw));
     output.push(...matched.map(([, message]) => `Diagnostic: ${message}`));
     if (!matched.length) {
-      const hasPgTapDetail = output.some((line) =>
-        line.startsWith("SQL error category: ") ||
-        line.startsWith("pgTAP file summary: ") ||
-        line.startsWith("Failed assertion ordinals"),
+      const hasPgTapDetail = output.some(
+        (line) =>
+          line.startsWith("SQL error category: ") ||
+          line.startsWith("pgTAP file summary: ") ||
+          line.startsWith("Failed assertion ordinals"),
       );
-      if (kind !== "pgtap") output.push("Diagnostic: unrecognized failure; raw output was withheld.");
-      else if (!hasPgTapDetail) output.push("Diagnostic: unclassified pgTAP failure; raw output was withheld.");
+      if (kind !== "pgtap")
+        output.push("Diagnostic: unrecognized failure; raw output was withheld.");
+      else if (!hasPgTapDetail)
+        output.push("Diagnostic: unclassified pgTAP failure; raw output was withheld.");
     }
     const states = [
       "42501",
@@ -358,13 +363,25 @@ function parsePgtapSqlErrors(raw, testFiles) {
   const lines = raw.split(/\r?\n/);
   for (const file of testFiles) {
     const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const match = lines.map((line) => ({
-      line,
-      match: line.match(new RegExp("(?:^|/)" + escaped + ":(\\d{1,6}):\\s*(?:ERROR|FATAL):\\s*(?:\\[([A-Z0-9]{5})\\]\\s*)?([^\\r\\n]*)", "i")),
-    })).find((entry) => entry.match);
+    const match = lines
+      .map((line) => ({
+        line,
+        match: line.match(
+          new RegExp(
+            "(?:^|/)" +
+              escaped +
+              ":(\\d{1,6}):\\s*(?:ERROR|FATAL):\\s*(?:\\[([A-Z0-9]{5})\\]\\s*)?([^\\r\\n]*)",
+            "i",
+          ),
+        ),
+      }))
+      .find((entry) => entry.match);
     if (!match) continue;
     const location = Number(match.match[1]);
-    const rawState = match.match[2] ?? match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ?? null;
+    const rawState =
+      match.match[2] ??
+      match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ??
+      null;
     const classified = classifyPgtapSqlError(rawState, match.match[3] ?? "");
     errors.set(file, { line: location, ...classified });
   }
@@ -373,18 +390,32 @@ function parsePgtapSqlErrors(raw, testFiles) {
 
 function classifyPgtapSqlError(rawState, message) {
   const labels = {
-    "42501": "database permission denied", "23505": "duplicate fixture key",
-    "23503": "fixture foreign-key constraint failed", "23514": "fixture check constraint failed",
-    "23502": "fixture required a missing value", "42601": "SQL syntax error",
-    "42P01": "database relation missing", "42703": "database column missing",
-    "25P02": "an earlier SQL statement aborted the test transaction",
+    42501: "database permission denied",
+    23505: "duplicate fixture key",
+    23503: "fixture foreign-key constraint failed",
+    23514: "fixture check constraint failed",
+    23502: "fixture required a missing value",
+    42601: "SQL syntax error",
+    42P01: "database relation missing",
+    42703: "database column missing",
+    25P02: "an earlier SQL statement aborted the test transaction",
     "0A000": "unsupported transaction setting or feature",
-    "P0001": "application validation rejected a fixture operation",
+    P0001: "application validation rejected a fixture operation",
   };
-  if (rawState && labels[rawState]) return { category: labels[rawState], sqlstate: rawState };
+  if (rawState && labels[rawState]) {
+    return { category: labels[rawState], sqlstate: rawState };
+  }
   const fallback = [
-    [/that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i, "application validation rejected a fixture operation", "P0001"],
-    [/duplicate key value violates unique constraint/i, "duplicate fixture key", "23505"],
+    [
+      /that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i,
+      "application validation rejected a fixture operation",
+      "P0001",
+    ],
+    [
+      /duplicate key value violates unique constraint/i,
+      "duplicate fixture key",
+      "23505",
+    ],
     [/violates foreign key constraint/i, "fixture foreign-key constraint failed", "23503"],
     [/violates check constraint/i, "fixture check constraint failed", "23514"],
     [/violates not-null constraint/i, "fixture required a missing value", "23502"],
@@ -392,7 +423,11 @@ function classifyPgtapSqlError(rawState, message) {
     [/syntax error/i, "SQL syntax error", "42601"],
     [/relation .* does not exist/i, "database relation missing", "42P01"],
     [/column .* does not exist/i, "database column missing", "42703"],
-    [/current transaction is aborted/i, "an earlier SQL statement aborted the test transaction", "25P02"],
+    [
+      /current transaction is aborted/i,
+      "an earlier SQL statement aborted the test transaction",
+      "25P02",
+    ],
   ];
   const inferred = fallback.find(([pattern]) => pattern.test(message));
   if (inferred) return { category: inferred[1], sqlstate: inferred[2] };

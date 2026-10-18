@@ -221,7 +221,9 @@ test("pgTAP SQL errors expose SQLSTATE and fixed labels, never raw database mess
   safe(summary);
   assert.ok(summary.includes("012_doctor_portal.test.sql: SQL execution error."));
   assert.ok(summary.includes("SQL error location: 012_doctor_portal.test.sql:78."));
-  assert.ok(summary.includes("SQL error category: application validation rejected a fixture operation."));
+  assert.ok(
+    summary.includes("SQL error category: application validation rejected a fixture operation."),
+  );
   assert.ok(summary.includes("SQLSTATE: P0001."));
   assert.ok(summary.includes("SQL error category: duplicate fixture key."));
   assert.ok(summary.includes("SQLSTATE: 23505."));
@@ -236,9 +238,18 @@ test("pgTAP SQL errors expose known files, line numbers and fixed categories onl
     "019_branch_schedule_overlap.test.sql",
   ];
   const raw = [
-    "psql:supabase/tests/" + files[0] + ":78: ERROR: That time slot is no longer available. " + canaries[1],
-    "psql:supabase/tests/" + files[1] + ":49: ERROR: duplicate key value violates unique constraint " + canaries[4],
-    "psql:supabase/tests/" + files[2] + ":84: ERROR: " + canaries[5],
+    "psql:supabase/tests/" +
+      files[0] +
+      ":78: ERROR: That time slot is no longer available. " +
+      canaries[1],
+    "psql:supabase/tests/" +
+      files[1] +
+      ":49: ERROR: duplicate key value violates unique constraint " +
+      canaries[4],
+    "psql:supabase/tests/" +
+      files[2] +
+      ":84: ERROR: " +
+      canaries[5],
     "Files=20, Tests=359",
     "Result: FAIL",
   ].join("\n");
@@ -250,13 +261,18 @@ test("pgTAP SQL errors expose known files, line numbers and fixed categories onl
   assert.ok(summary.includes("SQL error location: 012_doctor_portal.test.sql:78"));
   assert.ok(summary.includes("SQL error location: 014_portal_authorization_matrix.test.sql:49"));
   assert.ok(summary.includes("SQL error location: 019_branch_schedule_overlap.test.sql:84"));
-  assert.ok(summary.includes("SQL error category: application validation rejected a fixture operation."));
+  assert.ok(
+    summary.includes("SQL error category: application validation rejected a fixture operation."),
+  );
   assert.ok(summary.includes("SQLSTATE: P0001."));
   assert.match(summary, /duplicate fixture key/);
   assert.ok(summary.includes("SQLSTATE: 23505."));
   assert.match(summary, /unclassified database exception/);
   assert.match(summary, /Workflow gate: FAIL/);
-  assert.doesNotMatch(summary, /That time slot is no longer available|duplicate key value|SYNTHETIC_CANARY/);
+  assert.doesNotMatch(
+    summary,
+    /That time slot is no longer available|duplicate key value|SYNTHETIC_CANARY/,
+  );
 });
 test("unrecognized output never invents a test result", () => {
   const summary = summarize(table, {
