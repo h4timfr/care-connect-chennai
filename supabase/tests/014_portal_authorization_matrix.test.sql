@@ -52,7 +52,7 @@ ALTER TABLE public.appointments DISABLE TRIGGER trg_check_appointment_overlap;
 INSERT INTO public.appointments (id, patient_id, doctor_id, clinic_id, date, time, status, fee)
 VALUES
 ('00000000-0000-0000-0000-0000000014a4', '00000000-0000-0000-0000-0000000014f1', '00000000-0000-0000-0000-0000000014d1', '00000000-0000-0000-0000-0000000014c1', CURRENT_DATE - 1, '10:00', 'confirmed', 500);
-ALTER TABLE public.appointments ENABLE TRIGGER trg_check_appointment_overlap
+ALTER TABLE public.appointments ENABLE TRIGGER trg_check_appointment_overlap;
 INSERT INTO public.conversations (id, patient_id, clinic_id, doctor_id, kind) VALUES
 ('00000000-0000-0000-0000-0000000014b1', '00000000-0000-0000-0000-0000000014f1', '00000000-0000-0000-0000-0000000014c1', '00000000-0000-0000-0000-0000000014d1', 'general'),
 ('00000000-0000-0000-0000-0000000014b2', '00000000-0000-0000-0000-0000000014f2', '00000000-0000-0000-0000-0000000014c2', '00000000-0000-0000-0000-0000000014d2', 'general');

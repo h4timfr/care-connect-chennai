@@ -352,7 +352,7 @@ function parsePgtapFailureSummaries(raw, testFiles) {
 function parsePgtapSqlErrors(raw, testFiles) {
   const errors = new Map();
   for (const file of testFiles) {
-      const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\export function runCapturedStep(");
+    const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const match = raw.match(new RegExp(escaped + ":(\\d{1,6}):\\s*(?:ERROR|FATAL):\\s*([^\\r\\n]*)", "i"));
     if (!match) continue;
     errors.set(file, { line: Number(match[1]), category: classifyPgtapSqlError(match[2]) });
