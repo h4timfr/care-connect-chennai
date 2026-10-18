@@ -398,7 +398,7 @@ function classifyPgtapSqlError(rawState, message) {
     42601: "SQL syntax error",
     "42P01": "database relation missing",
     42703: "database column missing",
-    25P02: "an earlier SQL statement aborted the test transaction",
+    "25P02": "an earlier SQL statement aborted the test transaction",
     "0A000": "unsupported transaction setting or feature",
     P0001: "application validation rejected a fixture operation",
   };
