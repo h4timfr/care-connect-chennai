@@ -132,16 +132,10 @@ export function summarize(
       const status = raw.match(new RegExp(`${escaped}[ .\\t]+(not ok|ok)\\b`));
       const failureSummary = failureSummaries.get(file);
       const sqlError = sqlErrors.get(file);
-      const normalizedStatus = status?.[1] ?? (failureSummary?.problem ? "failed" : sqlError ? "SQL execution error" : null);
+      const normalizedStatus = status?.[1] ?? (sqlError ? "SQL execution error" : failureSummary?.problem ? "failed" : null);
       statuses.push(normalizedStatus);
       output.push(`${file}: ${normalizedStatus ?? "result not recognized"}.`);
       if (sqlError) {
-        output.push(`SQL error location: ${file}:${sqlError.line}.`);
-        output.push(`SQL error category: ${sqlError.category}.`);
-        if (sqlError.sqlstate) output.push(`SQLSTATE for ${file}: ${sqlError.sqlstate}.`);
-      }
-      if (sqlError) {
-        output.push(`${file}: SQL execution error.`);
         output.push(`SQL error location: ${file}:${sqlError.line}.`);
         output.push(`SQL error category: ${sqlError.category}.`);
         if (sqlError.sqlstate) output.push(`SQLSTATE: ${sqlError.sqlstate}.`);
@@ -370,14 +364,14 @@ function parsePgtapSqlErrors(raw, testFiles) {
     })).find((entry) => entry.match);
     if (!match) continue;
     const location = Number(match.match[1]);
-    const state = match.match[2] ?? match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ?? null;
-    const category = classifyPgtapSqlError(state, match.match[3] ?? "");
-    errors.set(file, { line: location, category, sqlstate: state });
+    const rawState = match.match[2] ?? match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ?? null;
+    const classified = classifyPgtapSqlError(rawState, match.match[3] ?? "");
+    errors.set(file, { line: location, ...classified });
   }
   return errors;
 }
 
-function classifyPgtapSqlError(sqlstate, message) {
+function classifyPgtapSqlError(rawState, message) {
   const labels = {
     "42501": "database permission denied", "23505": "duplicate fixture key",
     "23503": "fixture foreign-key constraint failed", "23514": "fixture check constraint failed",
@@ -387,20 +381,22 @@ function classifyPgtapSqlError(sqlstate, message) {
     "0A000": "unsupported transaction setting or feature",
     "P0001": "application validation rejected a fixture operation",
   };
-  if (sqlstate && labels[sqlstate]) return labels[sqlstate];
+  if (rawState && labels[rawState]) return { category: labels[rawState], sqlstate: rawState };
   const fallback = [
-    [/that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i, "application validation rejected a fixture operation"],
-    [/duplicate key value violates unique constraint/i, "duplicate fixture key"],
-    [/violates foreign key constraint/i, "fixture foreign-key constraint failed"],
-    [/violates check constraint/i, "fixture check constraint failed"],
-    [/violates not-null constraint/i, "fixture required a missing value"],
-    [/row-level security policy|permission denied/i, "database permission denied"],
-    [/syntax error/i, "SQL syntax error"],
-    [/relation .* does not exist/i, "database relation missing"],
-    [/column .* does not exist/i, "database column missing"],
-    [/current transaction is aborted/i, "an earlier SQL statement aborted the test transaction"],
+    [/that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i, "application validation rejected a fixture operation", "P0001"],
+    [/duplicate key value violates unique constraint/i, "duplicate fixture key", "23505"],
+    [/violates foreign key constraint/i, "fixture foreign-key constraint failed", "23503"],
+    [/violates check constraint/i, "fixture check constraint failed", "23514"],
+    [/violates not-null constraint/i, "fixture required a missing value", "23502"],
+    [/row-level security policy|permission denied/i, "database permission denied", "42501"],
+    [/syntax error/i, "SQL syntax error", "42601"],
+    [/relation .* does not exist/i, "database relation missing", "42P01"],
+    [/column .* does not exist/i, "database column missing", "42703"],
+    [/current transaction is aborted/i, "an earlier SQL statement aborted the test transaction", "25P02"],
   ];
-  return fallback.find(([pattern]) => pattern.test(message))?.[1] ?? "unclassified database exception";
+  const inferred = fallback.find(([pattern]) => pattern.test(message));
+  if (inferred) return { category: inferred[1], sqlstate: inferred[2] };
+  return { category: "unclassified database exception", sqlstate: null };
 }
 export function runCapturedStep({ kind, command, args, rawRoot, artifactRoot, cwd = root }) {
   if (!kinds.includes(kind) || !path.isAbsolute(rawRoot) || !path.isAbsolute(artifactRoot)) {
