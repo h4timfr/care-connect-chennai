@@ -95,6 +95,7 @@ SELECT extensions.results_eq(
 SELECT extensions.is((SELECT count(*)::int FROM public.doctors WHERE id = '00000000-0000-0000-0000-0000000014d3'), 0, 'patient: cannot see a pending, unlisted doctor');
 RESET role;
 SET LOCAL request.jwt.claims TO '{}';
+RESET role;
 UPDATE public.appointments SET status = 'confirmed' WHERE id = '00000000-0000-0000-0000-0000000014a1';
 
 -- ---- CLINIC STAFF at A (e3)

@@ -132,13 +132,19 @@ export function summarize(
       const status = raw.match(new RegExp(`${escaped}[ .\\t]+(not ok|ok)\\b`));
       const failureSummary = failureSummaries.get(file);
       const sqlError = sqlErrors.get(file);
-      const normalizedStatus = sqlError ? "failed" : status?.[1] ?? (failureSummary?.problem ? "failed" : null);
+      const normalizedStatus = status?.[1] ?? (failureSummary?.problem ? "failed" : sqlError ? "SQL execution error" : null);
       statuses.push(normalizedStatus);
       output.push(`${file}: ${normalizedStatus ?? "result not recognized"}.`);
       if (sqlError) {
         output.push(`SQL error location: ${file}:${sqlError.line}.`);
         output.push(`SQL error category: ${sqlError.category}.`);
         if (sqlError.sqlstate) output.push(`SQLSTATE for ${file}: ${sqlError.sqlstate}.`);
+      }
+      if (sqlError) {
+        output.push(`${file}: SQL execution error.`);
+        output.push(`SQL error location: ${file}:${sqlError.line}.`);
+        output.push(`SQL error category: ${sqlError.category}.`);
+        if (sqlError.sqlstate) output.push(`SQLSTATE: ${sqlError.sqlstate}.`);
       }
       if (failureSummary?.problem) {
         output.push(
@@ -355,67 +361,47 @@ function parsePgtapFailureSummaries(raw, testFiles) {
 
 function parsePgtapSqlErrors(raw, testFiles) {
   const errors = new Map();
+  const lines = raw.split(/\r?\n/);
   for (const file of testFiles) {
     const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const match = raw.match(
-      new RegExp(escaped + ":(\\d{1,6}):\\s*(?:ERROR|FATAL):\\s*([^\\r\\n]*)", "i"),
-    );
+    const match = lines.map((line) => ({
+      line,
+      match: line.match(new RegExp("(?:^|/)" + escaped + ":(\\d{1,6}):\\s*(?:ERROR|FATAL):\\s*(?:\\[([A-Z0-9]{5})\\]\\s*)?([^\\r\\n]*)", "i")),
+    })).find((entry) => entry.match);
     if (!match) continue;
-    const classified = classifyPgtapSqlError(match[2]);
-    errors.set(file, { line: Number(match[1]), ...classified });
+    const location = Number(match.match[1]);
+    const state = match.match[2] ?? match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ?? null;
+    const category = classifyPgtapSqlError(state, match.match[3] ?? "");
+    errors.set(file, { line: location, category, sqlstate: state });
   }
   return errors;
 }
 
-function classifyPgtapSqlError(message) {
-  const categories = [
-    [
-      /that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i,
-      {
-        category: "appointment-window validation rejected an active appointment fixture",
-        sqlstate: "P0001",
-      },
-    ],
-    [
-      /duplicate key value violates unique constraint/i,
-      { category: "duplicate fixture key", sqlstate: "23505" },
-    ],
-    [
-      /violates foreign key constraint/i,
-      { category: "fixture foreign-key constraint failed", sqlstate: "23503" },
-    ],
-    [
-      /violates check constraint/i,
-      { category: "fixture check constraint failed", sqlstate: "23514" },
-    ],
-    [
-      /violates not-null constraint/i,
-      { category: "fixture required a missing value", sqlstate: "23502" },
-    ],
-    [
-      /row-level security policy/i,
-      { category: "row-level security rejected a fixture operation", sqlstate: "42501" },
-    ],
-    [/permission denied/i, { category: "database permission denied", sqlstate: "42501" }],
-    [/syntax error/i, { category: "SQL syntax error", sqlstate: "42601" }],
-    [/relation .* does not exist/i, { category: "database relation missing", sqlstate: "42P01" }],
-    [/column .* does not exist/i, { category: "database column missing", sqlstate: "42703" }],
-    [
-      /current transaction is aborted/i,
-      {
-        category: "an earlier SQL statement aborted the test transaction",
-        sqlstate: "25P02",
-      },
-    ],
+function classifyPgtapSqlError(sqlstate, message) {
+  const labels = {
+    "42501": "database permission denied", "23505": "duplicate fixture key",
+    "23503": "fixture foreign-key constraint failed", "23514": "fixture check constraint failed",
+    "23502": "fixture required a missing value", "42601": "SQL syntax error",
+    "42P01": "database relation missing", "42703": "database column missing",
+    "25P02": "an earlier SQL statement aborted the test transaction",
+    "0A000": "unsupported transaction setting or feature",
+    "P0001": "application validation rejected a fixture operation",
+  };
+  if (sqlstate && labels[sqlstate]) return labels[sqlstate];
+  const fallback = [
+    [/that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i, "application validation rejected a fixture operation"],
+    [/duplicate key value violates unique constraint/i, "duplicate fixture key"],
+    [/violates foreign key constraint/i, "fixture foreign-key constraint failed"],
+    [/violates check constraint/i, "fixture check constraint failed"],
+    [/violates not-null constraint/i, "fixture required a missing value"],
+    [/row-level security policy|permission denied/i, "database permission denied"],
+    [/syntax error/i, "SQL syntax error"],
+    [/relation .* does not exist/i, "database relation missing"],
+    [/column .* does not exist/i, "database column missing"],
+    [/current transaction is aborted/i, "an earlier SQL statement aborted the test transaction"],
   ];
-  return (
-    categories.find(([pattern]) => pattern.test(message))?.[1] ?? {
-      category: "unclassified database exception",
-      sqlstate: null,
-    }
-  );
+  return fallback.find(([pattern]) => pattern.test(message))?.[1] ?? "unclassified database exception";
 }
-
 export function runCapturedStep({ kind, command, args, rawRoot, artifactRoot, cwd = root }) {
   if (!kinds.includes(kind) || !path.isAbsolute(rawRoot) || !path.isAbsolute(artifactRoot)) {
     throw new Error("Invalid capture configuration.");
