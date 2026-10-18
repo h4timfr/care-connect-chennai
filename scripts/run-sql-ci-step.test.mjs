@@ -169,6 +169,41 @@ test("pgTAP summaries retain results/counts without assertion descriptions or ar
   assert.match(summary, /Workflow gate: FAIL/);
 });
 
+test("pgTAP harness failure summaries expose only known file counts and assertion ordinals", () => {
+  const raw = [
+    `./supabase/tests/${testFiles[0]} .. `,
+    "Failed 1/1 subtests",
+    `psql:${testFiles[1]}:84: ERROR: ${canaries[4]}`,
+    "",
+    "Test Summary Report",
+    "-------------------",
+    `./supabase/tests/${testFiles[0]} (Wstat: 0 Tests: 1 Failed: 1)`,
+    "  Failed test:  1",
+    `./supabase/tests/${testFiles[1]} (Wstat: 768 Tests: 9 Failed: 0)`,
+    "  Non-zero exit status: 3",
+    "  Parse errors: No plan found in TAP output",
+    "Files=2, Tests=10",
+    "Result: FAIL",
+    table,
+  ].join("\n");
+  const summary = summarize(raw, {
+    kind: "pgtap",
+    exitCode: 1,
+    testFiles,
+    expectedAssertionCount: 10,
+  });
+  safe(summary);
+  assert.match(summary, /017_public_catalog_schema_contract\.test\.sql: failed/);
+  assert.match(summary, /017_public_catalog_schema_contract\.test\.sql: tests=1, failed=1/);
+  assert.match(
+    summary,
+    /Failed assertion ordinals for 017_public_catalog_schema_contract\.test\.sql: 1/,
+  );
+  assert.match(summary, /018_booking_limit_lock\.test\.sql: failed/);
+  assert.match(summary, /018_booking_limit_lock\.test\.sql: tests=9, failed=0/);
+  assert.doesNotMatch(summary, /No plan found|Non-zero exit status|SYNTHETIC_PASSWORD/);
+});
+
 test("unrecognized output never invents a test result", () => {
   const summary = summarize(table, {
     kind: "pgtap",

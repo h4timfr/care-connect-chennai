@@ -123,12 +123,26 @@ export function summarize(
     }
   }
   if (kind === "pgtap") {
+    const knownTestFiles = testFiles.filter((file) => /^\d{3}_[a-z0-9_]+\.test\.sql$/.test(file));
+    const failureSummaries = parsePgtapFailureSummaries(raw, knownTestFiles);
     const statuses = [];
-    for (const file of testFiles.filter((file) => /^\d{3}_[a-z0-9_]+\.test\.sql$/.test(file))) {
+    for (const file of knownTestFiles) {
       const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const status = raw.match(new RegExp(`${escaped}[ .\\t]+(not ok|ok)\\b`));
-      statuses.push(status?.[1] ?? null);
-      output.push(`${file}: ${status ? status[1] : "result not recognized"}.`);
+      const failureSummary = failureSummaries.get(file);
+      const normalizedStatus = status?.[1] ?? (failureSummary?.problem ? "failed" : null);
+      statuses.push(normalizedStatus);
+      output.push(`${file}: ${normalizedStatus ?? "result not recognized"}.`);
+      if (failureSummary?.problem) {
+        output.push(
+          `pgTAP file summary: ${file}: tests=${failureSummary.tests}, failed=${failureSummary.failed}.`,
+        );
+        if (failureSummary.failedOrdinals.length) {
+          output.push(
+            `Failed assertion ordinals for ${file}: ${failureSummary.failedOrdinals.join(", ")}.`,
+          );
+        }
+      }
     }
     const totalsMatches = [...raw.matchAll(/\bFiles=(\d{1,6}),\s*Tests=(\d{1,6})\b/g)];
     const totals = totalsMatches[0] ?? null;
@@ -268,6 +282,62 @@ function parseMigrationLedger(raw) {
   }
 
   return { localVersions, remoteVersions, valid };
+}
+
+function parsePgtapFailureSummaries(raw, testFiles) {
+  const marker = raw.lastIndexOf("Test Summary Report");
+  if (marker < 0) return new Map();
+
+  const lines = raw.slice(marker).split(/\r?\n/);
+  const headers = [];
+  const headerPattern = /\(Wstat:[^\n)]*\bTests:\s*(\d{1,6})\s+Failed:\s*(\d{1,6})\)/;
+
+  for (const [index, line] of lines.entries()) {
+    const counts = line.match(headerPattern);
+    if (!counts) continue;
+    const file = testFiles.find((candidate) => line.includes(candidate));
+    if (!file) continue;
+    headers.push({ index, file, tests: Number(counts[1]), failed: Number(counts[2]) });
+  }
+
+  const summaries = new Map();
+  for (const [position, header] of headers.entries()) {
+    const nextHeader = headers[position + 1]?.index;
+    const totalsIndex = lines.findIndex(
+      (line, index) => index > header.index && /^Files=\d+,\s*Tests=\d+/.test(line),
+    );
+    const blockEnd = nextHeader ?? (totalsIndex >= 0 ? totalsIndex : lines.length);
+    const block = lines.slice(header.index + 1, blockEnd);
+    const problem =
+      header.failed > 0 ||
+      block.some((line) =>
+        /^\s+(?:Non-zero exit status|Non-zero wait status|Parse errors):/.test(line),
+      );
+    const failedOrdinals = [];
+
+    for (let index = 0; index < block.length; index += 1) {
+      const first = block[index].match(/^\s+Failed tests?:\s+([0-9,\-\s]+)$/);
+      if (!first) continue;
+      const ranges = [first[1]];
+      while (index + 1 < block.length && /^\s{16}[0-9,\-\s]+$/.test(block[index + 1])) {
+        ranges.push(block[index + 1].trim());
+        index += 1;
+      }
+      for (const token of ranges.join(",").split(",")) {
+        const normalized = token.trim();
+        if (/^\d{1,5}(?:-\d{1,5})?$/.test(normalized)) failedOrdinals.push(normalized);
+      }
+    }
+
+    summaries.set(header.file, {
+      tests: header.tests,
+      failed: header.failed,
+      problem,
+      failedOrdinals: [...new Set(failedOrdinals)],
+    });
+  }
+
+  return summaries;
 }
 
 export function runCapturedStep({ kind, command, args, rawRoot, artifactRoot, cwd = root }) {
