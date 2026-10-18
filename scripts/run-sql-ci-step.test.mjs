@@ -162,7 +162,7 @@ test("pgTAP summaries retain results/counts without assertion descriptions or ar
   });
   safe(summary);
   assert.match(summary, /017_public_catalog_schema_contract.test.sql: ok/);
-  assert.match(summary, /018_booking_limit_lock.test.sql: not ok/);
+  assert.ok(summary.includes("018_booking_limit_lock.test.sql: failed"));
   assert.match(summary, /18 files, 439 assertions/);
   assert.match(summary, /Failed assertion ordinals: 1/);
   assert.match(summary, /SQL error location: 018_booking_limit_lock.test.sql:17/);
@@ -219,12 +219,12 @@ test("pgTAP SQL errors expose known files, line numbers and fixed categories onl
   ].join("\n");
   const summary = summarize(raw, { kind: "pgtap", exitCode: 1, testFiles: files, expectedAssertionCount: 460 });
   safe(summary);
-  assert.match(summary, /012_doctor_portal\\.test\\.sql: failed/);
-  assert.match(summary, /014_portal_authorization_matrix\\.test\\.sql: failed/);
-  assert.match(summary, /019_branch_schedule_overlap\\.test\\.sql: failed/);
-  assert.match(summary, /SQL error location: 012_doctor_portal\\.test\\.sql:78/);
-  assert.match(summary, /SQL error location: 014_portal_authorization_matrix\\.test\\.sql:49/);
-  assert.match(summary, /SQL error location: 019_branch_schedule_overlap\\.test\\.sql:84/);
+  assert.ok(summary.includes("012_doctor_portal.test.sql: failed"));
+  assert.ok(summary.includes("014_portal_authorization_matrix.test.sql: failed"));
+  assert.ok(summary.includes("019_branch_schedule_overlap.test.sql: failed"));
+  assert.ok(summary.includes("SQL error location: 012_doctor_portal.test.sql:78"));
+  assert.ok(summary.includes("SQL error location: 014_portal_authorization_matrix.test.sql:49"));
+  assert.ok(summary.includes("SQL error location: 019_branch_schedule_overlap.test.sql:84"));
   assert.match(summary, /appointment-window validation rejected an active appointment fixture/);
   assert.match(summary, /duplicate fixture key/);
   assert.match(summary, /unclassified database exception/);
