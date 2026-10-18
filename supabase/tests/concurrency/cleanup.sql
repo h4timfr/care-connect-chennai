@@ -25,9 +25,34 @@ WHERE target_id = 'f7600000-0000-4000-8000-000000000004'
 DROP TABLE public.__careconnect_booking_race_run;
 DELETE FROM public.clinics WHERE id = 'f7600000-0000-4000-8000-000000000004';
 DELETE FROM public.doctors WHERE id = 'f7600000-0000-4000-8000-000000000005';
+-- public.users.id matches auth.users.id by trigger convention, not a foreign
+-- key. Deleting Auth users alone leaves their app profiles, patient rows and
+-- roles behind. Remove only this run's four owned profile identities explicitly.
+DELETE FROM public.users
+WHERE id IN ('f7600000-0000-4000-8000-000000000001', 'f7600000-0000-4000-8000-000000000002',
+             'f7600000-0000-4000-8000-000000000009', 'f7600000-0000-4000-8000-00000000000a');
 DELETE FROM auth.users
 WHERE id IN ('f7600000-0000-4000-8000-000000000001', 'f7600000-0000-4000-8000-000000000002',
              'f7600000-0000-4000-8000-000000000009', 'f7600000-0000-4000-8000-00000000000a');
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.users WHERE id IN (
+      'f7600000-0000-4000-8000-000000000001', 'f7600000-0000-4000-8000-000000000002',
+      'f7600000-0000-4000-8000-000000000009', 'f7600000-0000-4000-8000-00000000000a')
+  ) OR EXISTS (
+    SELECT 1 FROM public.patients WHERE user_id IN (
+      'f7600000-0000-4000-8000-000000000001', 'f7600000-0000-4000-8000-000000000002',
+      'f7600000-0000-4000-8000-000000000009', 'f7600000-0000-4000-8000-00000000000a')
+  ) OR EXISTS (
+    SELECT 1 FROM auth.users WHERE id IN (
+      'f7600000-0000-4000-8000-000000000001', 'f7600000-0000-4000-8000-000000000002',
+      'f7600000-0000-4000-8000-000000000009', 'f7600000-0000-4000-8000-00000000000a')
+  ) THEN
+    RAISE EXCEPTION 'Owned local booking profile cleanup incomplete';
+  END IF;
+END;
+$$;
 COMMIT;
 \echo Booking race fixtures cleaned for owned local run.
 \else

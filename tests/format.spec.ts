@@ -38,7 +38,11 @@ test.describe("locale-aware formatting", () => {
 
   test("dates are localized and invalid dates are empty, not 'Invalid Date'", () => {
     expect(longDate("2030-10-07")).toContain("October");
-    expect(longDate("2030-10-07", "hi-IN")).toContain("अक्तूबर");
+    // Windows and the hosted runner's ICU data differ at त/ट for this month.
+    // Require the observed Hindi month forms; English fallback must still fail.
+    const hindiDate = longDate("2030-10-07", "hi-IN");
+    expect(hindiDate).toMatch(/अक्[तट]ूबर/);
+    expect(hindiDate).toContain("सोमवार");
     expect(longDate("2030-13-45")).toBe("");
     expect(longDate("")).toBe("");
   });
