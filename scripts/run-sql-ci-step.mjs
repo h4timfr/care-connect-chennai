@@ -379,8 +379,7 @@ function parsePgtapSqlErrors(raw, testFiles) {
     if (!match) continue;
     const location = Number(match.match[1]);
     const rawState =
-      match.match[2] ??
-      match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ??
+      match.match[2] ?? match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ??
       null;
     const classified = classifyPgtapSqlError(rawState, match.match[3] ?? "");
     errors.set(file, { line: location, ...classified });
@@ -411,11 +410,7 @@ function classifyPgtapSqlError(rawState, message) {
       "application validation rejected a fixture operation",
       "P0001",
     ],
-    [
-      /duplicate key value violates unique constraint/i,
-      "duplicate fixture key",
-      "23505",
-    ],
+    [/duplicate key value violates unique constraint/i, "duplicate fixture key", "23505"],
     [/violates foreign key constraint/i, "fixture foreign-key constraint failed", "23503"],
     [/violates check constraint/i, "fixture check constraint failed", "23514"],
     [/violates not-null constraint/i, "fixture required a missing value", "23502"],

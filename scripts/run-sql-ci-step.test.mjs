@@ -211,13 +211,27 @@ test("pgTAP SQL errors expose SQLSTATE and fixed labels, never raw database mess
     "019_branch_schedule_overlap.test.sql",
   ];
   const raw = [
-    "psql:supabase/tests/" + files[0] + ":78: ERROR: [P0001] application validation message " + canaries[1],
-    "psql:supabase/tests/" + files[1] + ":49: ERROR: [23505] duplicate key value violates unique constraint " + canaries[4],
-    "psql:supabase/tests/" + files[2] + ":84: ERROR: [99999] unknown database message " + canaries[5],
+    "psql:supabase/tests/" +
+      files[0] +
+      ":78: ERROR: [P0001] application validation message " +
+      canaries[1],
+    "psql:supabase/tests/" +
+      files[1] +
+      ":49: ERROR: [23505] duplicate key value violates unique constraint " +
+      canaries[4],
+    "psql:supabase/tests/" +
+      files[2] +
+      ":84: ERROR: [99999] unknown database message " +
+      canaries[5],
     "Files=3, Tests=12",
     "Result: FAIL",
   ].join("\n");
-  const summary = summarize(raw, { kind: "pgtap", exitCode: 1, testFiles: files, expectedAssertionCount: 12 });
+  const summary = summarize(raw, {
+    kind: "pgtap",
+    exitCode: 1,
+    testFiles: files,
+    expectedAssertionCount: 12,
+  });
   safe(summary);
   assert.ok(summary.includes("012_doctor_portal.test.sql: SQL execution error."));
   assert.ok(summary.includes("SQL error location: 012_doctor_portal.test.sql:78."));
@@ -228,7 +242,10 @@ test("pgTAP SQL errors expose SQLSTATE and fixed labels, never raw database mess
   assert.ok(summary.includes("SQL error category: duplicate fixture key."));
   assert.ok(summary.includes("SQLSTATE: 23505."));
   assert.ok(summary.includes("SQL error category: unclassified database exception."));
-  assert.doesNotMatch(summary, /application validation message|duplicate key value|unknown database message|SYNTHETIC_CANARY/);
+  assert.doesNotMatch(
+    summary,
+    /application validation message|duplicate key value|unknown database message|SYNTHETIC_CANARY/,
+  );
   assert.ok(summary.includes("Workflow gate: FAIL"));
 });
 test("pgTAP SQL errors expose known files, line numbers and fixed categories only", () => {
@@ -246,14 +263,16 @@ test("pgTAP SQL errors expose known files, line numbers and fixed categories onl
       files[1] +
       ":49: ERROR: duplicate key value violates unique constraint " +
       canaries[4],
-    "psql:supabase/tests/" +
-      files[2] +
-      ":84: ERROR: " +
-      canaries[5],
+    "psql:supabase/tests/" + files[2] + ":84: ERROR: " + canaries[5],
     "Files=20, Tests=359",
     "Result: FAIL",
   ].join("\n");
-  const summary = summarize(raw, { kind: "pgtap", exitCode: 1, testFiles: files, expectedAssertionCount: 460 });
+  const summary = summarize(raw, {
+    kind: "pgtap",
+    exitCode: 1,
+    testFiles: files,
+    expectedAssertionCount: 460,
+  });
   safe(summary);
   assert.ok(summary.includes("012_doctor_portal.test.sql: SQL execution error."));
   assert.ok(summary.includes("014_portal_authorization_matrix.test.sql: SQL execution error."));
