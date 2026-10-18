@@ -226,7 +226,9 @@ test("pgTAP SQL errors expose known files, line numbers and fixed categories onl
   assert.ok(summary.includes("SQL error location: 014_portal_authorization_matrix.test.sql:49"));
   assert.ok(summary.includes("SQL error location: 019_branch_schedule_overlap.test.sql:84"));
   assert.match(summary, /appointment-window validation rejected an active appointment fixture/);
+  assert.ok(summary.includes("SQLSTATE for 012_doctor_portal.test.sql: P0001"));
   assert.match(summary, /duplicate fixture key/);
+  assert.ok(summary.includes("SQLSTATE for 014_portal_authorization_matrix.test.sql: 23505"));
   assert.match(summary, /unclassified database exception/);
   assert.match(summary, /Workflow gate: FAIL/);
   assert.doesNotMatch(summary, /That time slot is no longer available|duplicate key value|SYNTHETIC_CANARY/);

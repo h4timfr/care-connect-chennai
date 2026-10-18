@@ -138,6 +138,7 @@ export function summarize(
       if (sqlError) {
         output.push(`SQL error location: ${file}:${sqlError.line}.`);
         output.push(`SQL error category: ${sqlError.category}.`);
+        if (sqlError.sqlstate) output.push(`SQLSTATE for ${file}: ${sqlError.sqlstate}.`);
       }
       if (failureSummary?.problem) {
         output.push(
@@ -207,6 +208,9 @@ export function summarize(
       "23505",
       "23503",
       "23514",
+      "23502",
+      "25P02",
+      "P0001",
       "40001",
       "40P01",
       "42601",
@@ -353,28 +357,65 @@ function parsePgtapSqlErrors(raw, testFiles) {
   const errors = new Map();
   for (const file of testFiles) {
     const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const match = raw.match(new RegExp(escaped + ":(\\d{1,6}):\\s*(?:ERROR|FATAL):\\s*([^\\r\\n]*)", "i"));
+    const match = raw.match(
+      new RegExp(escaped + ":(\\d{1,6}):\\s*(?:ERROR|FATAL):\\s*([^\\r\\n]*)", "i"),
+    );
     if (!match) continue;
-    errors.set(file, { line: Number(match[1]), category: classifyPgtapSqlError(match[2]) });
+    const classified = classifyPgtapSqlError(match[2]);
+    errors.set(file, { line: Number(match[1]), ...classified });
   }
   return errors;
 }
 
 function classifyPgtapSqlError(message) {
   const categories = [
-    [/that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i, "appointment-window validation rejected an active appointment fixture"],
-    [/duplicate key value violates unique constraint/i, "duplicate fixture key"],
-    [/violates foreign key constraint/i, "fixture foreign-key constraint failed"],
-    [/violates check constraint/i, "fixture check constraint failed"],
-    [/violates not-null constraint/i, "fixture required a missing value"],
-    [/row-level security policy/i, "row-level security rejected a fixture operation"],
-    [/permission denied/i, "database permission denied"],
-    [/syntax error/i, "SQL syntax error"],
-    [/does not exist/i, "database object or column missing"],
-    [/current transaction is aborted/i, "an earlier SQL statement aborted the test transaction"],
+    [
+      /that time slot is no longer available|cannot book appointments in the past|booking horizon exceeds 90 days|appointment date is outside the booking window|time slot is not available for this doctor/i,
+      {
+        category: "appointment-window validation rejected an active appointment fixture",
+        sqlstate: "P0001",
+      },
+    ],
+    [
+      /duplicate key value violates unique constraint/i,
+      { category: "duplicate fixture key", sqlstate: "23505" },
+    ],
+    [
+      /violates foreign key constraint/i,
+      { category: "fixture foreign-key constraint failed", sqlstate: "23503" },
+    ],
+    [
+      /violates check constraint/i,
+      { category: "fixture check constraint failed", sqlstate: "23514" },
+    ],
+    [
+      /violates not-null constraint/i,
+      { category: "fixture required a missing value", sqlstate: "23502" },
+    ],
+    [
+      /row-level security policy/i,
+      { category: "row-level security rejected a fixture operation", sqlstate: "42501" },
+    ],
+    [/permission denied/i, { category: "database permission denied", sqlstate: "42501" }],
+    [/syntax error/i, { category: "SQL syntax error", sqlstate: "42601" }],
+    [/relation .* does not exist/i, { category: "database relation missing", sqlstate: "42P01" }],
+    [/column .* does not exist/i, { category: "database column missing", sqlstate: "42703" }],
+    [
+      /current transaction is aborted/i,
+      {
+        category: "an earlier SQL statement aborted the test transaction",
+        sqlstate: "25P02",
+      },
+    ],
   ];
-  return categories.find(([pattern]) => pattern.test(message))?.[1] ?? "unclassified database exception";
+  return (
+    categories.find(([pattern]) => pattern.test(message))?.[1] ?? {
+      category: "unclassified database exception",
+      sqlstate: null,
+    }
+  );
 }
+
 export function runCapturedStep({ kind, command, args, rawRoot, artifactRoot, cwd = root }) {
   if (!kinds.includes(kind) || !path.isAbsolute(rawRoot) || !path.isAbsolute(artifactRoot)) {
     throw new Error("Invalid capture configuration.");

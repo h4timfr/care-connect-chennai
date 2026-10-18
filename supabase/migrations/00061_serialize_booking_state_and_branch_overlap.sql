@@ -11,7 +11,6 @@ DECLARE
     v_slot_minutes integer;
     v_new_start timestamp;
     v_new_end timestamp;
-    v_now_ist timestamp;
 BEGIN
     PERFORM pg_catalog.pg_advisory_xact_lock(
         pg_catalog.hashtext(NEW.doctor_id::text),
@@ -20,15 +19,6 @@ BEGIN
 
     IF NEW.status NOT IN ('pending', 'confirmed', 'arrived') THEN
         RETURN NEW;
-    END IF;
-
-    -- Recheck the time window after the doctor/date advisory lock. A request
-    -- can wait on this lock long enough for its earlier validation to go stale.
-    v_now_ist := pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Kolkata';
-    IF NEW.date < v_now_ist::date
-       OR NEW.date > v_now_ist::date + 90
-       OR (NEW.date = v_now_ist::date AND NEW.time <= v_now_ist::time) THEN
-        RAISE EXCEPTION 'Validation Failed: That time slot is no longer available.';
     END IF;
 
     SELECT ds.slot_minutes INTO v_slot_minutes
@@ -161,8 +151,16 @@ BEGIN
         RAISE EXCEPTION 'Validation Failed: That time slot is not available for this doctor.';
     END IF;
 
-    -- The patient and schedule locks above may have blocked. Validate against
-    -- wall-clock India time after acquiring them, not the transaction start.
+    -- Serialize this doctor/date before the final clock check. The overlap
+    -- trigger takes the same transaction lock, so the later INSERT cannot wait
+    -- past this validation and then commit a stale slot.
+    PERFORM pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtext(p_doctor_id::text),
+        pg_catalog.hashtext(p_date::text)
+    );
+
+    -- The patient, schedule, and doctor/date locks above may have blocked.
+    -- Validate against wall-clock India time after acquiring them.
     v_now_ist := pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Kolkata';
     v_today := v_now_ist::date;
     IF p_date < v_today OR p_date > v_today + 90 THEN

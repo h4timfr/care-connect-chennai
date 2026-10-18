@@ -1,8 +1,10 @@
 BEGIN;
-SELECT extensions.plan(11);
+SELECT extensions.plan(12);
 
 INSERT INTO auth.users (id, email, created_at, updated_at)
-VALUES ('00000000-0000-0000-0000-0000000019e1', 'branch-overlap@test.invalid', now(), now());
+VALUES
+('00000000-0000-0000-0000-0000000019e1', 'branch-overlap@test.invalid', now(), now()),
+('00000000-0000-0000-0000-0000000019e2', 'branch-overlap-staff@test.invalid', now(), now());
 UPDATE public.patients
 SET id = '00000000-0000-0000-0000-0000000019f1', full_name = 'Branch Overlap Fixture'
 WHERE user_id = '00000000-0000-0000-0000-0000000019e1';
@@ -10,6 +12,8 @@ WHERE user_id = '00000000-0000-0000-0000-0000000019e1';
 INSERT INTO public.clinics (id, name, address, phone, email, is_demo) VALUES
 ('00000000-0000-0000-0000-0000000019c1', 'Overlap Clinic A', 'Test', '0000000001', 'branch-a@test.invalid', false),
 ('00000000-0000-0000-0000-0000000019c2', 'Overlap Clinic B', 'Test', '0000000002', 'branch-b@test.invalid', false);
+INSERT INTO public.clinic_memberships (clinic_id, user_id, role)
+VALUES ('00000000-0000-0000-0000-0000000019c1', '00000000-0000-0000-0000-0000000019e2', 'clinic_staff');
 INSERT INTO public.doctors (id, name, consultation_fee, is_demo)
 VALUES ('00000000-0000-0000-0000-0000000019d1', 'Branch Overlap Doctor', 500, false);
 
@@ -78,13 +82,28 @@ SELECT extensions.throws_ok(
     'a schedule with future active appointments cannot be deleted'
 );
 
--- Model a legacy elapsed appointment so the test can target patient cancellation policy.
-ALTER TABLE public.appointments DISABLE TRIGGER trg_check_appointment_overlap;
 INSERT INTO public.appointments (patient_id, doctor_id, clinic_id, date, time, status, fee)
 VALUES ('00000000-0000-0000-0000-0000000019f1', '00000000-0000-0000-0000-0000000019d1',
         '00000000-0000-0000-0000-0000000019c1',
         (pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date, '00:00', 'confirmed', 500);
-ALTER TABLE public.appointments ENABLE TRIGGER trg_check_appointment_overlap;
+
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000019e2","role":"authenticated"}';
+SET LOCAL role authenticated;
+SELECT extensions.lives_ok(
+    $$ UPDATE public.appointments SET status = 'arrived'
+       WHERE patient_id = '00000000-0000-0000-0000-0000000019f1'
+         AND date = (pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date
+         AND time = '00:00' $$,
+    'clinic staff can mark an elapsed confirmed appointment arrived'
+);
+RESET role;
+RESET request.jwt.claims;
+UPDATE public.appointments
+SET status = 'confirmed'
+WHERE patient_id = '00000000-0000-0000-0000-0000000019f1'
+  AND date = (pg_catalog.clock_timestamp() AT TIME ZONE 'Asia/Kolkata')::date
+  AND time = '00:00';
+
 SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000019e1","role":"authenticated"}';
 SET LOCAL role authenticated;
 SELECT extensions.throws_ok(
