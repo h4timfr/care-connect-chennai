@@ -115,6 +115,10 @@ jobs:
         run: npm ci
 
       - name: Run lint, typecheck, and build
+        # Build-only synthetic values: the reserved .invalid host cannot route to Supabase.
+        env:
+          VITE_SUPABASE_URL: https://careconnect-ci-build.invalid
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
         run: npm run validate:frontend
 
       - name: Check whitespace in all changes since the original checkpoint
