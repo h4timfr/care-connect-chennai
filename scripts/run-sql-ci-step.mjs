@@ -379,8 +379,7 @@ function parsePgtapSqlErrors(raw, testFiles) {
     if (!match) continue;
     const location = Number(match.match[1]);
     const rawState =
-      match.match[2] ?? match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ??
-      null;
+      match.match[2] ?? match.line.match(/\\bSQLSTATE:?\\s*([A-Z0-9]{5})\\b/i)?.[1] ?? null;
     const classified = classifyPgtapSqlError(rawState, match.match[3] ?? "");
     errors.set(file, { line: location, ...classified });
   }
