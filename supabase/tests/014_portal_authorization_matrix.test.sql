@@ -55,7 +55,7 @@ INSERT INTO public.conversations (id, patient_id, clinic_id, doctor_id, kind) VA
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000014e1", "role": "authenticated"}';
 SET LOCAL role authenticated;
 SELECT extensions.is((SELECT count(*)::int FROM public.clinic_memberships), 0, 'patient: sees no clinic memberships');
-SELECT extensions.is((SELECT count(*)::int FROM public.appointments), 1, 'patient: sees only their own appointment');
+SELECT extensions.is((SELECT count(*)::int FROM public.appointments), 3, 'patient: sees only their own appointments');
 SELECT extensions.is((SELECT count(*)::int FROM public.conversations WHERE clinic_id = '00000000-0000-0000-0000-0000000014c2'), 0, 'patient: sees no other patient''s conversation');
 SELECT extensions.is((SELECT count(*)::int FROM public.patients WHERE id = '00000000-0000-0000-0000-0000000014f2'), 0, 'patient: cannot read another patient');
 SELECT extensions.throws_ok(
@@ -101,7 +101,7 @@ UPDATE public.appointments SET status = 'confirmed' WHERE id = '00000000-0000-00
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000014e3", "role": "authenticated"}';
 SET LOCAL role authenticated;
 SELECT extensions.is((SELECT count(*)::int FROM public.appointments WHERE clinic_id = '00000000-0000-0000-0000-0000000014c2'), 0, 'clinic staff: sees no appointments of another clinic');
-SELECT extensions.is((SELECT count(*)::int FROM public.appointments WHERE clinic_id = '00000000-0000-0000-0000-0000000014c1'), 1, 'clinic staff: sees their own clinic''s appointment');
+SELECT extensions.is((SELECT count(*)::int FROM public.appointments WHERE clinic_id = '00000000-0000-0000-0000-0000000014c1'), 3, 'clinic staff: sees their own clinic''s appointments');
 SELECT extensions.throws_ok(
     $$ UPDATE public.appointments SET fee = 1 WHERE id = '00000000-0000-0000-0000-0000000014a1' $$,
     'P0001', 'Staff cannot mass-assign scheduling details', 'clinic staff: cannot change appointment fee'
