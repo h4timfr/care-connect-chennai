@@ -13,10 +13,29 @@ import {
   pendingVersions,
   targetVersions,
   validateInventory,
+  verifyPinnedCliVersion,
 } from "./staging-reconciliation-rehearsal.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const files = readdirSync(path.join(root, "supabase/migrations")).sort();
+
+test("pinned CLI version accepts the actual update notice observed in successful CI", () => {
+  const fixture =
+    "2.117.0\nA new version of Supabase CLI is available: v2.121.0 (currently installed v2.117.0)\n";
+  assert.doesNotThrow(() => verifyPinnedCliVersion(fixture));
+  assert.doesNotThrow(() =>
+    verifyPinnedCliVersion(`\u001b[36m2.117.0\u001b[0m\r\n${fixture.split("\n")[1]}\r\n`),
+  );
+  for (const source of [
+    "",
+    "2.118.0\n",
+    "2.117.0\n2.118.0\n",
+    "2.117.0\n2.117.0\n",
+    "A new version is available: v2.117.0\n",
+  ]) {
+    assert.throws(() => verifyPinnedCliVersion(source));
+  }
+});
 
 test("inventory is exact, with an intentional gap and 39 genuinely pending versions", () => {
   assert.equal(validateInventory(files).length, 40);

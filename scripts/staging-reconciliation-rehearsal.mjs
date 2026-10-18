@@ -15,6 +15,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 import {
   assertLocalDatabaseUrl,
   localPsqlCommand,
@@ -56,6 +57,14 @@ export function normalizeDump(source) {
         !/^-- (?:Dumped|Started|Completed)\b/.test(line) && !/^\\(?:un)?restrict\b/.test(line),
     )
     .join("\n");
+}
+
+export function verifyPinnedCliVersion(raw) {
+  const versions = stripVTControlCharacters(raw)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(line));
+  check(versions.length === 1 && versions[0] === "2.117.0");
 }
 
 export function assertNoRemoteEnvironment(env) {
@@ -498,7 +507,7 @@ async function main() {
     report(`Migration checkpoint PASS: ${files.find((f) => f.startsWith(`${version}_`))}.`);
   }
   try {
-    check(cli(["--version"], "cli-version").raw.trim() === "2.117.0");
+    verifyPinnedCliVersion(cli(["--version"], "cli-version").raw);
     for (const args of [
       ["db", "push", "--help"],
       ["db", "reset", "--help"],
