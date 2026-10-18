@@ -396,7 +396,7 @@ function classifyPgtapSqlError(rawState, message) {
     23514: "fixture check constraint failed",
     23502: "fixture required a missing value",
     42601: "SQL syntax error",
-    42P01: "database relation missing",
+    "42P01": "database relation missing",
     42703: "database column missing",
     25P02: "an earlier SQL statement aborted the test transaction",
     "0A000": "unsupported transaction setting or feature",
