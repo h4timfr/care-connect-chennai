@@ -1,5 +1,42 @@
 # CareConnect engineering handoff
 
+## 2026-10-19 isolated hardening checkpoint
+
+This dated section supersedes the current-status claims in the historical 2026-10-12 record below. That record is retained as history, not evidence that today's SQL or browser suites remain unexecuted.
+
+Scope: existing PR #2 and `claude/careconnect-frontend-repair`. Reviewed starting source `e980d488bf58eb712da8104808fec022a807a3a2`. Work uses the existing isolated worktree; the original checkout remains at `baa49df2a76a9ef3fb9e3357b5372e9999fbad03` with all 19 modified and four untracked files preserved. Those unpublished files are not validated by the isolated CI source.
+
+### Changes and reasons
+
+- Added an exact 40-file LF-normalized SHA-256 migration manifest. Filename/ledger equality alone cannot detect changed SQL.
+- Added real-runner fault injections for ledger-write failure, connection termination during transactional DDL, competing migration processes, recorded-commit retry and ledger-preserving schema drift. Historical migration files remain intact; injected copies exist only in runner-owned temporary directories.
+- Added a full logical-backup restore experiment in a uniquely named database inside the disposable container, with ownership/ACL/data/publication/ledger comparisons. This does not claim a hosted staging backup is restorable.
+- Preserved the first failed command stage through cleanup and added fixed allow-listed diagnostic categories. Raw output and backup bytes never enter artifacts.
+- Added a ninth independent-session booking scenario: doctor fee update waits for booking, committed fee is preserved, stale occupied-slot selection fails, subsequent booking uses the new authoritative fee. No new application behavior or historical migration was needed.
+- Added a metadata-only staging inventory SELECT and operator runbooks for writer freeze, backup/restore and all 40 migrations' recovery requirements.
+
+### Executed evidence and failures
+
+- [Clean-stack run 39211320826](https://github.com/h4timfr/care-connect-chennai/actions/runs/39211320826), exact source `6322f66fc5c9658529c2898dc902b1fc6d4bb00e`: 40 migration attempts; exact 40-entry ledger; SQL 001–021 **479 assertions passed**; booking regressions **9/9 passed**; owned fixture cleanup passed. Lint, typecheck, build and whitespace gates passed.
+- The clean-stack ZIP contained exactly `startup.log`, `ledger.log`, `pgtap.log`, `concurrency.log`. In-memory filename and credential/URL-pattern checks passed. No raw log, dump or connection file was uploaded.
+- New restore attempts initially failed. [Run 39179515315](https://github.com/h4timfr/care-connect-chennai/actions/runs/39179515315) identified a missing-object failure; [run 39211320842](https://github.com/h4timfr/care-connect-chennai/actions/runs/39211320842) reproduced it at DROP POLICY with `--clean` on an empty target, then failed the separate fresh-target restore. [Run 39211960489](https://github.com/h4timfr/care-connect-chennai/actions/runs/39211960489) identified that fresh-target failure as an ALTER ownership/SET ROLE privilege requirement.
+- The correction passed in [run 39212447344](https://github.com/h4timfr/care-connect-chennai/actions/runs/39212447344), exact source `34b8863fb06f8ffd78165396137ddb00a9e6e821`: fresh restore without `--clean`, using existing `supabase_admin` solely inside the disposable local container after verifying its superuser attribute. Ownership/ACLs remained checked; no role grant or ignored error was added. The restored fingerprints and ledger matched and the source remained unchanged.
+- Local commands executed: `node --test --test-reporter=dot scripts/staging-reconciliation-rehearsal.test.mjs scripts/local-sql-test-target.test.mjs scripts/run-sql-ci-step.test.mjs` (**66 passed**); `npm run lint` (**passed**); `npm run typecheck` (**passed**); prior same-sprint `npm run build` (**passed**, reserved invalid build configuration), `npm run test:supabase-config` (**10 passed**); scoped Prettier and `git diff --check` (**passed**). No local Docker/SQL stack was started.
+- The same run's frontend job passed lint, typecheck, production build, configuration tests and the complete mocked Chromium suite (**267 passed**). This does not verify hosted Preview or real-provider transactions.
+- The successful rehearsal artifact contained only five allow-listed summary filenames. Present entries passed in-memory filename and credential/URL-pattern checks. No raw CLI output or dump was uploaded.
+
+### Hosted observations and boundaries
+
+Staging-only catalog/aggregate SELECTs confirmed `careconnect-staging`, the sole `20261009041700 / 00001_initial_schema` ledger entry, zero application/Auth/Storage rows, and an existing empty non-all-tables Realtime publication. No patient/message content was read. The prepared inventory query also returned 18 relations, 26 policies and zero public/private functions. Metadata is a point-in-time observation, not a writer freeze or hosted equivalence proof.
+
+The scoped Vercel deployment read again returned HTTP 403; no installed CLI fallback was available. Hosted Preview remains unverified. No production access, hosted writes, freeze, backup capture, migrations, deployment or merge occurred. Normal source pushes are authorized; branch Git deployment remains disabled in the existing `vercel.json`.
+
+Migration 00009's internal COMMIT can leave committed effects with no history row. Never blindly retry or synthesize history. Missing 00024–00044 filenames are not invented. The local 00055 contents are hash-pinned for this clean rehearsal, not assumed deployed elsewhere. Hosted migration remains gated on a verified writer freeze, exact post-freeze baseline reconciliation, actual backup/restore evidence and explicit approval.
+
+See [release readiness](STAGING_RELEASE_READINESS.md), [writer freeze](STAGING_WRITER_FREEZE_RUNBOOK.md), [backup/restore](STAGING_BACKUP_RESTORE_RUNBOOK.md), and [migration recovery matrix](MIGRATION_RECOVERY_MATRIX.md) for the current decision and approval gates. Hosted Storage API operations, authenticated Realtime delivery/confidentiality and real-provider booking are not validated by these SQL or mocked browser results.
+
+## Historical record — 2026-10-12
+
 Updated 2026-10-12. This is a read-only deployment status plus local validation record; no hosted database or remote Git action was performed.
 
 ## Executive status

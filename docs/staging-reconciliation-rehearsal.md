@@ -27,11 +27,31 @@ Current rehearsal results must be read from the exact commit's Actions run. A wo
 
 ## Scope and current evidence
 
+**Successful database rehearsal:** [run 39150803643](https://github.com/h4timfr/care-connect-chennai/actions/runs/39150803643), database job on `e980d488bf58eb712da8104808fec022a807a3a2`, completed successfully. It reproduced the exact timestamp ledger baseline twice, normalized to canonical `00001` with unchanged schema/data/ownership/grants, queried the exact 39 pending versions, applied all of them including `00008`, verified all checkpoints and the final 40-entry ledger, passed 21 pgTAP files / 479 assertions, passed all eight concurrency scenarios, and verified zero residual Auth/app users, patients, appointments, conversations, messages, Storage objects and research candidates. The exact six demo clinics, twelve demo doctors, twelve links and 64 schedules remained. Cases A–E and the separate 00009 post-COMMIT failure/rebuild ran successfully; the owned stack was stopped. Every entry in the downloaded successful artifact (four allow-listed summaries only) was inspected without exposing raw diagnostics or connection details. [Clean-stack run 39150803654](https://github.com/h4timfr/care-connect-chennai/actions/runs/39150803654) also passed on that same SHA.
+
+The same run's frontend job completed successfully: lint, typecheck, build, 10/10 Supabase configuration tests and **267/267 complete mocked Chromium tests** (7.1 minutes), including the existing language/RTL, phone, provider, portal and booking coverage. Rehearsal/guard/sanitizer unit checks passed **62/62**. The focused local formatting suite passed 6/6. These results cover the isolated remote/worktree source at `e980d488…`, not the user's preserved 19 modified and four untracked files in the stale original checkout. No database test or browser result is attributed to those unpublished edits.
+
+Three normal commits were published to the existing branch: `4d6db8dec5bd4f2a40ce0fadbbc84fad3eadf160`, `30e73325ba3c01c8e904c1e84dddfc9e2a44e709` and `e980d488bf58eb712da8104808fec022a807a3a2`. This final evidence-only runbook update remains local so the published HEAD stays exactly the tested SHA. The original checkout was never edited, reset, stashed or staged by this rehearsal.
+
+Exact published manifest (nine paths; no deployment migrations changed):
+
+- `.github/workflows/staging-reconciliation-rehearsal.yml` (new)
+- `docs/staging-reconciliation-rehearsal.md` (new; final evidence supplement remains local)
+- `scripts/staging-reconciliation-rehearsal.mjs` (new)
+- `scripts/staging-reconciliation-rehearsal.test.mjs` (new)
+- `scripts/test-booking-concurrency.mjs` (owned-profile collision guard)
+- `supabase/tests/021_demo_seed_publication_boundary.test.sql` (new, 18 assertions)
+- `supabase/tests/concurrency/cleanup.sql` (owned-profile deletion and verification)
+- `tests/format.spec.ts` (observed Hindi month variants and weekday assertion)
+- `vercel.json` (exact branch-specific Git deployment guard)
+
+Vercel verification limit: the properly scoped deployment-list request returned **403 forbidden**; no installed CLI fallback was available, and no authentication/settings were changed. Earlier unscoped empty lists are not proof that no team deployment exists. GitHub reports no Vercel commit-status entry for `e980d488…`; the source guard disables this branch's Git deployments by documented configuration. No deployment command was issued. The earlier `2412bac4…` Preview was READY by its GitHub status, but its runtime and any post-push team deployment inventory remain independently unverified. PR #2 remains open; its body still contains historical 116-test/audit claims, which must not be presented as this run's results. No npm audit was run here.
+
 Execution record (2026-10-18): starting remote HEAD was `2412bac4e070126101e9f0e34385f2c98dd83bcb`, PR #2 open. [Clean-stack run 39149639187](https://github.com/h4timfr/care-connect-chennai/actions/runs/39149639187) passed on `4d6db8dec5bd4f2a40ce0fadbbc84fad3eadf160`: 40 migrations, 21 files / 479 assertions and all eight concurrency checks. All four downloaded artifact entries were inspected for credential/endpoint patterns and contained only the allow-listed summaries. Local lint, typecheck, build and 10 Supabase configuration tests passed; rehearsal/guard/sanitizer unit tests passed 62/62 after fixing the CLI update-notice version check.
 
-[Staging-state run 39149866209](https://github.com/h4timfr/care-connect-chennai/actions/runs/39149866209) on `30e73325ba3c01c8e904c1e84dddfc9e2a44e709` executed normalization, all 39 pending migrations, all 479 SQL assertions, all eight races, and cases A–E successfully, but **failed the stricter final zero-residual-data gate**. It is not a successful overall rehearsal. The schema has no `public.users.id → auth.users.id` foreign key: existing concurrency cleanup deleted Auth identities without deleting their app profiles/patients/roles. The narrow fixture correction explicitly removes only the four owned app-profile UUIDs, rejects a pre-existing owned profile, and asserts no owned Auth/profile/patient residue before committing cleanup. This correction still requires a new isolated run; it changes no application migration or hosted account-deletion behavior.
+[Staging-state run 39149866209](https://github.com/h4timfr/care-connect-chennai/actions/runs/39149866209) on `30e73325ba3c01c8e904c1e84dddfc9e2a44e709` executed normalization, all 39 pending migrations, all 479 SQL assertions, all eight races, and cases A–E successfully, but **failed the stricter final zero-residual-data gate**. It is not a successful overall rehearsal. The schema has no `public.users.id → auth.users.id` foreign key: existing concurrency cleanup deleted Auth identities without deleting their app profiles/patients/roles. The narrow fixture correction explicitly removes only the four owned app-profile UUIDs, rejects a pre-existing owned profile, and asserts no owned Auth/profile/patient residue before committing cleanup. The successful rerun above validates that fixture correction; it changes no application migration or hosted account-deletion behavior.
 
-That run's complete mocked Chromium job had **266 passed, 1 failed**, with no product interaction failure: `tests/format.spec.ts` hardcoded the older ICU Hindi spelling of October, while hosted Node returned the other observed Hindi spelling. The narrow assertion correction accepts exactly those two Hindi forms and additionally requires the Hindi weekday; invalid-date and English checks remain. The full final-source suite must rerun after this correction. No application locale strings or formatter implementation changed.
+That run's complete mocked Chromium job had **266 passed, 1 failed**, with no product interaction failure: `tests/format.spec.ts` hardcoded the older ICU Hindi spelling of October, while hosted Node returned the other observed Hindi spelling. The narrow assertion correction accepts exactly those two Hindi forms and additionally requires the Hindi weekday; invalid-date and English checks remain. The successful full rerun above validates the correction. No application locale strings or formatter implementation changed.
 
 This document describes a disposable local rehearsal for the staging history shape. Only the explicitly linked execution results are evidence of runs; none establishes hosted migration safety or an operational staging freeze.
 
@@ -43,7 +63,7 @@ The disposable rehearsal starts from repository `00001`, zero application/Auth a
 
 ## Demo-seed disposition
 
-**Decision: KEEP DEMO FIXTURES IN STAGING.** Executed demo-isolation assertions and the full chain support this truthful path; final fixture-cleanup validation and the separately authorized staging freeze remain required.
+**Decision: KEEP DEMO FIXTURES IN STAGING.** Executed demo-isolation assertions, the full chain and final fixture cleanup support this truthful path. The separately authorized staging freeze remains required. Do not clear demo flags or perform cleanup merely to make staging appear empty.
 
 Migration `00008_demo_seed.sql` inserts six clinics, twelve doctors, twelve clinic-doctor links, and 64 schedules. It touches only `public.clinics`, `public.doctors`, `public.clinic_doctors`, and `public.doctor_schedules`; the clinic and doctor identifiers are deterministic, the email values use `.demo` addresses, and the phone values are synthetic seed values. It does not insert Auth users, app users, or patients and does not import candidate records.
 
@@ -130,4 +150,18 @@ Before the real window, retain the exact successful rehearsal evidence and verif
 
 ## Release gate
 
-Do not migrate staging until the rehearsal executes and confirms timestamp normalization, the exact 39 pending versions, each checkpoint through `00061`, all pgTAP files `001–021` with the exact planned total, the eight two-session booking scenarios, fixture rollback/cleanup, final demo visibility/booking boundaries, and the failure-recovery cases. Then separately verify the staging-specific maintenance freeze with trusted channels accounted for. Production remains out of scope.
+Disposable rehearsal gates passed on `e980d488…`; they do not authorize hosted operations. Before any separately approved staging migration, verify the staging-specific maintenance freeze across every writer, recheck the live baseline/ledger after that freeze, establish the pre-window backup/restore procedure, and obtain explicit hosted-operation approval. Hosted Storage API, authenticated Realtime confidentiality and actual provider/client smoke tests remain outstanding. Production remains completely outside this task.
+
+Historical classification at the time of the earlier evidence: **KEEP DEMO FIXTURES IN STAGING**; **FREEZE PLAN INCOMPLETE**; **READY FOR STAGING REHEARSAL**. Superseding result: the final local recovery/restore rehearsal passed at source `34b8863fb06f8ffd78165396137ddb00a9e6e821`; see below. This does not establish a hosted writer freeze or authorize a hosted staging migration.
+
+## Final disposable rehearsal — 2026-10-19
+
+[GitHub Actions run 39212447344](https://github.com/h4timfr/care-connect-chennai/actions/runs/39212447344), exact source SHA `34b8863fb06f8ffd78165396137ddb00a9e6e821`, completed successfully. The migration manifest verified all 40 checked-in files by hash. The staging-shaped timestamp baseline was reproduced and normalized with 39 pending migrations; all 40 ledger entries were verified after replay.
+
+The fresh-target logical restore passed in the same disposable Supabase/PostgreSQL cluster, with schema, data, owner, grant, publication and ledger fingerprints equal and source unchanged. The earlier `--clean` probe's DROP POLICY missing-object failure remains documented; the actual fresh-target restore uses no `--clean` and the pre-existing local `supabase_admin` superuser after checking `rolsuper`. No hosted backup or restore was attempted.
+
+Recovery fault cases A–J passed. The independent `00009` post-COMMIT injection again demonstrated committed partial effects without a `00009` history row; the owned stack was rebuilt and replayed. This confirms why hosted recovery must stop for explicit reconciliation instead of retrying blindly or fabricating a ledger entry.
+
+The runner applied the exact 39 pending repository migrations; SQL tests 001–021 passed (**21 files, 479 assertions**); all nine independent-session booking scenarios passed; owned fixture cleanup and disposable stack cleanup passed. The paired frontend job passed lint, typecheck, production build, Supabase configuration tests and the complete mocked Chromium suite (**267 passed**). These results do not validate hosted Storage API behavior, authenticated Realtime confidentiality, Preview runtime, or real-provider booking.
+
+The uploaded artifact contained only allow-listed summaries; present entries were inspected in memory for unexpected paths and credential/URL patterns. No SQL dump or raw CLI output was included. Final status is **READY_FOR_HOSTED_READ_ONLY_VERIFICATION**, not ready for a hosted migration. Writer freeze, staging-specific backup/restore, post-freeze schema reconciliation, legitimate Vercel visibility, and explicit migration approval remain open.
