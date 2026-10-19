@@ -1,0 +1,207 @@
+{
+  "format": 1,
+  "reviewed_commit": "e980d488bf58eb712da8104808fec022a807a3a2",
+  "normalization": "CRLF to LF only; not a deployed migration ledger",
+  "migrations": [
+    {
+      "version": "00001",
+      "file": "00001_initial_schema.sql",
+      "sha256_lf": "c6bb8cc29df8a9cd09150117a3d0ca900ad76b9afb701e46c7f6127fa5173149"
+    },
+    {
+      "version": "00002",
+      "file": "00002_foundation_hardening.sql",
+      "sha256_lf": "969c40c153dda4725812bf6f50239335927eb7a5905e7c6013396dc9ad136ed3"
+    },
+    {
+      "version": "00003",
+      "file": "00003_security_hardening_phase1.sql",
+      "sha256_lf": "34b4b92e26d5b7ce6314f65d22ed33d0a4ff1d7a81b2352e815677197abedaab"
+    },
+    {
+      "version": "00004",
+      "file": "00004_revoke_function_execution.sql",
+      "sha256_lf": "f566a3dcddcf287776417fd4941744b0249e32a0e18877de5dbf80475e19e8a6"
+    },
+    {
+      "version": "00005",
+      "file": "00005_fix_rls_recursion.sql",
+      "sha256_lf": "1a56330c60f5e4188a609c8427dec163a5229801533a2fb1b58830454619acd6"
+    },
+    {
+      "version": "00006",
+      "file": "00006_multirole_auth.sql",
+      "sha256_lf": "d3850c807beff4b7912214b3c4622d88d66527695e9e2089aacbbbb80c7da516"
+    },
+    {
+      "version": "00007",
+      "file": "00007_schema_extensions.sql",
+      "sha256_lf": "a68ad605575b81c1e83c17209c342a652faceb0e24bfbdbe7aa633ff4de20df4"
+    },
+    {
+      "version": "00008",
+      "file": "00008_demo_seed.sql",
+      "sha256_lf": "32ca5127638ec8e0dd93517c63ae562c348feaf527fc2e899fa31bda36564661"
+    },
+    {
+      "version": "00009",
+      "file": "00009_production_hardening.sql",
+      "sha256_lf": "43c2821a4764847706a08cde8e02464675bc31159eb48ef042b59048743a03cd"
+    },
+    {
+      "version": "00010",
+      "file": "00010_security_fixes.sql",
+      "sha256_lf": "1c0c81f18877c06bd4205e1688c7fc00a33eefbc3a04db46460cdbd938613303"
+    },
+    {
+      "version": "00011",
+      "file": "00011_security_correction.sql",
+      "sha256_lf": "f5001f254c2b9a9eb3984f6153abdbc9e265eb3b076f53c86d72c3e3f282888b"
+    },
+    {
+      "version": "00012",
+      "file": "00012_security_correction.sql",
+      "sha256_lf": "bf61078227a197582807eb85cd12908379a525ffcf576652d3f9511513fa03d2"
+    },
+    {
+      "version": "00013",
+      "file": "00013_auth_and_schema_fixes.sql",
+      "sha256_lf": "4afe71698d98e9052886e75d39677958d11bc90f12f869440e205ab5b1e343f6"
+    },
+    {
+      "version": "00014",
+      "file": "00014_audit_logging_hardening.sql",
+      "sha256_lf": "34bfbf0b41c3ab74392f77581c93b60c0cce7122d445066cb09d42685076b36b"
+    },
+    {
+      "version": "00015",
+      "file": "00015_atomic_toggles.sql",
+      "sha256_lf": "b5f0c1072479f4a6706787bad803668cc9ecc96d6560e5a8a0cb4aebed24a75b"
+    },
+    {
+      "version": "00016",
+      "file": "00016_patient_privacy_staff.sql",
+      "sha256_lf": "f67da3d9707de8fba766c84d2f148831d1a80a4326bfe3f53bb3eaebf2655415"
+    },
+    {
+      "version": "00017",
+      "file": "00017_appointment_double_booking.sql",
+      "sha256_lf": "d53c0864394f2b972b559c948d2f07b411a5d8b79bcaae5a84f263bdbe163afb"
+    },
+    {
+      "version": "00018",
+      "file": "00018_doctor_availability_rpc.sql",
+      "sha256_lf": "c48af95f2881f25aad0c271e4169d2e67435cab358847bb3beeab8344f2c9b9b"
+    },
+    {
+      "version": "00019",
+      "file": "00019_harden_doctor_update.sql",
+      "sha256_lf": "62cf6dd318c7644351e8e005d7daabf9eb15f29a205303705167dbff62d0d091"
+    },
+    {
+      "version": "00020",
+      "file": "00020_harden_clinic_update.sql",
+      "sha256_lf": "3f78070e160aafc816c3dc52e2d33796e419351e7694474d4fa21cd0c15bb7f4"
+    },
+    {
+      "version": "00021",
+      "file": "00021_fix_availability_rpc.sql",
+      "sha256_lf": "3fba6e3ba6e18839aea61ce47f5f364be3735884cde388aface453bcb1ca0af8"
+    },
+    {
+      "version": "00022",
+      "file": "00022_grant_availability_anon.sql",
+      "sha256_lf": "c19634b420a5eccb851c5a67fc79368f1ba9406bf5f97041131ffba23e1e8976"
+    },
+    {
+      "version": "00023",
+      "file": "00023_rpc_all_slots.sql",
+      "sha256_lf": "8f96704f23349c30654f7a6e2ac6ff33db38a2169fc8bfbc3a35b6543664c7a9"
+    },
+    {
+      "version": "00045",
+      "file": "00045_patients_read_staff_rls_fix.sql",
+      "sha256_lf": "b654c8bda467adc0140d08b84b406d18edfbf26be479e212ca81f3186f053f34"
+    },
+    {
+      "version": "00046",
+      "file": "00046_drop_staff_conversation_insert.sql",
+      "sha256_lf": "70265a3f1698b19598c22faece647b763cf9d330fbef7a062257089937c55c76"
+    },
+    {
+      "version": "00047",
+      "file": "00047_clinic_aware_doctor_slots.sql",
+      "sha256_lf": "2d7476223a3bc9339db3222c1fff8c197442c4b931a7535ec08ac306813620aa"
+    },
+    {
+      "version": "00048",
+      "file": "00048_book_appointment_slot_validation.sql",
+      "sha256_lf": "790299fda7ede138740ba8f2854739ed5ef3d76c1dba7d33e6995b0e96a99fc5"
+    },
+    {
+      "version": "00049",
+      "file": "00049_conversations_unique_general.sql",
+      "sha256_lf": "a50ef6548c093c86ce1d5d6ade0d7cf22908383fe8ccb4694aa67cc79146e2f6"
+    },
+    {
+      "version": "00050",
+      "file": "00050_function_acl_cleanup.sql",
+      "sha256_lf": "a199b1b5067aa334c0de984ef8b10ddbd048406e9ef12ac7160824058b78d32f"
+    },
+    {
+      "version": "00051",
+      "file": "00051_table_grants_tightening.sql",
+      "sha256_lf": "17fa49884cc6a77fcd7fb28ff50bf840f572aed2a0f0ad30456f97fdc91e38bb"
+    },
+    {
+      "version": "00052",
+      "file": "00052_user_roles_audit_logs_rls_fix.sql",
+      "sha256_lf": "3f6f347aa49c67a43321056d3618346b27c6067fa5140d0374a65785d24259ea"
+    },
+    {
+      "version": "00053",
+      "file": "00053_avatars_storage.sql",
+      "sha256_lf": "947d6b43a5908dda7452ba206c3261367785d3ea741cd63cef6e485a5ce2ea10"
+    },
+    {
+      "version": "00054",
+      "file": "00054_provider_onboarding.sql",
+      "sha256_lf": "89979e390335b5c87ccbf2d1ec4070e6c77f9e135bb2fcfc4cbd7123ae74c35f"
+    },
+    {
+      "version": "00055",
+      "file": "00055_doctor_portal.sql",
+      "sha256_lf": "1a8abd7e7a31e5473c6ed932f29ea46f991a9725e19d6f0b93d8f563933b5a94"
+    },
+    {
+      "version": "00056",
+      "file": "00056_provider_candidates.sql",
+      "sha256_lf": "1a1f33378d376221df639bdc87fafffeacc2ef1838f0fd309c56d0a2c108219a"
+    },
+    {
+      "version": "00057",
+      "file": "00057_provider_publication_contactability.sql",
+      "sha256_lf": "12dc13a72610e56a30ab487e57ef25560cec9806a4d698d888f680a6c26fa1eb"
+    },
+    {
+      "version": "00058",
+      "file": "00058_provider_publication_read_boundary.sql",
+      "sha256_lf": "41a1f0fdef0ff8b6cff0d284e796f6d5ebe9849f6ffc1ea6562d9b55ee8522e3"
+    },
+    {
+      "version": "00059",
+      "file": "00059_public_clinic_projection_and_schedule_boundary.sql",
+      "sha256_lf": "14a804eaf5ff8de543ead6e8ae95099640be342fa19e7d9d97f73ed99bdc5092"
+    },
+    {
+      "version": "00060",
+      "file": "00060_serialize_patient_booking_limit.sql",
+      "sha256_lf": "f36b8378b9c7f5a505a328ab8f691256f97da76593e6b8247a813545582a8147"
+    },
+    {
+      "version": "00061",
+      "file": "00061_serialize_booking_state_and_branch_overlap.sql",
+      "sha256_lf": "8828f87857f66d471a916b79b350bf60e42f2057698bd0e2885c663297000fc6"
+    }
+  ]
+}

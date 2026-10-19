@@ -10,6 +10,17 @@ if (!url || !key) {
   throw new Error("Missing Supabase credentials in .env");
 }
 
+// This script signs up real accounts. Refuse to run unless the operator explicitly confirms the
+// target project, so it can't be pointed at production by accident.
+const targetHost = new URL(url).host;
+if (process.env.SECURITY_TEST_CONFIRM_HOST !== targetHost) {
+  console.error(
+    `Refusing to run: this script creates real accounts in ${targetHost}.\n` +
+      `Use a non-production project, then re-run with SECURITY_TEST_CONFIRM_HOST=${targetHost}`,
+  );
+  process.exit(1);
+}
+
 const supabase = createClient(url, key);
 
 async function runTests() {

@@ -10,11 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AssistantRouteImport } from './routes/assistant'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AdminProvidersRouteImport } from './routes/admin_.providers'
 import { Route as AppointmentsIndexRouteImport } from './routes/appointments.index'
 import { Route as AppointmentsAppointmentIdRouteImport } from './routes/appointments.$appointmentId'
 import { Route as BookDoctorIdRouteImport } from './routes/book.$doctorId'
@@ -22,21 +25,31 @@ import { Route as ClinicIndexRouteImport } from './routes/clinic.index'
 import { Route as ClinicAppointmentsRouteImport } from './routes/clinic.appointments'
 import { Route as ClinicCalendarRouteImport } from './routes/clinic.calendar'
 import { Route as ClinicDoctorsRouteImport } from './routes/clinic.doctors'
+import { Route as ClinicLoginRouteImport } from './routes/clinic.login'
 import { Route as ClinicMessagesRouteImport } from './routes/clinic.messages'
 import { Route as ClinicPatientsRouteImport } from './routes/clinic.patients'
 import { Route as ClinicProfileRouteImport } from './routes/clinic.profile'
-import { Route as ClinicSettingsRouteImport } from './routes/clinic.settings'
+import { Route as ClinicSignupRouteImport } from './routes/clinic.signup'
 import { Route as ClinicsClinicIdRouteImport } from './routes/clinics.$clinicId'
+import { Route as DoctorIndexRouteImport } from './routes/doctor.index'
+import { Route as DoctorAppointmentsRouteImport } from './routes/doctor.appointments'
+import { Route as DoctorLoginRouteImport } from './routes/doctor.login'
+import { Route as DoctorMessagesRouteImport } from './routes/doctor.messages'
+import { Route as DoctorProfileRouteImport } from './routes/doctor.profile'
+import { Route as DoctorScheduleRouteImport } from './routes/doctor.schedule'
+import { Route as DoctorSignupRouteImport } from './routes/doctor.signup'
 import { Route as DoctorsDoctorIdRouteImport } from './routes/doctors.$doctorId'
+import { Route as ProvidersIndexRouteImport } from './routes/providers.index'
+import { Route as ProvidersApplyRouteImport } from './routes/providers.apply'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AssistantRoute = AssistantRouteImport.update({
-  id: '/assistant',
-  path: '/assistant',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverRoute = DiscoverRouteImport.update({
@@ -57,6 +70,21 @@ const MessagesRoute = MessagesRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminProvidersRoute = AdminProvidersRouteImport.update({
+  id: '/admin_/providers',
+  path: '/admin/providers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppointmentsIndexRoute = AppointmentsIndexRouteImport.update({
@@ -95,6 +123,11 @@ const ClinicDoctorsRoute = ClinicDoctorsRouteImport.update({
   path: '/clinic/doctors',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClinicLoginRoute = ClinicLoginRouteImport.update({
+  id: '/clinic/login',
+  path: '/clinic/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClinicMessagesRoute = ClinicMessagesRouteImport.update({
   id: '/clinic/messages',
   path: '/clinic/messages',
@@ -110,9 +143,9 @@ const ClinicProfileRoute = ClinicProfileRouteImport.update({
   path: '/clinic/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClinicSettingsRoute = ClinicSettingsRouteImport.update({
-  id: '/clinic/settings',
-  path: '/clinic/settings',
+const ClinicSignupRoute = ClinicSignupRouteImport.update({
+  id: '/clinic/signup',
+  path: '/clinic/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClinicsClinicIdRoute = ClinicsClinicIdRouteImport.update({
@@ -120,162 +153,298 @@ const ClinicsClinicIdRoute = ClinicsClinicIdRouteImport.update({
   path: '/clinics/$clinicId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DoctorIndexRoute = DoctorIndexRouteImport.update({
+  id: '/doctor/',
+  path: '/doctor/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorAppointmentsRoute = DoctorAppointmentsRouteImport.update({
+  id: '/doctor/appointments',
+  path: '/doctor/appointments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorLoginRoute = DoctorLoginRouteImport.update({
+  id: '/doctor/login',
+  path: '/doctor/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorMessagesRoute = DoctorMessagesRouteImport.update({
+  id: '/doctor/messages',
+  path: '/doctor/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorProfileRoute = DoctorProfileRouteImport.update({
+  id: '/doctor/profile',
+  path: '/doctor/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorScheduleRoute = DoctorScheduleRouteImport.update({
+  id: '/doctor/schedule',
+  path: '/doctor/schedule',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorSignupRoute = DoctorSignupRouteImport.update({
+  id: '/doctor/signup',
+  path: '/doctor/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DoctorsDoctorIdRoute = DoctorsDoctorIdRouteImport.update({
   id: '/doctors/$doctorId',
   path: '/doctors/$doctorId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProvidersIndexRoute = ProvidersIndexRouteImport.update({
+  id: '/providers/',
+  path: '/providers/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProvidersApplyRoute = ProvidersApplyRouteImport.update({
+  id: '/providers/apply',
+  path: '/providers/apply',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/assistant': typeof AssistantRoute
+  '/admin': typeof AdminRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/admin/providers': typeof AdminProvidersRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
   '/clinic/calendar': typeof ClinicCalendarRoute
   '/clinic/doctors': typeof ClinicDoctorsRoute
+  '/clinic/login': typeof ClinicLoginRoute
   '/clinic/messages': typeof ClinicMessagesRoute
   '/clinic/patients': typeof ClinicPatientsRoute
   '/clinic/profile': typeof ClinicProfileRoute
-  '/clinic/settings': typeof ClinicSettingsRoute
+  '/clinic/signup': typeof ClinicSignupRoute
   '/clinics/$clinicId': typeof ClinicsClinicIdRoute
+  '/doctor/appointments': typeof DoctorAppointmentsRoute
+  '/doctor/login': typeof DoctorLoginRoute
+  '/doctor/messages': typeof DoctorMessagesRoute
+  '/doctor/profile': typeof DoctorProfileRoute
+  '/doctor/schedule': typeof DoctorScheduleRoute
+  '/doctor/signup': typeof DoctorSignupRoute
   '/doctors/$doctorId': typeof DoctorsDoctorIdRoute
+  '/providers/apply': typeof ProvidersApplyRoute
   '/appointments/': typeof AppointmentsIndexRoute
   '/clinic/': typeof ClinicIndexRoute
+  '/doctor/': typeof DoctorIndexRoute
+  '/providers/': typeof ProvidersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/assistant': typeof AssistantRoute
+  '/admin': typeof AdminRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/admin/providers': typeof AdminProvidersRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
   '/clinic/calendar': typeof ClinicCalendarRoute
   '/clinic/doctors': typeof ClinicDoctorsRoute
+  '/clinic/login': typeof ClinicLoginRoute
   '/clinic/messages': typeof ClinicMessagesRoute
   '/clinic/patients': typeof ClinicPatientsRoute
   '/clinic/profile': typeof ClinicProfileRoute
-  '/clinic/settings': typeof ClinicSettingsRoute
+  '/clinic/signup': typeof ClinicSignupRoute
   '/clinics/$clinicId': typeof ClinicsClinicIdRoute
+  '/doctor/appointments': typeof DoctorAppointmentsRoute
+  '/doctor/login': typeof DoctorLoginRoute
+  '/doctor/messages': typeof DoctorMessagesRoute
+  '/doctor/profile': typeof DoctorProfileRoute
+  '/doctor/schedule': typeof DoctorScheduleRoute
+  '/doctor/signup': typeof DoctorSignupRoute
   '/doctors/$doctorId': typeof DoctorsDoctorIdRoute
+  '/providers/apply': typeof ProvidersApplyRoute
   '/appointments': typeof AppointmentsIndexRoute
   '/clinic': typeof ClinicIndexRoute
+  '/doctor': typeof DoctorIndexRoute
+  '/providers': typeof ProvidersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/assistant': typeof AssistantRoute
+  '/admin': typeof AdminRoute
   '/discover': typeof DiscoverRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/admin_/providers': typeof AdminProvidersRoute
   '/appointments/$appointmentId': typeof AppointmentsAppointmentIdRoute
   '/book/$doctorId': typeof BookDoctorIdRoute
   '/clinic/appointments': typeof ClinicAppointmentsRoute
   '/clinic/calendar': typeof ClinicCalendarRoute
   '/clinic/doctors': typeof ClinicDoctorsRoute
+  '/clinic/login': typeof ClinicLoginRoute
   '/clinic/messages': typeof ClinicMessagesRoute
   '/clinic/patients': typeof ClinicPatientsRoute
   '/clinic/profile': typeof ClinicProfileRoute
-  '/clinic/settings': typeof ClinicSettingsRoute
+  '/clinic/signup': typeof ClinicSignupRoute
   '/clinics/$clinicId': typeof ClinicsClinicIdRoute
+  '/doctor/appointments': typeof DoctorAppointmentsRoute
+  '/doctor/login': typeof DoctorLoginRoute
+  '/doctor/messages': typeof DoctorMessagesRoute
+  '/doctor/profile': typeof DoctorProfileRoute
+  '/doctor/schedule': typeof DoctorScheduleRoute
+  '/doctor/signup': typeof DoctorSignupRoute
   '/doctors/$doctorId': typeof DoctorsDoctorIdRoute
+  '/providers/apply': typeof ProvidersApplyRoute
   '/appointments/': typeof AppointmentsIndexRoute
   '/clinic/': typeof ClinicIndexRoute
+  '/doctor/': typeof DoctorIndexRoute
+  '/providers/': typeof ProvidersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/assistant'
+    | '/admin'
     | '/discover'
     | '/login'
     | '/messages'
     | '/profile'
+    | '/reset-password'
+    | '/signup'
+    | '/admin/providers'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
     | '/clinic/calendar'
     | '/clinic/doctors'
+    | '/clinic/login'
     | '/clinic/messages'
     | '/clinic/patients'
     | '/clinic/profile'
-    | '/clinic/settings'
+    | '/clinic/signup'
     | '/clinics/$clinicId'
+    | '/doctor/appointments'
+    | '/doctor/login'
+    | '/doctor/messages'
+    | '/doctor/profile'
+    | '/doctor/schedule'
+    | '/doctor/signup'
     | '/doctors/$doctorId'
+    | '/providers/apply'
     | '/appointments/'
     | '/clinic/'
+    | '/doctor/'
+    | '/providers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/assistant'
+    | '/admin'
     | '/discover'
     | '/login'
     | '/messages'
     | '/profile'
+    | '/reset-password'
+    | '/signup'
+    | '/admin/providers'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
     | '/clinic/calendar'
     | '/clinic/doctors'
+    | '/clinic/login'
     | '/clinic/messages'
     | '/clinic/patients'
     | '/clinic/profile'
-    | '/clinic/settings'
+    | '/clinic/signup'
     | '/clinics/$clinicId'
+    | '/doctor/appointments'
+    | '/doctor/login'
+    | '/doctor/messages'
+    | '/doctor/profile'
+    | '/doctor/schedule'
+    | '/doctor/signup'
     | '/doctors/$doctorId'
+    | '/providers/apply'
     | '/appointments'
     | '/clinic'
+    | '/doctor'
+    | '/providers'
   id:
     | '__root__'
     | '/'
-    | '/assistant'
+    | '/admin'
     | '/discover'
     | '/login'
     | '/messages'
     | '/profile'
+    | '/reset-password'
+    | '/signup'
+    | '/admin_/providers'
     | '/appointments/$appointmentId'
     | '/book/$doctorId'
     | '/clinic/appointments'
     | '/clinic/calendar'
     | '/clinic/doctors'
+    | '/clinic/login'
     | '/clinic/messages'
     | '/clinic/patients'
     | '/clinic/profile'
-    | '/clinic/settings'
+    | '/clinic/signup'
     | '/clinics/$clinicId'
+    | '/doctor/appointments'
+    | '/doctor/login'
+    | '/doctor/messages'
+    | '/doctor/profile'
+    | '/doctor/schedule'
+    | '/doctor/signup'
     | '/doctors/$doctorId'
+    | '/providers/apply'
     | '/appointments/'
     | '/clinic/'
+    | '/doctor/'
+    | '/providers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AssistantRoute: typeof AssistantRoute
+  AdminRoute: typeof AdminRoute
   DiscoverRoute: typeof DiscoverRoute
   LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRoute
   ProfileRoute: typeof ProfileRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignupRoute: typeof SignupRoute
+  AdminProvidersRoute: typeof AdminProvidersRoute
   AppointmentsAppointmentIdRoute: typeof AppointmentsAppointmentIdRoute
   BookDoctorIdRoute: typeof BookDoctorIdRoute
   ClinicAppointmentsRoute: typeof ClinicAppointmentsRoute
   ClinicCalendarRoute: typeof ClinicCalendarRoute
   ClinicDoctorsRoute: typeof ClinicDoctorsRoute
+  ClinicLoginRoute: typeof ClinicLoginRoute
   ClinicMessagesRoute: typeof ClinicMessagesRoute
   ClinicPatientsRoute: typeof ClinicPatientsRoute
   ClinicProfileRoute: typeof ClinicProfileRoute
-  ClinicSettingsRoute: typeof ClinicSettingsRoute
+  ClinicSignupRoute: typeof ClinicSignupRoute
   ClinicsClinicIdRoute: typeof ClinicsClinicIdRoute
+  DoctorAppointmentsRoute: typeof DoctorAppointmentsRoute
+  DoctorLoginRoute: typeof DoctorLoginRoute
+  DoctorMessagesRoute: typeof DoctorMessagesRoute
+  DoctorProfileRoute: typeof DoctorProfileRoute
+  DoctorScheduleRoute: typeof DoctorScheduleRoute
+  DoctorSignupRoute: typeof DoctorSignupRoute
   DoctorsDoctorIdRoute: typeof DoctorsDoctorIdRoute
+  ProvidersApplyRoute: typeof ProvidersApplyRoute
   AppointmentsIndexRoute: typeof AppointmentsIndexRoute
   ClinicIndexRoute: typeof ClinicIndexRoute
+  DoctorIndexRoute: typeof DoctorIndexRoute
+  ProvidersIndexRoute: typeof ProvidersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -287,11 +456,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/assistant': {
-      id: '/assistant'
-      path: '/assistant'
-      fullPath: '/assistant'
-      preLoaderRoute: typeof AssistantRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/discover': {
@@ -320,6 +489,27 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin_/providers': {
+      id: '/admin_/providers'
+      path: '/admin/providers'
+      fullPath: '/admin/providers'
+      preLoaderRoute: typeof AdminProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/appointments/': {
@@ -371,6 +561,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClinicDoctorsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clinic/login': {
+      id: '/clinic/login'
+      path: '/clinic/login'
+      fullPath: '/clinic/login'
+      preLoaderRoute: typeof ClinicLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clinic/messages': {
       id: '/clinic/messages'
       path: '/clinic/messages'
@@ -392,11 +589,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClinicProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clinic/settings': {
-      id: '/clinic/settings'
-      path: '/clinic/settings'
-      fullPath: '/clinic/settings'
-      preLoaderRoute: typeof ClinicSettingsRouteImport
+    '/clinic/signup': {
+      id: '/clinic/signup'
+      path: '/clinic/signup'
+      fullPath: '/clinic/signup'
+      preLoaderRoute: typeof ClinicSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clinics/$clinicId': {
@@ -406,6 +603,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClinicsClinicIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/doctor/': {
+      id: '/doctor/'
+      path: '/doctor'
+      fullPath: '/doctor/'
+      preLoaderRoute: typeof DoctorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/doctor/appointments': {
+      id: '/doctor/appointments'
+      path: '/doctor/appointments'
+      fullPath: '/doctor/appointments'
+      preLoaderRoute: typeof DoctorAppointmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/doctor/login': {
+      id: '/doctor/login'
+      path: '/doctor/login'
+      fullPath: '/doctor/login'
+      preLoaderRoute: typeof DoctorLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/doctor/messages': {
+      id: '/doctor/messages'
+      path: '/doctor/messages'
+      fullPath: '/doctor/messages'
+      preLoaderRoute: typeof DoctorMessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/doctor/profile': {
+      id: '/doctor/profile'
+      path: '/doctor/profile'
+      fullPath: '/doctor/profile'
+      preLoaderRoute: typeof DoctorProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/doctor/schedule': {
+      id: '/doctor/schedule'
+      path: '/doctor/schedule'
+      fullPath: '/doctor/schedule'
+      preLoaderRoute: typeof DoctorScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/doctor/signup': {
+      id: '/doctor/signup'
+      path: '/doctor/signup'
+      fullPath: '/doctor/signup'
+      preLoaderRoute: typeof DoctorSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/doctors/$doctorId': {
       id: '/doctors/$doctorId'
       path: '/doctors/$doctorId'
@@ -413,29 +659,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DoctorsDoctorIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/providers/': {
+      id: '/providers/'
+      path: '/providers'
+      fullPath: '/providers/'
+      preLoaderRoute: typeof ProvidersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/providers/apply': {
+      id: '/providers/apply'
+      path: '/providers/apply'
+      fullPath: '/providers/apply'
+      preLoaderRoute: typeof ProvidersApplyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AssistantRoute: AssistantRoute,
+  AdminRoute: AdminRoute,
   DiscoverRoute: DiscoverRoute,
   LoginRoute: LoginRoute,
   MessagesRoute: MessagesRoute,
   ProfileRoute: ProfileRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignupRoute: SignupRoute,
+  AdminProvidersRoute: AdminProvidersRoute,
   AppointmentsAppointmentIdRoute: AppointmentsAppointmentIdRoute,
   BookDoctorIdRoute: BookDoctorIdRoute,
   ClinicAppointmentsRoute: ClinicAppointmentsRoute,
   ClinicCalendarRoute: ClinicCalendarRoute,
   ClinicDoctorsRoute: ClinicDoctorsRoute,
+  ClinicLoginRoute: ClinicLoginRoute,
   ClinicMessagesRoute: ClinicMessagesRoute,
   ClinicPatientsRoute: ClinicPatientsRoute,
   ClinicProfileRoute: ClinicProfileRoute,
-  ClinicSettingsRoute: ClinicSettingsRoute,
+  ClinicSignupRoute: ClinicSignupRoute,
   ClinicsClinicIdRoute: ClinicsClinicIdRoute,
+  DoctorAppointmentsRoute: DoctorAppointmentsRoute,
+  DoctorLoginRoute: DoctorLoginRoute,
+  DoctorMessagesRoute: DoctorMessagesRoute,
+  DoctorProfileRoute: DoctorProfileRoute,
+  DoctorScheduleRoute: DoctorScheduleRoute,
+  DoctorSignupRoute: DoctorSignupRoute,
   DoctorsDoctorIdRoute: DoctorsDoctorIdRoute,
+  ProvidersApplyRoute: ProvidersApplyRoute,
   AppointmentsIndexRoute: AppointmentsIndexRoute,
   ClinicIndexRoute: ClinicIndexRoute,
+  DoctorIndexRoute: DoctorIndexRoute,
+  ProvidersIndexRoute: ProvidersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
