@@ -7,7 +7,7 @@ Current verdict: **READY_FOR_HOSTED_READ_ONLY_VERIFICATION**. The isolated resto
 ## Executed baseline evidence
 
 - [Staging-shaped rehearsal 39150803643](https://github.com/h4timfr/care-connect-chennai/actions/runs/39150803643) and [clean stack 39150803654](https://github.com/h4timfr/care-connect-chennai/actions/runs/39150803654) passed on `e980d488`: canonical normalization preserving schema/data/grants; exact 39 pending migrations and 40 final ledger entries; SQL 001–021, 479 assertions; eight independent-session booking scenarios; cleanup; recovery A–E; 267 mocked Chromium tests.
-- Current local lint/typecheck/build passed, helper tests 65/65 and Supabase configuration tests 10/10. YAML was parsed with installed `js-yaml`; the initially requested `yaml` package was absent, and no package was installed to replace it.
+- Current local helper tests passed **66/66**, and `npm run test:supabase-config` passed **10/10**. The final-source CI job in run 39212447344 also passed lint, typecheck, production build and whitespace checks. YAML validation used installed `js-yaml`; the initially requested `yaml` package was absent, and none was installed to replace it.
 - First new [run 39179179429](https://github.com/h4timfr/care-connect-chennai/actions/runs/39179179429), source `b00e8cdca5628b34b966b70e03ceadfaa0da1ff9`, failed during the new restore experiment, before SQL/concurrency. Cleanup succeeded. It is not a database validation pass. The initial sanitized diagnostic could not identify the cause and cleanup overwrote the stage label; `03f35850824cac97ae114df283ed5dce0718f385` adds fixed error categories and preserves the first failing command stage.
 
 ## Hosted read-only observations this sprint

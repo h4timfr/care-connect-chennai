@@ -53,7 +53,7 @@ Every row depends on the preceding canonical chain as well as its highlighted pr
 
 ## Fault cases and decisions
 
-The previous successful run on `e980d488` executed A–E plus the separate `00009` post-COMMIT case. Newly authored F–J and restore testing require the new workflow result; a unit test or static matrix is not execution evidence.
+Final execution evidence: [run 39212447344](https://github.com/h4timfr/care-connect-chennai/actions/runs/39212447344), exact source `34b8863fb06f8ffd78165396137ddb00a9e6e821`, passed the same-cluster fresh-target restore and **all cases A–J**, then rebuilt the owned baseline and replayed the full chain. The separate `00009` post-COMMIT test again confirmed partial committed effects can remain without a ledger row. Each injection and cleanup succeeded on the disposable CLI 2.117.0 stack; none changes the hosted recovery rule: inspect exact effects and stop for operator approval when state is ambiguous. A unit test or static matrix alone is not execution evidence.
 
 | Case | Injected/observed condition | Required decision |
 | --- | --- | --- |
