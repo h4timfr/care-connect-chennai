@@ -98,6 +98,15 @@ export function restoreFailureLabels(raw) {
     [/cannot drop.*extension|extension.*requires it/i, "extension-owned-object"],
     [/query failed|could not execute query/i, "restore-sql-failed"],
     [/connection.*(?:closed|refused)|terminating connection/i, "connection-failed"],
+    [/Command was:\s*DROP POLICY\b/i, "operation-drop-policy"],
+    [/Command was:\s*DROP TRIGGER\b/i, "operation-drop-trigger"],
+    [/Command was:\s*ALTER TABLE\b[\s\S]*?DROP CONSTRAINT\b/i, "operation-drop-constraint"],
+    [/Command was:\s*CREATE EXTENSION\b/i, "operation-create-extension"],
+    [/Command was:\s*CREATE SCHEMA\b/i, "operation-create-schema"],
+    [/schema "auth" does not exist/i, "missing-managed-auth-schema"],
+    [/schema "storage" does not exist/i, "missing-managed-storage-schema"],
+    [/schema "extensions" does not exist/i, "missing-managed-extensions-schema"],
+    [/schema "public" does not exist/i, "missing-public-schema"],
   ];
   const labels = patterns.filter(([pattern]) => pattern.test(raw)).map(([, label]) => label);
   return labels.length ? labels : ["unrecognized-restore-failure"];
@@ -363,6 +372,17 @@ async function main() {
     report(
       "Baseline PASS: exact timestamp version/name; empty application/Auth/Storage; existing empty Realtime publication.",
     );
+    const inventory = JSON.parse(
+      sql(
+        readFileSync(path.join(root, "scripts/staging-readonly-inventory.sql"), "utf8"),
+        "readonly-inventory-baseline",
+      ),
+    );
+    check(inventory.ledger.length === 1 && inventory.ledger[0].version === "20261009041700");
+    check(Object.values(inventory.counts).every((count) => count === 0));
+    report(
+      "Read-only inventory PASS: metadata query executes on the timestamp baseline without reading application rows.",
+    );
   }
   function restoreBaseline() {
     const before = snapshot();
@@ -379,7 +399,9 @@ async function main() {
       "create-owned-restore-database",
     );
     try {
-      capture(
+      // Reproduce the observed clean/empty-target failure and emit fixed categories.
+      // This is an owned disposable database; never a retry policy for hosted restore.
+      const cleanProbe = capture(
         "docker",
         [
           "exec",
@@ -389,6 +411,40 @@ async function main() {
           "postgres",
           "--clean",
           "--if-exists",
+          "--exit-on-error",
+          "--single-transaction",
+          "--dbname",
+          restoreDatabase,
+          backup,
+        ],
+        "restore-clean-probe",
+        localSqlEnvironment(),
+        true,
+      );
+      check(
+        cleanProbe.status !== 0 &&
+          restoreFailureLabels(cleanProbe.raw).includes("missing-object-or-role"),
+      );
+      for (const category of restoreFailureLabels(cleanProbe.raw))
+        report(`Restore clean-probe diagnostic: ${category}.`);
+      capture(
+        "docker",
+        ["exec", container, "dropdb", "-U", "postgres", restoreDatabase],
+        "recreate-empty-restore-target-drop",
+      );
+      capture(
+        "docker",
+        ["exec", container, "createdb", "-U", "postgres", "--template=template0", restoreDatabase],
+        "recreate-empty-restore-target-create",
+      );
+      capture(
+        "docker",
+        [
+          "exec",
+          container,
+          "pg_restore",
+          "-U",
+          "postgres",
           "--exit-on-error",
           "--single-transaction",
           "--dbname",
@@ -828,7 +884,7 @@ async function main() {
     checkpoint("00059");
     success = true;
     report(
-      "Staging-state rehearsal PASS: exact normalization, 39 pending migrations, all SQL plans, eight concurrency checks, owned fixture cleanup and recovery cases A–J.",
+      "Staging-state rehearsal PASS: exact normalization, 39 pending migrations, all SQL plans, nine concurrency checks, owned fixture cleanup and recovery cases A–J.",
     );
   } catch {
     report(

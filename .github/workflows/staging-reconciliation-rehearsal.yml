@@ -8,6 +8,7 @@ on:
       - ".github/workflows/staging-reconciliation-rehearsal.yml"
       - "scripts/staging-reconciliation-rehearsal*.mjs"
       - "scripts/migration-integrity.json"
+      - "scripts/staging-readonly-inventory.sql"
       - "vercel.json"
       - "scripts/run-sql-ci-step*.mjs"
       - "scripts/local-sql-test-target*.mjs"

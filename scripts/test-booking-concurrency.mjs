@@ -20,6 +20,7 @@ const fixtures = {
   cancelSession: path.join(root, "supabase/tests/concurrency/cancel-session.sql"),
   publicationSession: path.join(root, "supabase/tests/concurrency/publication-session.sql"),
   scheduleUpdate: path.join(root, "supabase/tests/concurrency/schedule-update.sql"),
+  doctorFee: path.join(root, "supabase/tests/concurrency/doctor-fee-session.sql"),
   cleanup: path.join(root, "supabase/tests/concurrency/cleanup.sql"),
 };
 
@@ -467,6 +468,73 @@ try {
   }
   console.log(
     "PASS: a schedule edit waited for an in-flight booking and was rejected to preserve its booked slot.",
+  );
+
+  const feeDate = query(dbUrl, `SELECT ('${bookingDate}'::date + 21)::text`).stdout.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(feeDate)) fail("Invalid fee-race date.");
+  const advertisedSlot = query(
+    dbUrl,
+    `SET ROLE anon; SELECT count(*) FROM public.get_doctor_slots('f7600000-0000-4000-8000-000000000005','f7600000-0000-4000-8000-000000000004','${feeDate}'::date) WHERE slot_time='12:00:00' AND available;`,
+  );
+  if (advertisedSlot.stdout.trim().split(/\r?\n/).at(-1) !== "1")
+    fail("The stale-slot fixture was not initially available.");
+  const feeBooking = runSqlFile(dbUrl, fixtures.singleSession, {
+    patient_user_id: "f7600000-0000-4000-8000-000000000009",
+    doctor_id: "f7600000-0000-4000-8000-000000000005",
+    clinic_id: "f7600000-0000-4000-8000-000000000004",
+    booking_date: feeDate,
+    slot_time: "12:00",
+    reason: "Fee serialization test",
+  });
+  const feeBookingSleeping = await waitForActivity(
+    dbUrl,
+    "SELECT count(*)::integer FROM pg_catalog.pg_stat_activity WHERE pid <> pg_backend_pid() AND application_name='careconnect-disposable-sql-test' AND state='active' AND wait_event='PgSleep' AND query LIKE '%public.book_appointment(%'",
+  );
+  if (!feeBookingSleeping) {
+    await feeBooking;
+    fail("Fee-race booking did not reach the observed insert delay.");
+  }
+  const feeChange = runSqlFile(dbUrl, fixtures.doctorFee, {});
+  const feeBlocked = await waitForActivity(
+    dbUrl,
+    "SELECT count(*)::integer FROM pg_catalog.pg_stat_activity WHERE pid <> pg_backend_pid() AND application_name='careconnect-disposable-sql-test' AND state='active' AND wait_event_type='Lock' AND query LIKE '%UPDATE public.doctors%'",
+  );
+  const feeOutcomes = await Promise.all([feeBooking, feeChange]);
+  if (!feeBlocked || feeOutcomes.some((result) => result.status !== 0))
+    fail("Doctor fee update did not serialize with the in-flight booking.");
+  const feeState = query(
+    dbUrl,
+    `SELECT count(*) FROM public.appointments a JOIN public.doctors d ON d.id=a.doctor_id WHERE a.patient_id='f7600000-0000-4000-8000-000000000007' AND a.date='${feeDate}'::date AND a.time='12:00'::time AND a.fee=500 AND d.consultation_fee=650;`,
+  );
+  if (feeState.stdout.trim() !== "1")
+    fail("Booked fee was not preserved across the authorized fee change.");
+  const staleBooking = await runSqlFile(dbUrl, fixtures.singleSession, {
+    patient_user_id: "f7600000-0000-4000-8000-00000000000a",
+    doctor_id: "f7600000-0000-4000-8000-000000000005",
+    clinic_id: "f7600000-0000-4000-8000-000000000004",
+    booking_date: feeDate,
+    slot_time: "12:00",
+    reason: "Stale availability test",
+  });
+  if (staleBooking.status === 0 || !/no longer available/i.test(staleBooking.stderr))
+    fail("Previously advertised occupied slot was not rejected.");
+  const nextFeeBooking = await runSqlFile(dbUrl, fixtures.singleSession, {
+    patient_user_id: "f7600000-0000-4000-8000-00000000000a",
+    doctor_id: "f7600000-0000-4000-8000-000000000005",
+    clinic_id: "f7600000-0000-4000-8000-000000000004",
+    booking_date: feeDate,
+    slot_time: "12:30",
+    reason: "Updated authoritative fee test",
+  });
+  if (nextFeeBooking.status !== 0) fail("Booking after the fee change failed.");
+  const newFeeState = query(
+    dbUrl,
+    `SELECT count(*) FROM public.appointments WHERE patient_id='f7600000-0000-4000-8000-000000000008' AND date='${feeDate}'::date AND time='12:30'::time AND fee=650;`,
+  );
+  if (newFeeState.stdout.trim() !== "1")
+    fail("A subsequent booking did not use the authoritative new fee.");
+  console.log(
+    "PASS: doctor fee changes serialized with booking; booked fees stayed immutable and stale availability was rejected.",
   );
 } finally {
   if (setupAttempted) {

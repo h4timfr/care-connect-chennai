@@ -392,6 +392,7 @@ test("concurrency gate passes only when every independent regression is explicit
     "a cancellation raced a booking without exceeding the active-booking limit.",
     "publication-state changes waited for an in-flight booking; disabled booking was rejected.",
     "a schedule edit waited for an in-flight booking and was rejected to preserve its booked slot.",
+    "doctor fee changes serialized with booking; booked fees stayed immutable and stale availability was rejected.",
   ]
     .map((check) => `PASS: ${check}`)
     .join("\n");
@@ -400,6 +401,12 @@ test("concurrency gate passes only when every independent regression is explicit
     exitCode: 0,
   });
   assert.match(summary, /Workflow gate: PASS/);
+  const missingFeeCheck = summarize(
+    `${raw.replace(/PASS: doctor fee changes[^\n]+/, "")}\nBooking race fixtures cleaned for owned local run.`,
+    { kind: "concurrency", exitCode: 0 },
+  );
+  assert.match(missingFeeCheck, /Booking regression 9: not confirmed/);
+  assert.match(missingFeeCheck, /Workflow gate: FAIL/);
 });
 
 test("concurrency gate fails closed when owned fixture cleanup is unconfirmed", () => {
@@ -412,6 +419,7 @@ test("concurrency gate fails closed when owned fixture cleanup is unconfirmed", 
     "a cancellation raced a booking without exceeding the active-booking limit.",
     "publication-state changes waited for an in-flight booking; disabled booking was rejected.",
     "a schedule edit waited for an in-flight booking and was rejected to preserve its booked slot.",
+    "doctor fee changes serialized with booking; booked fees stayed immutable and stale availability was rejected.",
   ]
     .map((check) => `PASS: ${check}`)
     .join("\n");

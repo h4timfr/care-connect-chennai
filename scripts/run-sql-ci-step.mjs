@@ -25,6 +25,7 @@ const checks = [
   "a cancellation raced a booking without exceeding the active-booking limit.",
   "publication-state changes waited for an in-flight booking; disabled booking was rejected.",
   "a schedule edit waited for an in-flight booking and was rejected to preserve its booked slot.",
+  "doctor fee changes serialized with booking; booked fees stayed immutable and stale availability was rejected.",
 ];
 const diagnostics = [
   [

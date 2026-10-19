@@ -41,6 +41,12 @@ test("restore diagnostic categories never echo raw SQL, credentials or object na
   assert.deepEqual(restoreFailureLabels('schema "private_name" already exists'), [
     "object-already-exists",
   ]);
+  assert.deepEqual(
+    restoreFailureLabels(
+      'ERROR: schema "auth" does not exist\nCommand was: DROP TRIGGER IF EXISTS private_trigger ON auth.private_table;',
+    ),
+    ["missing-object-or-role", "operation-drop-trigger", "missing-managed-auth-schema"],
+  );
 });
 
 test("all forty reviewed migration contents match; CRLF checkout is equivalent", () => {
