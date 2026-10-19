@@ -456,6 +456,14 @@ async function main() {
         ["exec", container, "createdb", "-U", "postgres", "--template=template0", restoreDatabase],
         "recreate-empty-restore-target-create",
       );
+      // The managed postgres role cannot restore all managed-object ownership.
+      // Require the already-existing LOCAL cluster administrator; never grant it
+      // privileges or interpret this as an available hosted restore credential.
+      expectSql(
+        "SELECT rolsuper::text FROM pg_catalog.pg_roles WHERE rolname='supabase_admin';",
+        "true",
+        "require-existing-local-restore-administrator",
+      );
       capture(
         "docker",
         [
@@ -463,7 +471,7 @@ async function main() {
           container,
           "pg_restore",
           "-U",
-          "postgres",
+          "supabase_admin",
           "--exit-on-error",
           "--single-transaction",
           "--dbname",

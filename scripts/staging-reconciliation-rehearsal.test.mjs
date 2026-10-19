@@ -71,6 +71,24 @@ test("all forty reviewed migration contents match; CRLF checkout is equivalent",
   assert.doesNotThrow(() => verifyMigrationContents(crlf, manifest));
 });
 
+test("restore retains ownership and requires an existing administrator only inside the owned local container", () => {
+  const source = readFileSync(
+    path.join(root, "scripts/staging-reconciliation-rehearsal.mjs"),
+    "utf8",
+  );
+  const restore = source.slice(
+    source.indexOf("function restoreBaseline()"),
+    source.indexOf("function normalize("),
+  );
+  assert.match(restore, /rolsuper::text FROM pg_catalog\.pg_roles WHERE rolname='supabase_admin'/);
+  assert.match(
+    restore,
+    /"exec",\s*container,\s*"pg_restore",\s*"-U",\s*"supabase_admin",\s*"--exit-on-error",\s*"--single-transaction"/,
+  );
+  assert.doesNotMatch(restore, /--no-owner|--no-acl|ALTER ROLE|GRANT .*supabase_admin/);
+  assert.match(restore, /check\(snapshot\(restoreDatabase\) === before\)/);
+});
+
 test("integrity gate rejects changed SQL despite identical filename and version", () => {
   const changed = new Map(originals);
   changed.set(files[0], `${changed.get(files[0])}\nGRANT ALL ON public.users TO anon;\n`);
