@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   closeSync,
@@ -67,6 +67,20 @@ export function verifyPinnedCliVersion(raw) {
   check(versions.length === 1 && versions[0] === "2.117.0");
 }
 
+export function verifyMigrationContents(originals, manifest) {
+  check(manifest.format === 1 && manifest.migrations.length === targetVersions.length);
+  check(originals.size === manifest.migrations.length);
+  for (const [index, entry] of manifest.migrations.entries()) {
+    check(entry.version === targetVersions[index]);
+    check(entry.file.startsWith(`${entry.version}_`));
+    const source = originals.get(entry.file);
+    check(typeof source === "string");
+    // Git checkouts can use CRLF. No other whitespace or SQL normalization.
+    const digest = createHash("sha256").update(source.replace(/\r\n/g, "\n")).digest("hex");
+    check(digest === entry.sha256_lf);
+  }
+}
+
 export function assertNoRemoteEnvironment(env) {
   for (const [key, value] of Object.entries(env)) {
     if (/^(?:SUPABASE_|VITE_SUPABASE_|DATABASE_URL$|DOTENV_PRIVATE_KEY)/i.test(key)) check(!value);
@@ -118,8 +132,13 @@ async function main() {
   const originals = new Map(
     files.map((f) => [f, readFileSync(path.join(root, "supabase/migrations", f), "utf8")]),
   );
+  verifyMigrationContents(
+    originals,
+    JSON.parse(readFileSync(path.join(root, "scripts/migration-integrity.json"), "utf8")),
+  );
   const projectId = `careconnect-rehearsal-${randomUUID().slice(0, 8)}`;
   const container = `supabase_db_${projectId}`;
+  const restoreDatabase = `cc_restore_${randomUUID().replaceAll("-", "")}`;
   let databaseUrl;
   let stage = "preflight";
   let rawIndex = 0;
@@ -145,6 +164,8 @@ async function main() {
         stdio: ["ignore", fd, fd],
         env,
         windowsHide: true,
+        timeout: label === "local-start" ? 15 * 60_000 : 10 * 60_000,
+        killSignal: "SIGKILL",
       });
     } finally {
       closeSync(fd);
@@ -186,8 +207,9 @@ async function main() {
     }
     return capture("supabase", args, label, localSqlEnvironment(), mayFail);
   }
-  function sql(statement, label = "catalog-check") {
+  function sql(statement, label = "catalog-check", database = "postgres") {
     assertDatabase();
+    check(database === "postgres" || database === restoreDatabase);
     const url = new URL(databaseUrl);
     const env = {
       ...localSqlEnvironment(),
@@ -195,7 +217,7 @@ async function main() {
       PGPORT: url.port,
       PGUSER: decodeURIComponent(url.username),
       PGPASSWORD: decodeURIComponent(url.password),
-      PGDATABASE: "postgres",
+      PGDATABASE: database,
     };
     return capture(
       localPsqlCommand("linux"),
@@ -228,11 +250,12 @@ async function main() {
       ),
     );
   }
-  function snapshot() {
+  function snapshot(database = "postgres") {
     assertDatabase();
+    check(database === "postgres" || database === restoreDatabase);
     const schema = capture(
       "docker",
-      ["exec", container, "pg_dump", "-U", "postgres", "--schema-only", "postgres"],
+      ["exec", container, "pg_dump", "-U", "postgres", "--schema-only", database],
       "snapshot-schema",
     ).raw;
     const data = capture(
@@ -247,7 +270,7 @@ async function main() {
         "--schema=public",
         "--schema=auth",
         "--schema=storage",
-        "postgres",
+        database,
       ],
       "snapshot-data",
     ).raw;
@@ -264,6 +287,7 @@ async function main() {
     const pub = sql(
       "SELECT COALESCE(json_agg(row_to_json(p) ORDER BY pubname),'[]'::json) FROM (SELECT pubname,puballtables,pubinsert,pubupdate,pubdelete,pubtruncate FROM pg_catalog.pg_publication) p;",
       "snapshot-publication",
+      database,
     );
     return createHash("sha256")
       .update([normalizeDump(schema), normalizeDump(data), roles, members, pub].join("\n"))
@@ -310,6 +334,61 @@ async function main() {
     report(
       "Baseline PASS: exact timestamp version/name; empty application/Auth/Storage; existing empty Realtime publication.",
     );
+  }
+  function restoreBaseline() {
+    const before = snapshot();
+    const backup = `/tmp/${restoreDatabase}.dump`;
+    assertDatabase();
+    capture(
+      "docker",
+      ["exec", container, "pg_dump", "-U", "postgres", "-Fc", "-f", backup, "postgres"],
+      "backup-disposable-baseline",
+    );
+    capture(
+      "docker",
+      ["exec", container, "createdb", "-U", "postgres", "--template=template0", restoreDatabase],
+      "create-owned-restore-database",
+    );
+    try {
+      capture(
+        "docker",
+        [
+          "exec",
+          container,
+          "pg_restore",
+          "-U",
+          "postgres",
+          "--clean",
+          "--if-exists",
+          "--exit-on-error",
+          "--single-transaction",
+          "--dbname",
+          restoreDatabase,
+          backup,
+        ],
+        "restore-disposable-baseline",
+      );
+      check(snapshot(restoreDatabase) === before);
+      check(
+        sql(
+          "SELECT version || '/' || name FROM supabase_migrations.schema_migrations;",
+          "restore-ledger-check",
+          restoreDatabase,
+        ) === "20261009041700/00001_initial_schema",
+      );
+      check(snapshot() === before);
+      report(
+        "Restore PASS: disposable empty timestamp baseline restored into a separate same-cluster database; schema/data/owners/grants/publication/ledger matched. Hosted backup remains unverified.",
+      );
+    } finally {
+      assertDatabase();
+      capture(
+        "docker",
+        ["exec", container, "dropdb", "-U", "postgres", restoreDatabase],
+        "drop-owned-restore-database",
+      );
+      capture("docker", ["exec", container, "rm", "--", backup], "remove-owned-disposable-backup");
+    }
   }
   function normalize(injectFailure) {
     const before = snapshot();
@@ -360,6 +439,112 @@ async function main() {
       expectLedger(targetVersions.slice(0, targetVersions.indexOf(file.slice(0, 5)) + 1));
     }
     return result;
+  }
+  function asyncPush(label) {
+    assertDatabase();
+    const rawPath = path.join(privateRoot, `${++rawIndex}.raw.log`);
+    const fd = openSync(rawPath, "wx", 0o600);
+    // Independent CLI process/connection. Output never reaches public logs.
+    return new Promise((resolve) => {
+      const child = spawn("supabase", ["db", "push", "--local", "--yes"], {
+        cwd: work,
+        env: localSqlEnvironment(),
+        stdio: ["ignore", fd, fd],
+        timeout: 90_000,
+        killSignal: "SIGKILL",
+      });
+      child.on("error", () => {});
+      child.on("close", (code) => {
+        closeSync(fd);
+        resolve({ status: code ?? 1, label });
+      });
+    });
+  }
+  async function waitForProbe() {
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const pid = sql(
+        "SELECT pid FROM pg_catalog.pg_stat_activity WHERE pid <> pg_backend_pid() AND datname=current_database() AND state='active' AND wait_event='PgSleep' AND query LIKE '%careconnect_fault_probe%' ORDER BY pid;",
+        "fault-probe-observer",
+      );
+      if (/^[0-9]+$/.test(pid)) return Number(pid);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    check(false);
+  }
+  async function runnerFaults(applied, file) {
+    stage = "extended-runner-faults";
+    selectFiles([...applied, file]);
+    const before = snapshot();
+    const versions = applied.map((f) => f.slice(0, 5));
+
+    // Fail the real runner's ledger INSERT, not a stand-in insert statement.
+    sql(
+      "CREATE FUNCTION public.__cc_reject_ledger() RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $$ BEGIN RAISE EXCEPTION 'disposable ledger fault'; END $$; CREATE TRIGGER __cc_reject_ledger BEFORE INSERT ON supabase_migrations.schema_migrations FOR EACH ROW EXECUTE FUNCTION public.__cc_reject_ledger();",
+      "fault-ledger-setup",
+    );
+    const withTrigger = snapshot();
+    check(push(file, true).status !== 0);
+    expectLedger(versions);
+    check(snapshot() === withTrigger);
+    sql(
+      "DROP TRIGGER __cc_reject_ledger ON supabase_migrations.schema_migrations; DROP FUNCTION public.__cc_reject_ledger();",
+      "fault-ledger-cleanup",
+    );
+    check(snapshot() === before);
+    report(
+      "Recovery F PASS: actual ledger-write rejection rolls back transactional migration effects.",
+    );
+
+    // The delay is test-only, after real DDL but before the CLI ledger insert.
+    writeFileSync(
+      path.join(migrations, file),
+      `${originals.get(file)}\nSELECT pg_catalog.pg_sleep(20) /* careconnect_fault_probe */;\n`,
+    );
+    const interrupted = asyncPush("connection-interruption");
+    const pid = await waitForProbe();
+    expectSql(
+      `SELECT pg_catalog.pg_terminate_backend(${pid})::text;`,
+      "true",
+      "terminate-owned-migration-session",
+    );
+    check((await interrupted).status !== 0);
+    expectLedger(versions);
+    check(snapshot() === before);
+    report(
+      "Recovery G PASS: terminated migration connection leaves ledger/schema/data/ACLs unchanged.",
+    );
+
+    const first = asyncPush("competing-migration-first");
+    await waitForProbe();
+    const second = asyncPush("competing-migration-second");
+    const outcomes = await Promise.all([first, second]);
+    // This non-idempotent ALTER migration must have one winner and one failure.
+    check(outcomes.filter((outcome) => outcome.status === 0).length === 1);
+    expectLedger([...versions, file.slice(0, 5)]);
+    expectSql(
+      "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='clinics' AND column_name='specialty_ids';",
+      "1",
+      "concurrent-migration-effect",
+    );
+    report(
+      "Recovery H PASS: competing independent CLI attempts produced one winner and one failure; operator serialization remains mandatory.",
+    );
+
+    // Simulate lost acknowledgement only AFTER verifying a real successful ledger write.
+    const committed = snapshot();
+    writeFileSync(path.join(migrations, file), originals.get(file));
+    cli(["db", "push", "--local", "--yes"], "after-ledger-noop");
+    expectLedger([...versions, file.slice(0, 5)]);
+    check(snapshot() === committed);
+    report(
+      "Recovery I PASS: recorded migration is not replayed after lost acknowledgement; schema remains unchanged.",
+    );
+
+    sql("CREATE TABLE public.__cc_schema_drift_probe(id integer);", "drift-probe-setup");
+    check(snapshot() !== committed);
+    sql("DROP TABLE public.__cc_schema_drift_probe;", "drift-probe-cleanup");
+    check(snapshot() === committed);
+    report("Recovery J PASS: unchanged migration ledger does not conceal injected schema drift.");
   }
   function injectedAtomicFailure(file, applied, caseLabel, prefix = false) {
     selectFiles([...applied, file]);
@@ -508,6 +693,9 @@ async function main() {
   }
   try {
     verifyPinnedCliVersion(cli(["--version"], "cli-version").raw);
+    report(
+      "Migration integrity PASS: all 40 filenames and LF-normalized source hashes match the reviewed manifest.",
+    );
     for (const args of [
       ["db", "push", "--help"],
       ["db", "reset", "--help"],
@@ -536,12 +724,18 @@ async function main() {
     cli(["start"], "local-start");
     statusUrl();
     baseline();
+    restoreBaseline();
     normalize(true);
 
     // Establish actual CLI atomicity when 00009 commits internally, then rebuild
     // ONLY this disposable stack. No historical source or hosted ledger changes.
     let applied = [files[0]];
     for (const file of files.slice(1, 8)) {
+      if (file.startsWith("00007_")) {
+        await runnerFaults(applied, file);
+        applied.push(file);
+        continue;
+      }
       selectFiles([...applied, file]);
       push(file);
       applied.push(file);
@@ -605,7 +799,7 @@ async function main() {
     checkpoint("00059");
     success = true;
     report(
-      "Staging-state rehearsal PASS: exact normalization, 39 pending migrations, all SQL plans, eight concurrency checks, owned fixture cleanup and recovery cases A–E.",
+      "Staging-state rehearsal PASS: exact normalization, 39 pending migrations, all SQL plans, eight concurrency checks, owned fixture cleanup and recovery cases A–J.",
     );
   } catch {
     report(

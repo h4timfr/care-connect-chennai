@@ -14,10 +14,43 @@ import {
   targetVersions,
   validateInventory,
   verifyPinnedCliVersion,
+  verifyMigrationContents,
 } from "./staging-reconciliation-rehearsal.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const files = readdirSync(path.join(root, "supabase/migrations")).sort();
+const originals = new Map(
+  files.map((file) => [file, readFileSync(path.join(root, "supabase/migrations", file), "utf8")]),
+);
+const manifest = JSON.parse(
+  readFileSync(path.join(root, "scripts/migration-integrity.json"), "utf8"),
+);
+
+test("all forty reviewed migration contents match; CRLF checkout is equivalent", () => {
+  assert.doesNotThrow(() => verifyMigrationContents(originals, manifest));
+  const crlf = new Map(
+    [...originals].map(([file, source]) => [
+      file,
+      source.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n"),
+    ]),
+  );
+  assert.doesNotThrow(() => verifyMigrationContents(crlf, manifest));
+});
+
+test("integrity gate rejects changed SQL despite identical filename and version", () => {
+  const changed = new Map(originals);
+  changed.set(files[0], `${changed.get(files[0])}\nGRANT ALL ON public.users TO anon;\n`);
+  assert.throws(() => verifyMigrationContents(changed, manifest));
+  changed.delete(files[0]);
+  assert.throws(() => verifyMigrationContents(changed, manifest));
+  for (const entries of [
+    manifest.migrations.slice(1),
+    [...manifest.migrations].reverse(),
+    [...manifest.migrations.slice(0, -1), manifest.migrations[0]],
+  ]) {
+    assert.throws(() => verifyMigrationContents(originals, { format: 1, migrations: entries }));
+  }
+});
 
 test("pinned CLI version accepts the actual update notice observed in successful CI", () => {
   const fixture =
