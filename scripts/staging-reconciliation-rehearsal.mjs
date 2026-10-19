@@ -83,7 +83,19 @@ export function verifyMigrationContents(originals, manifest) {
 
 export function restoreFailureLabels(raw) {
   const patterns = [
-    [/permission denied|must be (?:owner|superuser)|only superuser/i, "permission-or-ownership"],
+    [
+      /permission denied|must be (?:owner|superuser)|only superuser|must be able to SET ROLE|must be (?:a )?member of role|cannot change owner/i,
+      "permission-or-ownership",
+    ],
+    [/must be able to SET ROLE|must be (?:a )?member of role/i, "role-membership-required"],
+    [
+      /must be loaded via shared_preload_libraries|can only be loaded via shared_preload_libraries/i,
+      "extension-preload-required",
+    ],
+    [
+      /reserved (?:role|schema)|is a reserved (?:role|schema)|not allowed to/i,
+      "managed-operation-restricted",
+    ],
     [/already exists/i, "object-already-exists"],
     [/does not exist|not found/i, "missing-object-or-role"],
     [/extension.*(?:not available|not installed)|could not open extension/i, "missing-extension"],
@@ -103,6 +115,13 @@ export function restoreFailureLabels(raw) {
     [/Command was:\s*ALTER TABLE\b[\s\S]*?DROP CONSTRAINT\b/i, "operation-drop-constraint"],
     [/Command was:\s*CREATE EXTENSION\b/i, "operation-create-extension"],
     [/Command was:\s*CREATE SCHEMA\b/i, "operation-create-schema"],
+    [/Command was:\s*ALTER\b/i, "operation-alter"],
+    [/Command was:\s*SET\b/i, "operation-set"],
+    [/Command was:\s*GRANT\b/i, "operation-grant"],
+    [/Command was:\s*REVOKE\b/i, "operation-revoke"],
+    [/Command was:\s*COMMENT\b/i, "operation-comment"],
+    [/Command was:\s*SELECT\b/i, "operation-select"],
+    [/Command was:\s*COPY\b/i, "operation-copy"],
     [/schema "auth" does not exist/i, "missing-managed-auth-schema"],
     [/schema "storage" does not exist/i, "missing-managed-storage-schema"],
     [/schema "extensions" does not exist/i, "missing-managed-extensions-schema"],

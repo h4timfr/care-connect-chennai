@@ -43,6 +43,17 @@ test("restore diagnostic categories never echo raw SQL, credentials or object na
   ]);
   assert.deepEqual(
     restoreFailureLabels(
+      'pg_restore: error: could not execute query: ERROR: must be able to SET ROLE "private_role"\nCommand was: ALTER SCHEMA private_schema OWNER TO private_role;',
+    ),
+    [
+      "permission-or-ownership",
+      "role-membership-required",
+      "restore-sql-failed",
+      "operation-alter",
+    ],
+  );
+  assert.deepEqual(
+    restoreFailureLabels(
       'ERROR: schema "auth" does not exist\nCommand was: DROP TRIGGER IF EXISTS private_trigger ON auth.private_table;',
     ),
     ["missing-object-or-role", "operation-drop-trigger", "missing-managed-auth-schema"],
