@@ -15,6 +15,7 @@ import {
   validateInventory,
   verifyPinnedCliVersion,
   verifyMigrationContents,
+  restoreFailureLabels,
 } from "./staging-reconciliation-rehearsal.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -25,6 +26,22 @@ const originals = new Map(
 const manifest = JSON.parse(
   readFileSync(path.join(root, "scripts/migration-integrity.json"), "utf8"),
 );
+
+test("restore diagnostic categories never echo raw SQL, credentials or object names", () => {
+  const raw =
+    "pg_restore: error: could not execute query: ERROR: permission denied for schema private_secret_name\nCommand was: CREATE EVENT TRIGGER private_name; postgres://user:password@private.invalid/db";
+  assert.deepEqual(restoreFailureLabels(raw), [
+    "permission-or-ownership",
+    "event-trigger-context",
+    "restore-sql-failed",
+  ]);
+  assert.deepEqual(restoreFailureLabels("unrecognized private diagnostic"), [
+    "unrecognized-restore-failure",
+  ]);
+  assert.deepEqual(restoreFailureLabels('schema "private_name" already exists'), [
+    "object-already-exists",
+  ]);
+});
 
 test("all forty reviewed migration contents match; CRLF checkout is equivalent", () => {
   assert.doesNotThrow(() => verifyMigrationContents(originals, manifest));

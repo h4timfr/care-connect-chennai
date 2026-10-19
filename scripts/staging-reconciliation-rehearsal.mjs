@@ -81,6 +81,28 @@ export function verifyMigrationContents(originals, manifest) {
   }
 }
 
+export function restoreFailureLabels(raw) {
+  const patterns = [
+    [/permission denied|must be (?:owner|superuser)|only superuser/i, "permission-or-ownership"],
+    [/already exists/i, "object-already-exists"],
+    [/does not exist|not found/i, "missing-object-or-role"],
+    [/extension.*(?:not available|not installed)|could not open extension/i, "missing-extension"],
+    [
+      /can only be loaded in database|can only create extension in database/i,
+      "database-specific-extension",
+    ],
+    [/unsupported version|unsupported.*archive|input file.*not.*valid archive/i, "archive-format"],
+    [/unrecognized configuration parameter/i, "server-setting-incompatibility"],
+    [/event trigger/i, "event-trigger-context"],
+    [/cannot drop.*required by|depend.*on it/i, "dependent-object"],
+    [/cannot drop.*extension|extension.*requires it/i, "extension-owned-object"],
+    [/query failed|could not execute query/i, "restore-sql-failed"],
+    [/connection.*(?:closed|refused)|terminating connection/i, "connection-failed"],
+  ];
+  const labels = patterns.filter(([pattern]) => pattern.test(raw)).map(([, label]) => label);
+  return labels.length ? labels : ["unrecognized-restore-failure"];
+}
+
 export function assertNoRemoteEnvironment(env) {
   for (const [key, value] of Object.entries(env)) {
     if (/^(?:SUPABASE_|VITE_SUPABASE_|DATABASE_URL$|DOTENV_PRIVATE_KEY)/i.test(key)) check(!value);
@@ -141,6 +163,7 @@ async function main() {
   const restoreDatabase = `cc_restore_${randomUUID().replaceAll("-", "")}`;
   let databaseUrl;
   let stage = "preflight";
+  let firstFailureStage;
   let rawIndex = 0;
   let startAttempted = false;
   let success = false;
@@ -173,6 +196,12 @@ async function main() {
     const status = result.status ?? 1;
     const raw = readFileSync(rawPath, "utf8");
     if (!mayFail && status !== 0) {
+      firstFailureStage ??= label;
+      report(`Command failure at fixed stage ${label}.`);
+      if (label === "restore-disposable-baseline") {
+        for (const category of restoreFailureLabels(raw))
+          report(`Restore diagnostic: ${category}.`);
+      }
       const safe = summarize(raw, { kind: "startup", exitCode: status, migrationFiles: files });
       writeFileSync(path.join(artifacts, "rehearsal-failure.log"), safe, { mode: 0o600 });
       process.stdout.write(safe);
@@ -803,7 +832,7 @@ async function main() {
     );
   } catch {
     report(
-      `Staging-state rehearsal FAIL at fixed stage ${stage}; raw CLI/SQL diagnostics withheld.`,
+      `Staging-state rehearsal FAIL at fixed stage ${firstFailureStage ?? stage}; raw CLI/SQL diagnostics withheld.`,
     );
     process.exitCode = 1;
   } finally {
