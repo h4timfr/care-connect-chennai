@@ -50,8 +50,7 @@ export function validateTestInventory(files) {
   check(
     tests.every(
       (f, i) =>
-        /^\d{3}_[a-z0-9_]+\.test\.sql$/.test(f) &&
-        f.slice(0, 3) === String(i + 1).padStart(3, "0"),
+        /^\d{3}_[a-z0-9_]+\.test\.sql$/.test(f) && f.slice(0, 3) === String(i + 1).padStart(3, "0"),
     ),
   );
   return tests;
