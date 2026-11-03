@@ -44,6 +44,19 @@ export function validateInventory(files) {
   return sql;
 }
 
+export function validateTestInventory(files) {
+  const tests = files.filter((f) => f.endsWith(".test.sql")).sort();
+  check(tests.length === 22);
+  check(
+    tests.every(
+      (f, i) =>
+        /^\d{3}_[a-z0-9_]+\.test\.sql$/.test(f) &&
+        f.slice(0, 3) === String(i + 1).padStart(3, "0"),
+    ),
+  );
+  return tests;
+}
+
 export function pendingVersions(applied) {
   check(new Set(applied).size === applied.length);
   check(applied.every((v) => targetVersions.includes(v)));
@@ -162,13 +175,7 @@ async function main() {
   check(!existsSync(path.join(root, "supabase/.temp/project-ref")));
   check(!existsSync(path.join(root, "supabase/.temp/linked-project.json")));
   const files = validateInventory(readdirSync(path.join(root, "supabase/migrations")));
-  const testFiles = readdirSync(path.join(root, "supabase/tests"))
-    .filter((f) => f.endsWith(".test.sql"))
-    .sort();
-  check(
-    testFiles.length === 21 &&
-      testFiles.every((f, i) => f.startsWith(`${String(i + 1).padStart(3, "0")}_`)),
-  );
+  const testFiles = validateTestInventory(readdirSync(path.join(root, "supabase/tests")));
   const privateRoot = mkdtempSync(
     path.join(process.env.RUNNER_TEMP, "careconnect-staging-rehearsal-"),
   );

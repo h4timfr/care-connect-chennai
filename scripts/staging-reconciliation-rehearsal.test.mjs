@@ -13,6 +13,7 @@ import {
   pendingVersions,
   targetVersions,
   validateInventory,
+  validateTestInventory,
   verifyPinnedCliVersion,
   verifyMigrationContents,
   restoreFailureLabels,
@@ -128,6 +129,14 @@ test("inventory is exact, with an intentional gap and 40 genuinely pending versi
   assert.equal(pendingVersions(["00001"]).length, 40);
   assert.deepEqual(pendingVersions(targetVersions), []);
   assert.equal(aliasFile, "20261009041700_00001_initial_schema.sql");
+});
+
+test("pgTAP inventory is exactly numbered 001 through 022", () => {
+  const testFiles = readdirSync(path.join(root, "supabase/tests"));
+  assert.equal(validateTestInventory(testFiles).length, 22);
+  assert.throws(() => validateTestInventory(testFiles.filter((f) => !f.startsWith("022_"))));
+  assert.throws(() => validateTestInventory([...testFiles, "023_unreviewed.test.sql"]));
+  assert.throws(() => validateTestInventory(testFiles.map((f) => f.replace(/^022_/, "023_"))));
 });
 
 for (const [label, invalid] of [
