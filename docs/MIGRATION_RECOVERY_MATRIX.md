@@ -1,8 +1,8 @@
 # Migration integrity and recovery matrix
 
-Reviewed source baseline: `e980d488bf58eb712da8104808fec022a807a3a2`. `scripts/migration-integrity.json` pins all 40 exact filenames and SHA-256 values after CRLF-to-LF conversion only. It is an integrity manifest, **not** a migration ledger or proof of hosted deployment. The rehearsal rejects missing, extra, renamed or changed source files. A future intentional migration requires explicit manifest and inventory review.
+Reviewed historical source baseline: `e980d488bf58eb712da8104808fec022a807a3a2`. The integrity manifest retains all 40 historical filenames and SHA-256 values from that baseline after CRLF-to-LF conversion only, and appends the reconstructed `00062` with its own SHA-256. The appended entry is not part of the pinned commit and is not proof of hosted deployment. The manifest is **not** a migration ledger. The rehearsal rejects missing, extra, renamed or changed source files. A future intentional migration requires explicit manifest and inventory review.
 
-Order is `00001–00023`, then `00045–00061`. No placeholder or guessed SQL is supplied for `00024–00044`. Clean and staging-shaped local execution proved this checked-in chain can bootstrap the tested application schema; it does not reconcile an unknown environment's missing historical versions. No production comparison was performed.
+Order is `00001–00023`, then `00045–00062` (41 source files, including the reconstructed `00062`). No placeholder or guessed SQL is supplied for `00024–00044`. The complete source chain through `00062` and all 493 real pgTAP assertions passed on an isolated PostgreSQL 17.11 cluster with Supabase platform prerequisites. The official Supabase Docker stack remains unavailable locally, so this does not establish container parity or reconcile an unknown environment's missing historical versions. No production comparison was performed.
 
 ## Per-migration effects and prerequisites
 
@@ -50,6 +50,7 @@ Every row depends on the preceding canonical chain as well as its highlighted pr
 | 00059 | 00058 publication predicates and 00055 schedule guards | Column-only public clinic projection, privileged contact RPCs, public schedule boundary. RLS alone cannot hide contact columns. |
 | 00060 | final booking eligibility, patient rows and active bookings | Per-patient row lock serializes five-booking limit; later RPC adds eligibility/schedule locking. |
 | 00061 | 00060 booking, overlap trigger, schedules and update guard | READ COMMITTED requirement, locked eligibility/schedule/doctor-date, branch duration overlap, prevents edits invalidating future bookings; non-idempotent new schedule trigger. |
+| 00062 | ACLs established by 00001–00061 on application tables | Restores only policy-backed authenticated operations, removes generic clinic/conversation updates and direct notification access, revokes API-role MAINTAIN, and removes PUBLIC/anon/authenticated defaults for future postgres-owned public tables. Forward-only ACL correction; verified with the complete source chain and real pgTAP on isolated PostgreSQL 17.11. |
 
 ## Fault cases and decisions
 

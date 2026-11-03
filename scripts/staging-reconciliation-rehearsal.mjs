@@ -26,6 +26,7 @@ import { summarize } from "./run-sql-ci-step.mjs";
 export const targetVersions = [
   ...Array.from({ length: 23 }, (_, i) => String(i + 1).padStart(5, "0")),
   ...Array.from({ length: 17 }, (_, i) => String(i + 45).padStart(5, "0")),
+  "00062",
 ];
 export const aliasFile = "20261009041700_00001_initial_schema.sql";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,7 +37,7 @@ function check(condition) {
 
 export function validateInventory(files) {
   const sql = files.filter((f) => f.endsWith(".sql")).sort();
-  check(sql.length === 40);
+  check(sql.length === 41);
   check(
     sql.every((f, i) => /^\d{5}_[a-z0-9_]+\.sql$/.test(f) && f.slice(0, 5) === targetVersions[i]),
   );
@@ -539,7 +540,7 @@ async function main() {
     );
     check(JSON.stringify(actualPending) === JSON.stringify(pendingVersions(["00001"])));
     report(
-      "Normalization PASS: schema/data/ownership/grants unchanged; exactly 39 pending versions (00002–00023, 00045–00061).",
+      "Normalization PASS: schema/data/ownership/grants unchanged; exactly 40 pending versions (00002–00023, 00045–00062).",
     );
   }
   function push(file, mayFail = false) {
@@ -911,7 +912,7 @@ async function main() {
     checkpoint("00059");
     success = true;
     report(
-      "Staging-state rehearsal PASS: exact normalization, 39 pending migrations, all SQL plans, nine concurrency checks, owned fixture cleanup and recovery cases A–J.",
+      "Staging-state rehearsal PASS: exact normalization, 40 pending migrations, all SQL plans, nine concurrency checks, owned fixture cleanup and recovery cases A–J.",
     );
   } catch {
     report(

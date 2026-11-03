@@ -60,7 +60,7 @@ test("restore diagnostic categories never echo raw SQL, credentials or object na
   );
 });
 
-test("all forty reviewed migration contents match; CRLF checkout is equivalent", () => {
+test("all forty-one reviewed migration contents match; CRLF checkout is equivalent", () => {
   assert.doesNotThrow(() => verifyMigrationContents(originals, manifest));
   const crlf = new Map(
     [...originals].map(([file, source]) => [
@@ -122,10 +122,10 @@ test("pinned CLI version accepts the actual update notice observed in successful
   }
 });
 
-test("inventory is exact, with an intentional gap and 39 genuinely pending versions", () => {
-  assert.equal(validateInventory(files).length, 40);
+test("inventory is exact, with an intentional gap and 40 genuinely pending versions", () => {
+  assert.equal(validateInventory(files).length, 41);
   assert.deepEqual(pendingVersions(["00001"]), targetVersions.slice(1));
-  assert.equal(pendingVersions(["00001"]).length, 39);
+  assert.equal(pendingVersions(["00001"]).length, 40);
   assert.deepEqual(pendingVersions(targetVersions), []);
   assert.equal(aliasFile, "20261009041700_00001_initial_schema.sql");
 });

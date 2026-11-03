@@ -202,6 +202,11 @@
       "version": "00061",
       "file": "00061_serialize_booking_state_and_branch_overlap.sql",
       "sha256_lf": "8828f87857f66d471a916b79b350bf60e42f2057698bd0e2885c663297000fc6"
+    },
+    {
+      "version": "00062",
+      "file": "00062_explicit_application_acl_baseline.sql",
+      "sha256_lf": "d78f669c167ad921b608efb56fd8aa35711803a7b1b5d59604b7b1d9f2d077f4"
     }
   ]
 }
