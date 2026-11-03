@@ -276,6 +276,39 @@ test.describe("When doctor and clinic details fail to load", () => {
   });
 });
 
+test.describe("Public catalogue failure recovery", () => {
+  test("the home page distinguishes a catalogue failure from an empty catalogue", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({ failTables: ["doctors"] }, { signedIn: false });
+    await page.goto("/");
+    await expect(page.getByRole("alert")).toContainText("We couldn't load doctors and clinics");
+    await expect(page.getByText("No doctors listed yet")).toHaveCount(0);
+
+    mock.state.failTables = [];
+    await page.getByRole("button", { name: "Try again" }).click();
+    await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+  });
+
+  test("clinic discovery distinguishes a failed load from an empty result", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({ failTables: ["clinics"] }, { signedIn: false });
+    await page.goto("/discover?tab=clinics");
+    const results = page.getByRole("tabpanel", { name: "Clinics" });
+    await expect(results.getByRole("alert")).toContainText("We couldn't load clinics");
+    await expect(results.getByText("No matching clinics")).toHaveCount(0);
+
+    mock.state.failTables = [];
+    await results.getByRole("button", { name: "Try again" }).click();
+    await expect(results.getByText("Test Clinic A")).toBeVisible();
+    await expect(results.getByRole("alert")).toHaveCount(0);
+  });
+});
+
 test.describe("Saved doctors", () => {
   test("bookmark calls the toggle RPC once per click", async ({ page, backend }) => {
     const mock = await backend();
