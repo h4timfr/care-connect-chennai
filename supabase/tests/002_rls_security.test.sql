@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(16);
+SELECT extensions.plan(18);
 
 -- 1. Check RLS is enabled on critical tables
 SELECT extensions.policies_are('public', 'appointments', ARRAY['appts_read_patient', 'appts_update_patient', 'appts_read_staff', 'appts_update_staff'], 'Appointments should have the expected 4 policies active');
@@ -109,7 +109,11 @@ RESET ROLE;
 -- TEST: Staff cannot update clinic
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000003", "role": "authenticated"}';
 SET LOCAL role authenticated;
-UPDATE public.clinics SET name = 'Hacked Clinic' WHERE id = 'e3333333-3333-3333-3333-333333333333';
+SELECT extensions.throws_ok(
+    $$ UPDATE public.clinics SET name = 'Hacked Clinic' WHERE id = 'e3333333-3333-3333-3333-333333333333' $$,
+    '42501', NULL,
+    'Clinic staff cannot directly update clinic details'
+);
 RESET ROLE;
 SELECT extensions.is(
     (SELECT name FROM public.clinics WHERE id = 'e3333333-3333-3333-3333-333333333333'),
@@ -117,15 +121,19 @@ SELECT extensions.is(
     'Normal staff cannot modify clinic details'
 );
 
--- TEST: Admin CAN update clinic
+-- Clinic updates use scoped RPCs; authenticated administrators have no generic UPDATE grant.
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000000009", "role": "authenticated"}';
 SET LOCAL role authenticated;
-UPDATE public.clinics SET name = 'Updated Clinic' WHERE id = 'e3333333-3333-3333-3333-333333333333';
+SELECT extensions.throws_ok(
+    $$ UPDATE public.clinics SET name = 'Updated Clinic' WHERE id = 'e3333333-3333-3333-3333-333333333333' $$,
+    '42501', NULL,
+    'Clinic administrators cannot bypass scoped clinic RPCs'
+);
 RESET ROLE;
 SELECT extensions.is(
     (SELECT name FROM public.clinics WHERE id = 'e3333333-3333-3333-3333-333333333333'),
-    'Updated Clinic'::text,
-    'Admin can modify their own clinic details'
+    'Clinic A'::text,
+    'A denied generic update leaves the clinic unchanged'
 );
 
 -- ROLE ESCALATION TEST

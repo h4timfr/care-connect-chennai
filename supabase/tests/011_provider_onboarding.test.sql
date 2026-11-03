@@ -1,4 +1,8 @@
 BEGIN;
+-- Exercise existing RLS/trigger defenses even though 00062 denies this unused
+-- production operation at the base ACL. This fixture grant rolls back below.
+-- Test 022 separately proves that real API roles have no direct clinic UPDATE.
+GRANT UPDATE ON public.clinics TO authenticated;
 SELECT extensions.plan(39);
 
 -- Contract

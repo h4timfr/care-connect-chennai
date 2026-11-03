@@ -4,10 +4,28 @@ import test from "node:test";
 
 import {
   assertLocalDatabaseUrl,
+  assertWslDisposableDatabaseUrl,
   localPsqlCommand,
   localSqlEnvironment,
   safeSqlFailure,
 } from "./local-sql-test-target.mjs";
+
+test("accept only the explicitly named WSL disposable database target", () => {
+  const url = "postgresql://postgres@127.0.0.1:55439/careconnect_concurrency_a1b2c3d4e5f6";
+  assert.equal(assertWslDisposableDatabaseUrl(url), url);
+});
+
+for (const url of [
+  "postgresql://postgres@127.0.0.1:54322/careconnect_concurrency_a1b2c3d4e5f6",
+  "postgresql://postgres@127.0.0.1:55439/postgres",
+  "postgresql://postgres:password@127.0.0.1:55439/careconnect_concurrency_a1b2c3d4e5f6",
+  "postgresql://postgres@db.remote.invalid:55439/careconnect_concurrency_a1b2c3d4e5f6",
+  "postgresql://postgres@127.0.0.1:55439/careconnect_concurrency_a1b2c3d4e5f6?host=remote.invalid",
+]) {
+  test("reject non-owned WSL database target", () => {
+    assert.throws(() => assertWslDisposableDatabaseUrl(url), /^Error: Refusing to run:/);
+  });
+}
 
 for (const host of ["127.0.0.1", "[::1]"]) {
   test(`accept explicit local ${host} database`, () => {

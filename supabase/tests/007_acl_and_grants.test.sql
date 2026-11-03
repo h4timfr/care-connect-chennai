@@ -38,25 +38,41 @@ SELECT extensions.table_privs_are('public', 'audit_logs', 'anon', ARRAY[]::text[
 
 -- authenticated: only the operations that have an RLS policy behind them (never TRUNCATE / REFERENCES / TRIGGER)
 SELECT extensions.ok(
-    has_table_privilege('authenticated', 'public.clinics', 'UPDATE')
+    NOT has_table_privilege('authenticated', 'public.clinics', 'UPDATE')
     AND NOT has_table_privilege('authenticated', 'public.clinics', 'SELECT')
     AND has_column_privilege('authenticated', 'public.clinics', 'id', 'SELECT')
     AND has_column_privilege('authenticated', 'public.clinics', 'name', 'SELECT')
     AND has_column_privilege('authenticated', 'public.clinics', 'address', 'SELECT')
     AND NOT has_column_privilege('authenticated', 'public.clinics', 'phone', 'SELECT')
     AND NOT has_column_privilege('authenticated', 'public.clinics', 'email', 'SELECT'),
-    'authenticated can update clinics and read only the safe clinic projection'
+    'authenticated cannot generically update clinics and reads only the safe clinic projection'
 );
 SELECT extensions.table_privs_are('public', 'doctors', 'authenticated', ARRAY['SELECT', 'UPDATE'], 'authenticated on doctors');
-SELECT extensions.table_privs_are('public', 'clinic_doctors', 'authenticated', ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE'], 'authenticated on clinic_doctors');
+SELECT extensions.ok(
+    has_table_privilege('authenticated', 'public.clinic_doctors', 'SELECT')
+    AND NOT has_table_privilege('authenticated', 'public.clinic_doctors', 'INSERT')
+    AND NOT has_table_privilege('authenticated', 'public.clinic_doctors', 'UPDATE')
+    AND NOT has_table_privilege('authenticated', 'public.clinic_doctors', 'DELETE')
+    AND has_column_privilege('authenticated', 'public.clinic_doctors', 'verification_state', 'UPDATE')
+    AND NOT has_column_privilege('authenticated', 'public.clinic_doctors', 'doctor_id', 'UPDATE'),
+    'authenticated can update only clinic_doctors.verification_state'
+);
 SELECT extensions.table_privs_are('public', 'doctor_schedules', 'authenticated', ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE'], 'authenticated on doctor_schedules');
-SELECT extensions.table_privs_are('public', 'clinic_memberships', 'authenticated', ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE'], 'authenticated on clinic_memberships');
+SELECT extensions.ok(
+    has_table_privilege('authenticated', 'public.clinic_memberships', 'SELECT')
+    AND NOT has_table_privilege('authenticated', 'public.clinic_memberships', 'INSERT')
+    AND NOT has_table_privilege('authenticated', 'public.clinic_memberships', 'UPDATE')
+    AND NOT has_table_privilege('authenticated', 'public.clinic_memberships', 'DELETE')
+    AND has_column_privilege('authenticated', 'public.clinic_memberships', 'active', 'UPDATE')
+    AND NOT has_column_privilege('authenticated', 'public.clinic_memberships', 'role', 'UPDATE'),
+    'authenticated can update only clinic_memberships.active'
+);
 SELECT extensions.table_privs_are('public', 'patients', 'authenticated', ARRAY['SELECT', 'UPDATE'], 'authenticated on patients');
 SELECT extensions.table_privs_are('public', 'users', 'authenticated', ARRAY['SELECT', 'UPDATE'], 'authenticated on users');
 SELECT extensions.table_privs_are('public', 'appointments', 'authenticated', ARRAY['SELECT', 'UPDATE'], 'authenticated on appointments (bookings go through book_appointment)');
-SELECT extensions.table_privs_are('public', 'conversations', 'authenticated', ARRAY['SELECT', 'INSERT', 'UPDATE'], 'authenticated on conversations');
+SELECT extensions.table_privs_are('public', 'conversations', 'authenticated', ARRAY['SELECT', 'INSERT'], 'authenticated on conversations');
 SELECT extensions.table_privs_are('public', 'messages', 'authenticated', ARRAY['SELECT', 'INSERT'], 'authenticated on messages');
-SELECT extensions.table_privs_are('public', 'notifications', 'authenticated', ARRAY['SELECT', 'INSERT', 'UPDATE'], 'authenticated on notifications');
+SELECT extensions.table_privs_are('public', 'notifications', 'authenticated', ARRAY[]::text[], 'authenticated on notifications');
 SELECT extensions.table_privs_are('public', 'audit_logs', 'authenticated', ARRAY['SELECT'], 'authenticated on audit_logs');
 SELECT extensions.table_privs_are('public', 'user_roles', 'authenticated', ARRAY['SELECT'], 'authenticated on user_roles');
 

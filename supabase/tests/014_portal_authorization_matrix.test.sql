@@ -1,4 +1,7 @@
 BEGIN;
+-- Exercise membership RLS beneath 00062's stricter active-only column grant.
+-- This owner-issued fixture grant rolls back; test 022 verifies the base ACL.
+GRANT UPDATE (role, clinic_id) ON public.clinic_memberships TO authenticated;
 SELECT extensions.plan(38);
 
 -- Portal security acceptance, enforced by RLS (the frontend's route guards are only UX):

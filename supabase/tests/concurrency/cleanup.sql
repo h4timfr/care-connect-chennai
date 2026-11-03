@@ -15,7 +15,8 @@ WHERE clinic_id = 'f7600000-0000-4000-8000-000000000004'
                      'f7600000-0000-4000-8000-000000000007',
                      'f7600000-0000-4000-8000-000000000008');
 DELETE FROM public.audit_logs
-WHERE target_id = 'f7600000-0000-4000-8000-000000000004'
+WHERE target_id IN ('f7600000-0000-4000-8000-000000000004',
+                    'f7600000-0000-4000-8000-000000000005')
    OR (actor_id = 'f7600000-0000-4000-8000-000000000002'
        AND action_type = 'clinic_publication_state_changed')
    OR (actor_id IN ('f7600000-0000-4000-8000-000000000001',
@@ -48,6 +49,28 @@ BEGIN
     SELECT 1 FROM auth.users WHERE id IN (
       'f7600000-0000-4000-8000-000000000001', 'f7600000-0000-4000-8000-000000000002',
       'f7600000-0000-4000-8000-000000000009', 'f7600000-0000-4000-8000-00000000000a')
+  ) OR EXISTS (
+    SELECT 1 FROM public.appointments
+    WHERE clinic_id = 'f7600000-0000-4000-8000-000000000004'
+       OR patient_id IN ('f7600000-0000-4000-8000-000000000003',
+                         'f7600000-0000-4000-8000-000000000007',
+                         'f7600000-0000-4000-8000-000000000008')
+  ) OR EXISTS (
+    SELECT 1 FROM public.audit_logs
+    WHERE target_id IN ('f7600000-0000-4000-8000-000000000004',
+                        'f7600000-0000-4000-8000-000000000005')
+       OR (actor_id IN ('f7600000-0000-4000-8000-000000000001',
+                        'f7600000-0000-4000-8000-000000000002',
+                        'f7600000-0000-4000-8000-000000000009',
+                        'f7600000-0000-4000-8000-00000000000a')
+           AND action_type IN ('clinic_publication_state_changed', 'clinic_doctor_created',
+                               'appointment_booked', 'appointment_status_changed'))
+  ) OR EXISTS (
+    SELECT 1 FROM public.doctor_schedules
+    WHERE doctor_id = 'f7600000-0000-4000-8000-000000000005'
+  ) OR EXISTS (
+    SELECT 1 FROM public.clinic_doctors
+    WHERE doctor_id = 'f7600000-0000-4000-8000-000000000005'
   ) THEN
     RAISE EXCEPTION 'Owned local booking profile cleanup incomplete';
   END IF;

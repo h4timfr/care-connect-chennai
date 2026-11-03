@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import {
   assertLocalDatabaseUrl,
+  assertWslDisposableDatabaseUrl,
   localPsqlCommand,
   localSqlEnvironment,
   safeSqlFailure,
@@ -12,7 +13,10 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const supabaseTemp = path.join(root, "supabase", ".temp");
-const psql = localPsqlCommand();
+const wslDisposableUrl = process.env.CARECONNECT_WSL_DISPOSABLE_DATABASE_URL;
+const wslDisposableOwner = process.env.CARECONNECT_WSL_DISPOSABLE_DATABASE_OWNER;
+const wslDisposableMode = Boolean(wslDisposableUrl);
+const psql = wslDisposableMode ? "wsl.exe" : localPsqlCommand();
 const fixtures = {
   setup: path.join(root, "supabase/tests/concurrency/setup.sql"),
   session: path.join(root, "supabase/tests/concurrency/book-session.sql"),
@@ -50,6 +54,23 @@ function getLocalDatabaseUrl() {
   ) {
     fail("Refusing to run: this checkout has Supabase linked-project metadata.");
   }
+  if (Boolean(wslDisposableUrl) !== Boolean(wslDisposableOwner)) {
+    fail("Refusing to run: WSL disposable database settings must be provided together.");
+  }
+  if (wslDisposableMode) {
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        wslDisposableOwner ?? "",
+      )
+    ) {
+      fail("Refusing to run: the WSL disposable database owner token is missing or malformed.");
+    }
+    try {
+      return assertWslDisposableDatabaseUrl(wslDisposableUrl);
+    } catch (error) {
+      fail(error.message);
+    }
+  }
   const help = run("supabase", ["status", "--help"]);
   const statusArgs = help.stdout.includes("--output")
     ? ["status", "--output", "env"]
@@ -66,7 +87,41 @@ function getLocalDatabaseUrl() {
 }
 
 function psqlArgs(dbUrl, ...args) {
-  return ["-X", "--no-psqlrc", "-v", "ON_ERROR_STOP=1", ...args, dbUrl];
+  const baseArgs = ["-X", "--no-psqlrc", "-v", "ON_ERROR_STOP=1", ...args];
+  if (wslDisposableMode) {
+    const database = new URL(dbUrl).pathname.slice(1);
+    const wslArgs = [...args];
+    for (let index = 0; index < wslArgs.length - 1; index += 1) {
+      if (wslArgs[index] === "-f") {
+        wslArgs[index + 1] = wslArgs[index + 1]
+          .replace(/^([A-Za-z]):\\/, (_, drive) => `/mnt/${drive.toLowerCase()}/`)
+          .replaceAll("\\", "/");
+      }
+    }
+    return [
+      "--distribution",
+      "Ubuntu",
+      "--exec",
+      "/usr/bin/env",
+      "PGAPPNAME=careconnect-disposable-sql-test",
+      "PGCONNECT_TIMEOUT=10",
+      "/usr/bin/psql",
+      "-X",
+      "--no-psqlrc",
+      "-v",
+      "ON_ERROR_STOP=1",
+      ...wslArgs,
+      "-h",
+      "/tmp",
+      "-p",
+      "55439",
+      "-U",
+      "postgres",
+      "-d",
+      database,
+    ];
+  }
+  return [...baseArgs, dbUrl];
 }
 
 function query(dbUrl, sql, { allowFailure = false } = {}) {
@@ -102,6 +157,28 @@ function runSqlFile(dbUrl, sqlFile, variables) {
   });
 }
 
+function assertOwnedWslDatabase(dbUrl) {
+  if (!wslDisposableMode) return;
+  const database = new URL(dbUrl).pathname.slice(1);
+  const ownerToken = wslDisposableOwner;
+  const result = query(
+    dbUrl,
+    `SELECT (
+      current_database() = '${database}'
+      AND current_setting('port') = '55439'
+      AND inet_server_addr() IS NULL
+      AND inet_client_addr() IS NULL
+      AND EXISTS (
+        SELECT 1 FROM careconnect_test_control.runner_ownership
+        WHERE database_name = current_database() AND owner_token = '${ownerToken}'::uuid
+      )
+    )::integer`,
+  );
+  if (result.stdout.trim() !== "1") {
+    fail("Refusing to run: WSL database identity or ownership marker did not match.");
+  }
+}
+
 function runSession(dbUrl, { bookingDate, sessionId, runId, patientUserId, slotTime, reason }) {
   return runSqlFile(dbUrl, fixtures.session, {
     booking_date: bookingDate,
@@ -127,6 +204,7 @@ async function waitForActivity(dbUrl, sql) {
 }
 
 const dbUrl = getLocalDatabaseUrl();
+assertOwnedWslDatabase(dbUrl);
 const dateResult = query(dbUrl, "SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date + 3)::text");
 const bookingDate = dateResult.stdout.trim();
 if (!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)) fail("Could not obtain a local future booking date.");
@@ -149,10 +227,12 @@ const fixtureCollision = query(
      OR EXISTS (SELECT 1 FROM public.doctors WHERE id = 'f7600000-0000-4000-8000-000000000005')
      OR pg_catalog.to_regclass('public.__careconnect_booking_race_barrier') IS NOT NULL
      OR pg_catalog.to_regclass('public.__careconnect_booking_race_run') IS NOT NULL
-     OR EXISTS (SELECT 1 FROM public.audit_logs WHERE target_id = 'f7600000-0000-4000-8000-000000000004'
+     OR EXISTS (SELECT 1 FROM public.audit_logs WHERE target_id IN (
+       'f7600000-0000-4000-8000-000000000004', 'f7600000-0000-4000-8000-000000000005')
        OR (actor_id IN ('f7600000-0000-4000-8000-000000000001', 'f7600000-0000-4000-8000-000000000002',
                         'f7600000-0000-4000-8000-000000000009', 'f7600000-0000-4000-8000-00000000000a')
-           AND action_type IN ('clinic_publication_state_changed', 'appointment_booked', 'appointment_status_changed')))
+           AND action_type IN ('clinic_publication_state_changed', 'clinic_doctor_created',
+                               'appointment_booked', 'appointment_status_changed')))
      OR EXISTS (SELECT 1 FROM pg_catalog.pg_trigger WHERE tgname IN (
        'z_careconnect_booking_race_delay', 'z_careconnect_booking_race_update_delay'))
    )::integer`,
@@ -177,7 +257,7 @@ try {
       `run_id=${setupRunId}`,
     ),
   );
-  console.log("Disposable booking fixtures created on the loopback Supabase database.");
+  console.log("Disposable booking fixtures created on the guarded local PostgreSQL database.");
 
   const patientRunId = randomUUID();
   const outcomes = await Promise.all([
