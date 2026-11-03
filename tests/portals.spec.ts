@@ -214,6 +214,64 @@ test.describe("Clinic portal", () => {
 });
 
 test.describe("Doctor portal", () => {
+  test("refreshes inbound messages while the doctor inbox stays open", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({
+      doctorConversations: [
+        {
+          id: "dconv-1",
+          clinic_id: ids.clinicA,
+          clinic_name: "Test Clinic A",
+          patient_name: "Patient For Me",
+          created_at: "2026-10-01T00:00:00Z",
+          messages: [
+            {
+              id: "m1",
+              body: "Initial message",
+              created_at: "2026-10-01T04:00:00Z",
+              from: "patient",
+            },
+          ],
+        },
+      ],
+    });
+    makeDoctor(mock, "verified");
+    await page.clock.install();
+    await page.goto("/doctor/messages?c=dconv-1");
+    const thread = page.getByRole("region", { name: "Patient For Me" });
+    await expect(thread.getByText("Initial message")).toBeVisible();
+    expect(mock.callsTo("POST", "/rest/v1/rpc/doctor_conversations")).toHaveLength(1);
+
+    mock.state.doctorConversations = [
+      {
+        id: "dconv-1",
+        clinic_id: ids.clinicA,
+        clinic_name: "Test Clinic A",
+        patient_name: "Patient For Me",
+        created_at: "2026-10-01T00:00:00Z",
+        messages: [
+          {
+            id: "m1",
+            body: "Initial message",
+            created_at: "2026-10-01T04:00:00Z",
+            from: "patient",
+          },
+          {
+            id: "m2",
+            body: "New patient reply",
+            created_at: "2026-10-01T06:00:00Z",
+            from: "patient",
+          },
+        ],
+      },
+    ];
+    await page.clock.fastForward(30_000);
+    await expect(thread.getByText("New patient reply")).toBeVisible();
+    expect(mock.callsTo("POST", "/rest/v1/rpc/doctor_conversations")).toHaveLength(2);
+  });
+
   test("signed-out visitors are sent to the doctor sign-in", async ({ page, backend }) => {
     await backend({}, { signedIn: false });
     await page.goto("/doctor/schedule");

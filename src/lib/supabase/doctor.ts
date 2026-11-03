@@ -133,6 +133,9 @@ export function useDoctorConversations(enabled: boolean) {
     queryKey: ["doctor_conversations", user?.id],
     enabled: enabled && !!user,
     retry: false,
+    // Doctors cannot subscribe to messages directly because RLS intentionally denies their
+    // SELECT access. Refresh the scoped SECURITY DEFINER inbox while it is visible instead.
+    refetchInterval: 30_000,
     queryFn: async (): Promise<DoctorConversation[]> => {
       const { data, error } = await supabase.rpc("doctor_conversations");
       if (error) throw error;
