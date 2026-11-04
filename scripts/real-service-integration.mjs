@@ -559,6 +559,20 @@ async function runIntegration() {
 
     const clinic = ids.clinic_id;
     const doctor = ids.doctor_id;
+    const seededRelationship = await measure("postgrest.synthetic_provider_relationship", () =>
+      admin
+        .from("clinic_doctors")
+        .select("active,verification_state")
+        .eq("clinic_id", clinic)
+        .eq("doctor_id", doctor)
+        .single(),
+    );
+    assert(
+      !seededRelationship.error &&
+        seededRelationship.data.active === true &&
+        seededRelationship.data.verification_state === "verified",
+      "synthetic provider relationship remains verified after authorized fixture seeding",
+    );
     const patientProfile = await measure("postgrest.patient_profile", async () => {
       const own = await patient
         .from("patients")

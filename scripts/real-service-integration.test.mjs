@@ -185,6 +185,32 @@ test("real-service fixtures use reserved synthetic identities and explicit owner
   assert.doesNotMatch(cleanup, /:\x27owner_token\x27[^\n]*\$\$/);
 });
 
+test("verified clinic-doctor fixture uses the synthetic admin identity in transaction scope", () => {
+  const seed = readFileSync(path.join(root, "tests/real-service/seed-owned-fixtures.sql"), "utf8");
+  const role = seed.indexOf("INSERT INTO public.user_roles (user_id, role)");
+  const subject = seed.indexOf("request.jwt.claim.sub");
+  const roleClaim = seed.indexOf("request.jwt.claim.role");
+  const claims = seed.indexOf("request.jwt.claims");
+  const relationship = seed.indexOf("INSERT INTO public.clinic_doctors");
+  assert.ok(
+    role >= 0 &&
+      role < subject &&
+      subject < roleClaim &&
+      roleClaim < claims &&
+      claims < relationship,
+  );
+  assert.match(seed, /set_config\([\s\S]*?request\.jwt\.claim\.sub[\s\S]*?true\)/);
+  assert.match(seed, /set_config\([\s\S]*?request\.jwt\.claim\.role[\s\S]*?true\)/);
+  assert.match(seed, /set_config\([\s\S]*?request\.jwt\.claims[\s\S]*?true\)/);
+  assert.match(seed, /SELECT auth\.uid\(\)[\s\S]*?role = 'platform_admin'/);
+  const runner = readFileSync(path.join(root, "scripts/real-service-integration.mjs"), "utf8");
+  assert.match(runner, /postgrest\.synthetic_provider_relationship/);
+  assert.match(
+    runner,
+    /synthetic provider relationship remains verified after authorized fixture seeding/,
+  );
+});
+
 test("the workflow provisions only local Supabase services and never links a remote project", () => {
   const workflow = readFileSync(
     path.join(root, ".github/workflows/real-service-integration.yml"),

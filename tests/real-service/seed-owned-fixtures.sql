@@ -42,6 +42,31 @@ INSERT INTO public.doctors (
   ARRAY['Integration verification']::text[], false
 );
 
+-- The clinic-doctor trigger accepts a verified link only when the request identity is a
+-- platform admin. Seed the runner-owned admin first and apply its claims locally to this
+-- transaction; this keeps fixture setup aligned with the application's authorization check.
+INSERT INTO public.user_roles (user_id, role)
+VALUES (:'platform_admin_id'::uuid, 'platform_admin');
+
+SELECT set_config('request.jwt.claim.sub', :'platform_admin_id', true);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SELECT set_config(
+  'request.jwt.claims',
+  jsonb_build_object('sub', :'platform_admin_id', 'role', 'authenticated')::text,
+  true
+);
+
+DO $$
+BEGIN
+  IF (SELECT auth.uid()) IS NULL OR NOT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = (SELECT auth.uid()) AND role = 'platform_admin'
+  ) THEN
+    RAISE EXCEPTION 'synthetic platform-admin fixture identity was not established';
+  END IF;
+END;
+$$;
+
 INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state)
 VALUES (:'clinic_id'::uuid, :'doctor_id'::uuid, true, 'verified');
 
@@ -53,9 +78,6 @@ INSERT INTO public.clinic_memberships (user_id, clinic_id, role, active)
 VALUES
   (:'clinic_staff_id'::uuid, :'clinic_id'::uuid, 'clinic_staff', true),
   (:'clinic_admin_id'::uuid, :'clinic_id'::uuid, 'clinic_admin', true);
-
-INSERT INTO public.user_roles (user_id, role)
-VALUES (:'platform_admin_id'::uuid, 'platform_admin');
 
 UPDATE public.patients SET full_name = 'Synthetic CI Patient'
 WHERE user_id = :'patient_id'::uuid;
