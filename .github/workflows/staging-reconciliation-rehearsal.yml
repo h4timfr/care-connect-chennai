@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/staging-reconciliation-rehearsal.yml"
       - "scripts/staging-reconciliation-rehearsal*.mjs"
+      - "scripts/compare-staging-baseline*.mjs"
       - "scripts/migration-integrity.json"
       - "scripts/staging-readonly-inventory.sql"
       - "vercel.json"
@@ -56,7 +57,7 @@ jobs:
           test -x /usr/bin/psql
 
       - name: Run rehearsal guard/unit tests
-        run: node --test scripts/staging-reconciliation-rehearsal.test.mjs scripts/local-sql-test-target.test.mjs scripts/run-sql-ci-step.test.mjs
+        run: node --test scripts/compare-staging-baseline.test.mjs scripts/staging-reconciliation-rehearsal.test.mjs scripts/local-sql-test-target.test.mjs scripts/run-sql-ci-step.test.mjs
 
       - name: Rehearse staging timestamp-ledger normalization and all migrations
         shell: bash

@@ -9,6 +9,8 @@ import {
   assertLocalProjectRefMatchesConfig,
   closeAuthResources,
   closeRealtimeResources,
+  collectRealtimeDeliveries,
+  prepareRealtimeAuth,
   countOwnedRecords,
   matchesCanonicalDisposableBaseline,
   removeUnseededApplicationUsers,
@@ -72,6 +74,54 @@ test("Realtime cleanup tears down channels and disconnects sockets after unsubsc
   assert.equal(result.teardown_failures, 0);
   assert.equal(result.disconnect_failures, 0);
   assert.equal(result.verified, false);
+});
+
+test("Realtime auth is synchronized from the current authenticated session before channel joins", async () => {
+  const calls = [];
+  const client = {
+    auth: {
+      async getSession() {
+        calls.push("get session");
+        return { data: { session: { access_token: "synthetic-session-token" } }, error: null };
+      },
+    },
+    realtime: {
+      async setAuth(token) {
+        calls.push(`set auth:${token}`);
+      },
+    },
+  };
+
+  assert.equal(await prepareRealtimeAuth(client), true);
+  assert.deepEqual(calls, ["get session", "set auth:synthetic-session-token"]);
+});
+
+test("Realtime auth refuses a missing session without configuring a channel", async () => {
+  let configured = false;
+  const client = {
+    auth: {
+      async getSession() {
+        return { data: { session: null }, error: null };
+      },
+    },
+    realtime: {
+      async setAuth() {
+        configured = true;
+      },
+    },
+  };
+
+  await assert.rejects(prepareRealtimeAuth(client), /authentication is unavailable/);
+  assert.equal(configured, false);
+});
+
+test("Realtime delivery outcomes identify each subscriber without short-circuiting", async () => {
+  const outcomes = await collectRealtimeDeliveries([
+    Promise.resolve(true),
+    Promise.reject(new Error("private transport details")),
+  ]);
+
+  assert.deepEqual(outcomes, [true, false]);
 });
 
 test("Auth cleanup stops refresh timers and disposes clients after signout hangs", async () => {
@@ -341,6 +391,10 @@ test("Realtime checks follow the message RLS contract and close bounded runner r
   assert.match(readiness, /schemaname = 'public'[\s\S]*?tablename = 'messages'/);
   assert.match(readiness, /indisprimary/);
   assert.match(readiness, /relrowsecurity/);
+  assert.match(runner, /map\(\s*prepareRealtimeAuth/);
+  assert.match(runner, /collectRealtimeDeliveries\(\[receivedByPatient, receivedByClinic\]\)/);
+  assert.match(runner, /authorized patient message delivery \(patient=/);
+  assert.match(runner, /authorized doctor reply delivery \(patient=/);
   assert.match(
     runner,
     /realtimeChannel\(\s*clients\["clinic-staff"\],\s*conversationId,\s*realtimeResources,?\s*\)/,

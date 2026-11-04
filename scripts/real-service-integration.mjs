@@ -156,6 +156,23 @@ export async function closeAuthResources(clients, timeoutMs = 5_000) {
   return { clients: uniqueClients.size, failures, verified: failures === 0 };
 }
 
+export async function prepareRealtimeAuth(client) {
+  const result = await client.auth.getSession();
+  const token = result?.data?.session?.access_token;
+  if (result?.error || typeof token !== "string" || token.length === 0) {
+    throw new Error("Realtime subscription authentication is unavailable");
+  }
+
+  await client.realtime.setAuth(token);
+  return true;
+}
+
+export async function collectRealtimeDeliveries(deliveries) {
+  return Promise.all(
+    deliveries.map((delivery) => Promise.resolve(delivery).then(Boolean, () => false)),
+  );
+}
+
 export function rejectRemoteConfiguration(env, files = []) {
   const forbidden = Object.entries(env).filter(([name, value]) => {
     if (!value) return false;
@@ -993,6 +1010,15 @@ async function runIntegration() {
     );
     const anonClient = createClient(creds.url, creds.anonKey, { auth: { persistSession: false } });
     authClients.add(anonClient);
+    const realtimeAuthReady = await measure("realtime.auth.sync", async () => {
+      await Promise.all(
+        [patient, clients["clinic-staff"], clients.doctor, clients["other-patient"]].map(
+          prepareRealtimeAuth,
+        ),
+      );
+      return true;
+    });
+    assert(realtimeAuthReady, "authenticated Realtime clients use their current Auth session");
     const anonChannel = realtimeChannel(anonClient, conversationId, realtimeResources);
     const readiness = await Promise.all([
       subscribed(patientChannel),
@@ -1011,11 +1037,11 @@ async function runIntegration() {
     });
     assert(!patientInsert.error, "patient sends authorized message through PostgREST");
     const patientDeliveries = await measure("realtime.patient_message_delivery", () =>
-      Promise.all([receivedByPatient, receivedByClinic]),
+      collectRealtimeDeliveries([receivedByPatient, receivedByClinic]),
     );
     assert(
-      patientDeliveries.every(Boolean),
-      "patient and authorized clinic staff receive the patient message through Realtime",
+      patientDeliveries[0] && patientDeliveries[1],
+      `authorized patient message delivery (patient=${patientDeliveries[0] ? "PASS" : "FAIL"}; clinic_staff=${patientDeliveries[1] ? "PASS" : "FAIL"})`,
     );
     const doctorDirectMessages = await clients.doctor
       .from("messages")
@@ -1045,11 +1071,11 @@ async function runIntegration() {
       .insert({ conversation_id: conversationId, sender_id: users.doctor.id, body: doctorMessage });
     assert(!reply.error, "doctor replies only to assigned conversation");
     const replyDeliveries = await measure("realtime.doctor_reply_delivery", () =>
-      Promise.all([receivedByPatientReply, receivedByClinicReply]),
+      collectRealtimeDeliveries([receivedByPatientReply, receivedByClinicReply]),
     );
     assert(
-      replyDeliveries.every(Boolean),
-      "patient and authorized clinic staff receive the doctor reply through Realtime",
+      replyDeliveries[0] && replyDeliveries[1],
+      `authorized doctor reply delivery (patient=${replyDeliveries[0] ? "PASS" : "FAIL"}; clinic_staff=${replyDeliveries[1] ? "PASS" : "FAIL"})`,
     );
     const doctorInboxAfterReply = await clients.doctor.rpc("doctor_conversations");
     assert(

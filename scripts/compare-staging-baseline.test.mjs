@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -164,4 +164,13 @@ test("rejects an extra argument even when both snapshot paths are valid", () => 
     assert.ok(!result.output.includes(": MATCH"));
     assert.ok(!result.output.includes(marker));
   });
+});
+
+test("baseline comparator tests run in CI whenever comparator sources change", () => {
+  const workflow = readFileSync(
+    path.join(path.dirname(script), "../.github/workflows/staging-reconciliation-rehearsal.yml"),
+    "utf8",
+  );
+  assert.match(workflow, /scripts\/compare-staging-baseline\*\.mjs/);
+  assert.match(workflow, /node --test scripts\/compare-staging-baseline\.test\.mjs/);
 });
