@@ -357,6 +357,20 @@ export async function countOwnedRecords(admin, table, column, values) {
   return result.error ? null : result.count;
 }
 
+export async function removeUnseededApplicationUsers(admin, userIds) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (
+    !Array.isArray(userIds) ||
+    userIds.some((id) => typeof id !== "string" || !uuidPattern.test(id))
+  ) {
+    return false;
+  }
+  const ownedIds = [...new Set(userIds)];
+  if (ownedIds.length === 0) return true;
+  const result = await admin.from("users").delete().in("id", ownedIds);
+  return !result.error;
+}
+
 async function verifyDisposableBaseline(admin) {
   const counts = {};
   for (const table of [
@@ -423,6 +437,7 @@ async function runIntegration() {
   let serviceStatus = "RUNNING";
   let browserRunnerFailed = false;
   let cleanupSqlSucceeded = true;
+  let unseededApplicationProfilesCleaned = true;
   activeAssertionResults = serviceAssertions;
   currentIntegrationCheck = "fixture-creation";
   writeSafe("browser-workflow-summary.json", JSON.stringify(blockedBrowserWorkflows(), null, 2));
@@ -486,6 +501,11 @@ async function runIntegration() {
       clients[role] = client;
     }
     const patient = clients.patient;
+    const refreshed = await measure("auth.session_refresh", () => patient.auth.refreshSession());
+    assert(
+      !refreshed.error && refreshed.data.session,
+      "Auth refresh returns a session before password recovery",
+    );
     const recovery = await measure("auth.password_recovery_request", () =>
       patient.auth.resetPasswordForEmail(users.patient.email),
     );
@@ -499,8 +519,6 @@ async function runIntegration() {
       "password recovery link completes and changes the synthetic user's password",
     );
     users.patient.password = recoveryMail.newPassword;
-    const refreshed = await measure("auth.session_refresh", () => patient.auth.refreshSession());
-    assert(!refreshed.error && refreshed.data.session, "Auth refresh rotates session");
     await expectDenied(
       createClient(creds.url, creds.anonKey).auth.signInWithPassword({
         email: users.patient.email,
@@ -1011,6 +1029,15 @@ async function runIntegration() {
       } catch {
         cleanupSqlSucceeded = false;
       }
+    } else {
+      try {
+        unseededApplicationProfilesCleaned = await removeUnseededApplicationUsers(
+          admin,
+          Object.values(users).map((user) => user.id),
+        );
+      } catch {
+        unseededApplicationProfilesCleaned = false;
+      }
     }
     for (const user of Object.values(users)) {
       try {
@@ -1033,7 +1060,12 @@ async function runIntegration() {
     );
     cleanupResult.recovery_email_cleaned = recoveryMailCleaned;
     cleanupResult.sql_succeeded = cleanupSqlSucceeded;
-    cleanupResult.verified = cleanupResult.verified && recoveryMailCleaned && cleanupSqlSucceeded;
+    cleanupResult.unseeded_application_profiles_cleaned = unseededApplicationProfilesCleaned;
+    cleanupResult.verified =
+      cleanupResult.verified &&
+      recoveryMailCleaned &&
+      cleanupSqlSucceeded &&
+      unseededApplicationProfilesCleaned;
     serviceAssertions.push({
       name: "runner-owned synthetic fixtures are removed and verified",
       status: cleanupResult.verified ? "PASS" : "FAIL",

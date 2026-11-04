@@ -78,6 +78,12 @@ DELETE FROM public.clinics c
 USING pg_temp.runner_owned o
 WHERE c.id = ANY(o.clinic_ids);
 
+-- Auth users do not cascade into public.users in this schema. Delete only the
+-- application profiles listed by this run's verified ownership marker.
+DELETE FROM public.users u
+USING pg_temp.runner_owned o
+WHERE u.id = ANY(o.user_ids);
+
 DO $$
 DECLARE
   run record;
@@ -92,7 +98,9 @@ BEGIN
      OR EXISTS (SELECT 1 FROM public.clinic_memberships WHERE clinic_id = ANY(run.clinic_ids) OR user_id = ANY(run.user_ids))
      OR EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = ANY(run.user_ids))
      OR EXISTS (SELECT 1 FROM public.doctors WHERE id = ANY(run.doctor_ids))
-     OR EXISTS (SELECT 1 FROM public.clinics WHERE id = ANY(run.clinic_ids)) THEN
+     OR EXISTS (SELECT 1 FROM public.clinics WHERE id = ANY(run.clinic_ids))
+     OR EXISTS (SELECT 1 FROM public.users WHERE id = ANY(run.user_ids))
+     OR EXISTS (SELECT 1 FROM public.patients WHERE user_id = ANY(run.user_ids)) THEN
     RAISE EXCEPTION 'owned application fixture cleanup did not reach zero';
   END IF;
 END;

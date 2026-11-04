@@ -9,6 +9,7 @@ import {
   assertLocalProjectRefMatchesConfig,
   countOwnedRecords,
   matchesCanonicalDisposableBaseline,
+  removeUnseededApplicationUsers,
   rejectRemoteConfiguration,
   summarizeBrowserWorkflows,
   verifyRepositoryIntegrity,
@@ -122,6 +123,37 @@ test("ownership cleanup counts composite-key links without assuming an id column
   ]);
 });
 
+test("Auth session refresh is checked before password recovery can terminate the session", () => {
+  const runner = readFileSync(path.join(root, "scripts/real-service-integration.mjs"), "utf8");
+  const refresh = runner.indexOf('measure("auth.session_refresh"');
+  const recovery = runner.indexOf('measure("auth.password_recovery_request"');
+  assert.ok(refresh >= 0 && recovery > refresh);
+});
+
+test("pre-seed cleanup deletes application profiles only for valid run Auth IDs", async () => {
+  const calls = [];
+  const admin = {
+    from(table) {
+      return {
+        delete() {
+          return {
+            in(column, ids) {
+              calls.push({ table, column, ids });
+              return Promise.resolve({ error: null });
+            },
+          };
+        },
+      };
+    },
+  };
+  const ownedId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+
+  assert.equal(await removeUnseededApplicationUsers(admin, [ownedId, ownedId]), true);
+  assert.deepEqual(calls, [{ table: "users", column: "id", ids: [ownedId] }]);
+  assert.equal(await removeUnseededApplicationUsers(admin, ["not-an-auth-id"]), false);
+  assert.equal(calls.length, 1);
+});
+
 test("real-service fixtures use reserved synthetic identities and explicit ownership keys", () => {
   const seed = readFileSync(path.join(root, "tests/real-service/seed-owned-fixtures.sql"), "utf8");
   const cleanup = readFileSync(
@@ -133,6 +165,8 @@ test("real-service fixtures use reserved synthetic identities and explicit owner
   assert.match(seed, /Synthetic CI fixture/);
   assert.match(cleanup, /runner ownership marker did not match exactly one row/);
   assert.match(cleanup, /pg_temp\.runner_owned/);
+  assert.match(cleanup, /DELETE FROM public\.users[\s\S]*?WHERE u\.id = ANY\(o\.user_ids\)/);
+  assert.match(cleanup, /public\.patients WHERE user_id = ANY\(run\.user_ids\)/);
   assert.doesNotMatch(cleanup, /:\x27owner_token\x27[^\n]*\$\$/);
 });
 
