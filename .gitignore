@@ -40,6 +40,7 @@ dist-ssr
 # Playwright artifacts
 test-results/
 playwright-report/
+test-artifacts/
 
 # Supabase CLI local state (linked project, versions, pooler URL)
 supabase/.temp/

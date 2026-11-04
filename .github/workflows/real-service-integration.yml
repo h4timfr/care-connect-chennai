@@ -1,0 +1,134 @@
+name: Disposable Supabase real-service integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/careconnect-frontend-repair
+    paths:
+      - ".github/workflows/real-service-integration.yml"
+      - "scripts/real-service-integration.mjs"
+      - "tests/real-service/**"
+      - "playwright.real-service.config.ts"
+      - "supabase/config.toml"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "scripts/migration-integrity.json"
+      - "scripts/run-sql-ci-step*.mjs"
+      - "scripts/local-sql-test-target*.mjs"
+      - "scripts/test-booking-concurrency.mjs"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: careconnect-real-service-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-service-integration:
+    name: Fresh local Supabase services and real browser workflows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out the selected branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.117.0
+
+      - name: Install local PostgreSQL client
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+          test -x /usr/bin/psql
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate guards and initialize unlinked local configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/real-service-integration.test.mjs scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs
+          if [ ! -f supabase/config.toml ]; then
+            test ! -e supabase/.temp/linked-project.json
+            test ! -e supabase/.temp/project-ref
+            supabase init --yes >/dev/null 2>&1
+          fi
+          node scripts/real-service-integration.mjs preflight
+          supabase --version >/dev/null
+
+      - name: Start a fresh disposable Supabase stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p test-artifacts
+          # Raw CLI output stays in runner-private temporary storage and is never uploaded.
+          if supabase start >"$RUNNER_TEMP/careconnect-supabase-start.raw.log" 2>&1; then
+            node scripts/real-service-integration.mjs startup-summary
+          else
+            node scripts/real-service-integration.mjs startup-failure-summary
+            exit 1
+          fi
+
+      - name: Verify migration ledger and reviewed SQL integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/real-service-integration.mjs verify-migrations
+          node scripts/run-sql-ci-step.mjs ledger
+
+      - name: Run the complete pgTAP suite and booking concurrency scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-sql-ci-step.mjs pgtap
+          node scripts/run-sql-ci-step.mjs concurrency
+
+      - name: Exercise real Auth, PostgREST, Storage, Realtime, and browser workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/real-service-integration.mjs run
+
+      - name: Stop the disposable Supabase stack
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f supabase/config.toml ]; then
+            supabase stop --no-backup >"$RUNNER_TEMP/careconnect-supabase-stop.raw.log" 2>&1 || true
+          fi
+
+      - name: Upload sanitized integration evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: careconnect-real-service-${{ github.run_id }}
+          path: |
+            test-artifacts/startup.log
+            test-artifacts/ledger.log
+            test-artifacts/pgtap.log
+            test-artifacts/concurrency.log
+            test-artifacts/real-service-summary.json
+            test-artifacts/browser-flow-summary.json
+            test-artifacts/browser-failure-trace.json
+          if-no-files-found: warn
+          retention-days: 7
