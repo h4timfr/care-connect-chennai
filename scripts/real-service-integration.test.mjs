@@ -223,6 +223,7 @@ test("clinic membership integration distinguishes Auth identity, fixture state, 
   assert.match(runner, /clinic staff Auth identity matches its synthetic fixture/);
   assert.match(runner, /service role confirms the synthetic active clinic membership fixture/);
   assert.match(runner, /clinic staff scope RPC returns its assigned clinic/);
+  assert.match(runner, /\.eq\("user_id", users\["clinic-staff"\]\.id\)/);
   assert.match(runner, /clinic staff reads its active membership \(\$\{membershipResponse/);
 });
 

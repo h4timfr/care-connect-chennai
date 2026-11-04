@@ -674,8 +674,9 @@ async function runIntegration() {
     const staffMemberships = await measure("postgrest.clinic_staff_membership_read", () =>
       clients["clinic-staff"]
         .from("clinic_memberships")
-        .select("clinic_id")
-        .eq("clinic_id", clinic),
+        .select("user_id,clinic_id,role,active")
+        .eq("clinic_id", clinic)
+        .eq("user_id", users["clinic-staff"].id),
     );
     const membershipSqlState = safeSqlState(staffMemberships.error);
     const membershipRows = Array.isArray(staffMemberships.data)
@@ -687,7 +688,10 @@ async function runIntegration() {
       .select("clinic_id")
       .eq("clinic_id", clinic);
     assert(
-      !staffMemberships.error && staffMemberships.data.length === 1,
+      !staffMemberships.error &&
+        staffMemberships.data.length === 1 &&
+        staffMemberships.data[0].user_id === users["clinic-staff"].id &&
+        staffMemberships.data[0].active === true,
       `clinic staff reads its active membership (${membershipResponse}${membershipSqlState ? `; SQLSTATE ${membershipSqlState}` : ""})`,
     );
     assert(
