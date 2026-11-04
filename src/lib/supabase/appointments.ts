@@ -4,7 +4,7 @@ import { useAuth } from "./auth";
 import { patientAppointmentsQueryKey } from "./query-keys";
 import { codeOf, describeDataError, isNetworkError, messageOf } from "./errors";
 import type { Database } from "@/lib/database.types";
-import { isoDate } from "@/lib/format";
+import { isAppointmentInPast } from "@/lib/appointment-time";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n";
 
@@ -148,9 +148,9 @@ export function useBookAppointment() {
   });
 }
 
-/** True once the appointment's date (in India) is before today. */
+/** True once the appointment's local date and time in India have passed. */
 export function isPastAppointment(appointment: Appointment) {
-  return appointment.date < isoDate(new Date());
+  return isAppointmentInPast(appointment.date, appointment.time);
 }
 
 /**
@@ -166,7 +166,11 @@ export function isCancellable(appointment: Appointment) {
 
 export function describeCancelError(error: unknown): MessageKey {
   const message = messageOf(error);
-  if (/terminal|only cancel/i.test(message)) return "appointment.cannotCancel";
+  if (
+    /terminal|only cancel|may cancel only|cannot cancel appointments in the past/i.test(message)
+  ) {
+    return "appointment.cannotCancel";
+  }
   return describeDataError(error);
 }
 
