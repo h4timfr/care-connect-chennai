@@ -156,15 +156,111 @@ export async function closeAuthResources(clients, timeoutMs = 5_000) {
   return { clients: uniqueClients.size, failures, verified: failures === 0 };
 }
 
-export async function prepareRealtimeAuth(client) {
+export async function prepareRealtimeAuth(client, expectedUserId, diagnostics) {
+  if (diagnostics) {
+    diagnostics.auth = {
+      mode: "authenticated",
+      sessionPresent: false,
+      jwtValidated: false,
+      identityMatched: false,
+      realtimeAuthSet: false,
+    };
+  }
   const result = await client.auth.getSession();
   const token = result?.data?.session?.access_token;
+  if (diagnostics) diagnostics.auth.sessionPresent = typeof token === "string" && token.length > 0;
   if (result?.error || typeof token !== "string" || token.length === 0) {
     throw new Error("Realtime subscription authentication is unavailable");
   }
 
+  const verified = await client.auth.getUser(token);
+  const authenticatedUserId = verified?.data?.user?.id;
+  const jwtValidated = !verified?.error && typeof authenticatedUserId === "string";
+  const identityMatched =
+    typeof expectedUserId === "string" && authenticatedUserId === expectedUserId;
+  if (diagnostics) {
+    diagnostics.auth.jwtValidated = jwtValidated;
+    diagnostics.auth.identityMatched = identityMatched;
+  }
+  if (!jwtValidated || !identityMatched) {
+    throw new Error("Realtime subscription authentication could not be verified");
+  }
+
   await client.realtime.setAuth(token);
+  if (diagnostics) diagnostics.auth.realtimeAuthSet = true;
   return true;
+}
+
+export function sanitizeRealtimeDiagnostics(diagnostics) {
+  const validStatus = (status) =>
+    ["SUBSCRIBED", "CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status) ? status : "OTHER";
+  const validMode = (mode) => (["authenticated", "anonymous"].includes(mode) ? mode : "unknown");
+  return diagnostics.map((item) => ({
+    role: ["patient", "clinic_staff", "doctor", "unrelated_patient", "anonymous"].includes(
+      item.role,
+    )
+      ? item.role
+      : "unknown",
+    auth: {
+      mode: validMode(item.auth?.mode),
+      sessionPresent: item.auth?.sessionPresent === true,
+      jwtValidated: item.auth?.jwtValidated === true,
+      identityMatched: item.auth?.identityMatched === true,
+      realtimeAuthSet: item.auth?.realtimeAuthSet === true,
+    },
+    subscription: {
+      statuses: Array.isArray(item.subscription?.statuses)
+        ? item.subscription.statuses.map(validStatus)
+        : [],
+      ready: item.subscription?.ready === true,
+    },
+    rowVisibility: {
+      checked: item.rowVisibility?.checked === true,
+      visible: item.rowVisibility?.visible === true,
+      rowCount: Number.isSafeInteger(item.rowVisibility?.rowCount)
+        ? item.rowVisibility.rowCount
+        : 0,
+    },
+    delivery: {
+      eventCount: Number.isSafeInteger(item.delivery?.eventCount) ? item.delivery.eventCount : 0,
+      payloadFieldsPresent: item.delivery?.payloadFieldsPresent === true,
+      conversationFilterMatched: item.delivery?.conversationFilterMatched === true,
+      expectedMessageMatched: item.delivery?.expectedMessageMatched === true,
+      waitOutcome: ["not-started", "matched", "not-observed", "timeout", "cancelled"].includes(
+        item.delivery?.waitOutcome,
+      )
+        ? item.delivery.waitOutcome
+        : "unknown",
+    },
+  }));
+}
+
+export function recordRealtimePayload(state, payload) {
+  const body = payload.new?.body;
+  const hasExpectedFields =
+    typeof payload.new?.id === "string" &&
+    typeof payload.new?.conversation_id === "string" &&
+    typeof payload.new?.sender_id === "string" &&
+    typeof body === "string";
+  state.diagnostics.delivery.eventCount += 1;
+  state.diagnostics.delivery.payloadFieldsPresent ||= hasExpectedFields;
+  state.diagnostics.delivery.conversationFilterMatched ||=
+    payload.new?.conversation_id === state.conversationId;
+  state.diagnostics.delivery.expectedMessageMatched ||= [...state.pending].some(
+    (pending) => pending.body === body,
+  );
+  state.delivered.push(body);
+  for (const pending of state.pending) {
+    if (pending.body === body) pending.deliver();
+  }
+}
+
+export function realtimePostgresChangesOptions() {
+  return {
+    config: {
+      postgres_changes_options: { wait: true, timeout: 10_000 },
+    },
+  };
 }
 
 export async function collectRealtimeDeliveries(deliveries) {
@@ -568,6 +664,7 @@ async function runIntegration() {
   const clients = {};
   const authClients = new Set();
   const realtimeResources = [];
+  const realtimeDiagnostics = [];
   const realtimeShutdownResults = [];
   const timings = {};
   const serviceAssertions = [];
@@ -996,30 +1093,57 @@ async function runIntegration() {
     psql(creds.databaseUrl, "tests/real-service/assert-realtime-readiness.sql", {});
     assert(true, "PostgreSQL logical replication and messages publication are ready");
 
-    const patientChannel = realtimeChannel(patient, conversationId, realtimeResources);
+    const patientChannel = realtimeChannel(
+      patient,
+      "patient",
+      conversationId,
+      realtimeResources,
+      realtimeDiagnostics,
+    );
     const clinicChannel = realtimeChannel(
       clients["clinic-staff"],
+      "clinic_staff",
       conversationId,
       realtimeResources,
+      realtimeDiagnostics,
     );
-    const doctorChannel = realtimeChannel(clients.doctor, conversationId, realtimeResources);
+    const doctorChannel = realtimeChannel(
+      clients.doctor,
+      "doctor",
+      conversationId,
+      realtimeResources,
+      realtimeDiagnostics,
+    );
     const outsiderChannel = realtimeChannel(
       clients["other-patient"],
+      "unrelated_patient",
       conversationId,
       realtimeResources,
+      realtimeDiagnostics,
     );
     const anonClient = createClient(creds.url, creds.anonKey, { auth: { persistSession: false } });
     authClients.add(anonClient);
     const realtimeAuthReady = await measure("realtime.auth.sync", async () => {
       await Promise.all(
-        [patient, clients["clinic-staff"], clients.doctor, clients["other-patient"]].map(
-          prepareRealtimeAuth,
+        [
+          [patient, users.patient.id, patientChannel],
+          [clients["clinic-staff"], users["clinic-staff"].id, clinicChannel],
+          [clients.doctor, users.doctor.id, doctorChannel],
+          [clients["other-patient"], users["other-patient"].id, outsiderChannel],
+        ].map(([client, expectedUserId, state]) =>
+          prepareRealtimeAuth(client, expectedUserId, state.diagnostics),
         ),
       );
       return true;
     });
     assert(realtimeAuthReady, "authenticated Realtime clients use their current Auth session");
-    const anonChannel = realtimeChannel(anonClient, conversationId, realtimeResources);
+    const anonChannel = realtimeChannel(
+      anonClient,
+      "anonymous",
+      conversationId,
+      realtimeResources,
+      realtimeDiagnostics,
+    );
     const readiness = await Promise.all([
       subscribed(patientChannel),
       subscribed(clinicChannel),
@@ -1036,6 +1160,26 @@ async function runIntegration() {
       body: patientMessage,
     });
     assert(!patientInsert.error, "patient sends authorized message through PostgREST");
+    const patientCanReadInsertedMessage = await verifyRealtimeMessageVisibility(
+      patient,
+      patientChannel,
+      conversationId,
+      patientMessage,
+    );
+    const clinicCanReadInsertedMessage = await verifyRealtimeMessageVisibility(
+      clients["clinic-staff"],
+      clinicChannel,
+      conversationId,
+      patientMessage,
+    );
+    assert(
+      patientCanReadInsertedMessage,
+      "Realtime patient can SELECT the inserted message under its JWT",
+    );
+    assert(
+      clinicCanReadInsertedMessage,
+      "Realtime clinic staff can SELECT the inserted message under its JWT",
+    );
     const patientDeliveries = await measure("realtime.patient_message_delivery", () =>
       collectRealtimeDeliveries([receivedByPatient, receivedByClinic]),
     );
@@ -1104,7 +1248,14 @@ async function runIntegration() {
     if (beforeReconnect.verified) realtimeResources.length = 0;
     assert(beforeReconnect.verified, "Realtime channels close before reconnect verification");
 
-    const refreshedChannel = realtimeChannel(patient, conversationId, realtimeResources);
+    const refreshedChannel = realtimeChannel(
+      patient,
+      "patient",
+      conversationId,
+      realtimeResources,
+      realtimeDiagnostics,
+    );
+    refreshedChannel.diagnostics.auth = { ...patientChannel.diagnostics.auth };
     await subscribed(refreshedChannel);
     const reconnection = `Synthetic reconnect check ${runId}`;
     const reconnected = waitForInsert(refreshedChannel, reconnection);
@@ -1415,6 +1566,7 @@ async function runIntegration() {
           workflows: browserEvidence.workflow_counts,
           timings_ms: timings,
           cleanup: cleanupResult,
+          realtime_diagnostics: sanitizeRealtimeDiagnostics(realtimeDiagnostics),
           failure:
             serviceStatus === "FAIL"
               ? { stage: currentIntegrationCheck, category: "service-integration" }
@@ -1509,26 +1661,49 @@ async function deleteRecoveryEmail(email) {
   if (!response.ok) throw new Error("runner-owned recovery email cleanup failed");
 }
 
-function realtimeChannel(client, conversationId, resources) {
-  const state = { delivered: [], pending: new Set() };
-  const channel = client.channel(`careconnect-ci-${randomUUID()}`).on(
-    "postgres_changes",
-    {
-      event: "INSERT",
-      schema: "public",
-      table: "messages",
-      filter: `conversation_id=eq.${conversationId}`,
+function realtimeChannel(client, role, conversationId, resources, diagnosticsCollection) {
+  const state = {
+    delivered: [],
+    pending: new Set(),
+    role,
+    conversationId,
+    diagnostics: {
+      role,
+      auth: {
+        mode: role === "anonymous" ? "anonymous" : "unknown",
+        sessionPresent: false,
+        jwtValidated: false,
+        identityMatched: false,
+        realtimeAuthSet: false,
+      },
+      subscription: { statuses: [], ready: false },
+      rowVisibility: { checked: false, visible: false, rowCount: 0 },
+      delivery: {
+        eventCount: 0,
+        payloadFieldsPresent: false,
+        conversationFilterMatched: false,
+        expectedMessageMatched: false,
+        waitOutcome: "not-started",
+      },
     },
-    (payload) => {
-      const body = payload.new?.body;
-      state.delivered.push(body);
-      for (const pending of state.pending) {
-        if (pending.body === body) pending.deliver();
-      }
-    },
-  );
+  };
+  const channel = client
+    .channel(`careconnect-ci-${randomUUID()}`, realtimePostgresChangesOptions())
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        recordRealtimePayload(state, payload);
+      },
+    );
   state.channel = channel;
   resources.push({ client, channel, state });
+  diagnosticsCollection.push(state.diagnostics);
   return state;
 }
 
@@ -1552,7 +1727,14 @@ function subscribed(state) {
     }, 15_000);
     try {
       state.channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") finish(resolve, true);
+        const safeStatus = ["SUBSCRIBED", "CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)
+          ? status
+          : "OTHER";
+        state.diagnostics.subscription.statuses.push(safeStatus);
+        if (status === "SUBSCRIBED") {
+          state.diagnostics.subscription.ready = true;
+          finish(resolve, true);
+        }
         if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
           finish(reject, new Error("realtime subscription failed"));
         }
@@ -1564,7 +1746,11 @@ function subscribed(state) {
 }
 
 function waitForInsert(state, body) {
-  if (state.delivered.includes(body)) return Promise.resolve(true);
+  if (state.delivered.includes(body)) {
+    state.diagnostics.delivery.expectedMessageMatched = true;
+    state.diagnostics.delivery.waitOutcome = "matched";
+    return Promise.resolve(true);
+  }
   return new Promise((resolve, reject) => {
     let finished = false;
     let timeout;
@@ -1577,19 +1763,51 @@ function waitForInsert(state, body) {
     };
     const pending = {
       body,
-      deliver: () => finish(resolve, true),
-      cancel: () => finish(resolve, false),
+      deliver: () => {
+        state.diagnostics.delivery.waitOutcome = "matched";
+        finish(resolve, true);
+      },
+      cancel: () => {
+        state.diagnostics.delivery.waitOutcome = "cancelled";
+        finish(resolve, false);
+      },
     };
     state.pending.add(pending);
     timeout = setTimeout(() => {
+      state.diagnostics.delivery.waitOutcome = "timeout";
       finish(reject, new Error("realtime message delivery timeout"));
     }, 15_000);
   });
 }
 
+async function verifyRealtimeMessageVisibility(client, state, conversationId, body) {
+  const result = await client
+    .from("messages")
+    .select("id,conversation_id")
+    .eq("conversation_id", conversationId)
+    .eq("body", body);
+  const rows = Array.isArray(result?.data) ? result.data : [];
+  const visible =
+    !result?.error &&
+    rows.length === 1 &&
+    rows[0]?.conversation_id === conversationId &&
+    typeof rows[0]?.id === "string";
+  state.diagnostics.rowVisibility = {
+    checked: true,
+    visible,
+    rowCount: rows.length,
+  };
+  return visible;
+}
+
 function noInsert(state, body) {
   return new Promise((resolve) => {
-    setTimeout(() => resolve(state.delivered.includes(body)), 1_500);
+    setTimeout(() => {
+      const matched = state.delivered.includes(body);
+      state.diagnostics.delivery.expectedMessageMatched = matched;
+      state.diagnostics.delivery.waitOutcome = matched ? "matched" : "not-observed";
+      resolve(matched);
+    }, 1_500);
   });
 }
 

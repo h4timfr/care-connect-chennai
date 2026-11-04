@@ -11,6 +11,9 @@ import {
   closeRealtimeResources,
   collectRealtimeDeliveries,
   prepareRealtimeAuth,
+  recordRealtimePayload,
+  realtimePostgresChangesOptions,
+  sanitizeRealtimeDiagnostics,
   countOwnedRecords,
   matchesCanonicalDisposableBaseline,
   removeUnseededApplicationUsers,
@@ -85,6 +88,10 @@ test("Realtime auth is synchronized from the current authenticated session befor
         calls.push("get session");
         return { data: { session: { access_token: "synthetic-session-token" } }, error: null };
       },
+      async getUser(token) {
+        calls.push(`validate auth:${token}`);
+        return { data: { user: { id: "synthetic-user-id" } }, error: null };
+      },
     },
     realtime: {
       async setAuth(token) {
@@ -93,8 +100,22 @@ test("Realtime auth is synchronized from the current authenticated session befor
     },
   };
 
-  assert.equal(await prepareRealtimeAuth(client), true);
-  assert.deepEqual(calls, ["get session", "set auth:synthetic-session-token"]);
+  const diagnostics = {
+    auth: {},
+  };
+  assert.equal(await prepareRealtimeAuth(client, "synthetic-user-id", diagnostics), true);
+  assert.deepEqual(calls, [
+    "get session",
+    "validate auth:synthetic-session-token",
+    "set auth:synthetic-session-token",
+  ]);
+  assert.deepEqual(diagnostics.auth, {
+    mode: "authenticated",
+    sessionPresent: true,
+    jwtValidated: true,
+    identityMatched: true,
+    realtimeAuthSet: true,
+  });
 });
 
 test("Realtime auth refuses a missing session without configuring a channel", async () => {
@@ -112,8 +133,38 @@ test("Realtime auth refuses a missing session without configuring a channel", as
     },
   };
 
-  await assert.rejects(prepareRealtimeAuth(client), /authentication is unavailable/);
+  await assert.rejects(
+    prepareRealtimeAuth(client, "synthetic-user-id"),
+    /authentication is unavailable/,
+  );
   assert.equal(configured, false);
+});
+
+test("Realtime JWT verification rejects a different authenticated identity", async () => {
+  const client = {
+    auth: {
+      async getSession() {
+        return { data: { session: { access_token: "synthetic-session-token" } }, error: null };
+      },
+      async getUser() {
+        return { data: { user: { id: "other-user-id" } }, error: null };
+      },
+    },
+    realtime: {
+      async setAuth() {
+        assert.fail("Realtime auth must not be set for the wrong identity");
+      },
+    },
+  };
+  const diagnostics = { auth: {} };
+
+  await assert.rejects(
+    prepareRealtimeAuth(client, "expected-user-id", diagnostics),
+    /authentication could not be verified/,
+  );
+  assert.equal(diagnostics.auth.jwtValidated, true);
+  assert.equal(diagnostics.auth.identityMatched, false);
+  assert.equal(diagnostics.auth.realtimeAuthSet, false);
 });
 
 test("Realtime delivery outcomes identify each subscriber without short-circuiting", async () => {
@@ -123,6 +174,84 @@ test("Realtime delivery outcomes identify each subscriber without short-circuiti
   ]);
 
   assert.deepEqual(outcomes, [true, false]);
+});
+
+test("Postgres Changes readiness waits for server-side subscription confirmation", () => {
+  assert.deepEqual(realtimePostgresChangesOptions(), {
+    config: {
+      postgres_changes_options: { wait: true, timeout: 10_000 },
+    },
+  });
+});
+
+test("Realtime payload diagnostics distinguish arrival, matching fields, and expected message safely", () => {
+  let delivered = false;
+  const state = {
+    conversationId: "synthetic-conversation-id",
+    delivered: [],
+    pending: new Set([
+      {
+        body: "private synthetic body",
+        deliver() {
+          delivered = true;
+        },
+      },
+    ]),
+    diagnostics: {
+      delivery: {
+        eventCount: 0,
+        payloadFieldsPresent: false,
+        conversationFilterMatched: false,
+        expectedMessageMatched: false,
+        waitOutcome: "not-started",
+      },
+    },
+  };
+
+  recordRealtimePayload(state, {
+    new: {
+      id: "synthetic-message-id",
+      conversation_id: "synthetic-conversation-id",
+      sender_id: "synthetic-user-id",
+      body: "private synthetic body",
+    },
+  });
+
+  assert.equal(delivered, true);
+  assert.deepEqual(state.diagnostics.delivery, {
+    eventCount: 1,
+    payloadFieldsPresent: true,
+    conversationFilterMatched: true,
+    expectedMessageMatched: true,
+    waitOutcome: "not-started",
+  });
+  const sanitized = sanitizeRealtimeDiagnostics([
+    {
+      role: "patient",
+      auth: {
+        mode: "authenticated",
+        sessionPresent: true,
+        jwtValidated: true,
+        identityMatched: true,
+        realtimeAuthSet: true,
+        token: "private token",
+      },
+      subscription: {
+        statuses: ["SUBSCRIBED", "private error text"],
+        ready: true,
+        error: "private error",
+      },
+      rowVisibility: { checked: true, visible: true, rowCount: 1, row: "private payload" },
+      delivery: state.diagnostics.delivery,
+      body: "private synthetic body",
+    },
+  ]);
+  const serialized = JSON.stringify(sanitized);
+  assert.doesNotMatch(
+    serialized,
+    /private token|private error|private payload|private synthetic body/,
+  );
+  assert.match(serialized, /"statuses":\["SUBSCRIBED","OTHER"\]/);
 });
 
 test("Realtime authorization assertion failures are not misclassified as Auth failures", () => {
@@ -405,13 +534,21 @@ test("Realtime checks follow the message RLS contract and close bounded runner r
   assert.match(readiness, /schemaname = 'public'[\s\S]*?tablename = 'messages'/);
   assert.match(readiness, /indisprimary/);
   assert.match(readiness, /relrowsecurity/);
-  assert.match(runner, /map\(\s*prepareRealtimeAuth/);
+  assert.match(runner, /prepareRealtimeAuth\(client, expectedUserId, state\.diagnostics\)/);
+  assert.match(runner, /client\.auth\.getUser\(token\)/);
+  assert.match(
+    runner,
+    /\.channel\(`careconnect-ci-\$\{randomUUID\(\)\}`, realtimePostgresChangesOptions\(\)\)/,
+  );
+  assert.match(runner, /Realtime patient can SELECT the inserted message under its JWT/);
+  assert.match(runner, /Realtime clinic staff can SELECT the inserted message under its JWT/);
+  assert.match(runner, /realtime_diagnostics: sanitizeRealtimeDiagnostics\(realtimeDiagnostics\)/);
   assert.match(runner, /collectRealtimeDeliveries\(\[receivedByPatient, receivedByClinic\]\)/);
   assert.match(runner, /Realtime authorized patient message delivery \(patient=/);
   assert.match(runner, /Realtime authorized doctor reply delivery \(patient=/);
   assert.match(
     runner,
-    /realtimeChannel\(\s*clients\["clinic-staff"\],\s*conversationId,\s*realtimeResources,?\s*\)/,
+    /realtimeChannel\(\s*clients\["clinic-staff"\],\s*"clinic_staff",\s*conversationId,/,
   );
   assert.match(runner, /doctor cannot read protected raw messages outside the scoped inbox RPC/);
   assert.match(runner, /doctor receives the patient message through the assigned-conversation RPC/);
