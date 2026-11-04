@@ -8,8 +8,16 @@ on:
     paths:
       - ".github/workflows/real-service-integration.yml"
       - "scripts/real-service-integration.mjs"
+      - "scripts/real-service-integration.test.mjs"
+      - "scripts/staging-reconciliation-rehearsal.mjs"
+      - "scripts/staging-reconciliation-rehearsal.test.mjs"
       - "tests/real-service/**"
       - "playwright.real-service.config.ts"
+      - "vite.config.ts"
+      - "nitro.config.ts"
+      - "tsconfig.json"
+      - "index.html"
+      - "public/**"
       - "supabase/config.toml"
       - "supabase/migrations/**"
       - "supabase/tests/**"
@@ -128,7 +136,7 @@ jobs:
             test-artifacts/pgtap.log
             test-artifacts/concurrency.log
             test-artifacts/real-service-summary.json
-            test-artifacts/browser-flow-summary.json
+            test-artifacts/browser-workflow-summary.json
             test-artifacts/browser-failure-trace.json
           if-no-files-found: warn
           retention-days: 7
