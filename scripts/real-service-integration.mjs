@@ -526,13 +526,9 @@ async function runIntegration() {
       }),
       "invalid password rejected",
     );
-    const anonymousRows = await createClient(creds.url, creds.anonKey)
-      .from("patients")
-      .select("id")
-      .limit(1);
-    assert(
-      !anonymousRows.error && anonymousRows.data.length === 0,
-      "anonymous patient data request returns no rows",
+    await expectDenied(
+      createClient(creds.url, creds.anonKey).from("patients").select("id").limit(1),
+      "anonymous patient data request is denied",
     );
     const expired = createClient(creds.url, creds.anonKey, { auth: { persistSession: false } });
     await expectDenied(

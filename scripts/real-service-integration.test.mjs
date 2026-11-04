@@ -130,6 +130,14 @@ test("Auth session refresh is checked before password recovery can terminate the
   assert.ok(refresh >= 0 && recovery > refresh);
 });
 
+test("anonymous patient profile access accepts an explicit ACL rejection", () => {
+  const runner = readFileSync(path.join(root, "scripts/real-service-integration.mjs"), "utf8");
+  assert.match(
+    runner,
+    /await expectDenied\(\s*createClient\(creds\.url, creds\.anonKey\)\.from\("patients"\)\.select\("id"\)\.limit\(1\),\s*"anonymous patient data request is denied"/,
+  );
+});
+
 test("pre-seed cleanup deletes application profiles only for valid run Auth IDs", async () => {
   const calls = [];
   const admin = {
