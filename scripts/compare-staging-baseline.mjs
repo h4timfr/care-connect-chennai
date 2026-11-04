@@ -1,19 +1,5 @@
 import { readFileSync } from "node:fs";
-const [expected, observed] = process.argv.slice(2);
-if (!expected || !observed)
-  throw new Error("Usage: node scripts/compare-staging-baseline.mjs EXPECTED.json OBSERVED.json");
-const canonicalize = (x) =>
-  Array.isArray(x)
-    ? x.map(canonicalize)
-    : x && typeof x === "object"
-      ? Object.fromEntries(
-          Object.keys(x)
-            .sort()
-            .map((k) => [k, canonicalize(x[k])]),
-        )
-      : x;
-const a = JSON.parse(readFileSync(expected, "utf8")),
-  b = JSON.parse(readFileSync(observed, "utf8"));
+
 const required = [
   "schemas",
   "enums",
@@ -28,22 +14,48 @@ const required = [
   "column_grants",
   "publication",
 ];
-for (const value of [a, b])
-  if (
-    !value ||
-    typeof value !== "object" ||
-    required.some((k) => !Array.isArray(value[k])) ||
-    Object.keys(value).length !== required.length
-  )
-    throw new Error("Incomplete or unexpected snapshot categories");
-const keys = Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).sort();
-let different = false;
-for (const key of keys) {
-  const equal =
-    Object.hasOwn(a, key) &&
-    Object.hasOwn(b, key) &&
-    JSON.stringify(canonicalize(a[key])) === JSON.stringify(canonicalize(b[key]));
-  different ||= !equal;
-  console.log(key + ": " + (equal ? "MATCH" : "DIFFERENCE"));
+
+const canonicalize = (value) =>
+  Array.isArray(value)
+    ? value.map(canonicalize)
+    : value && typeof value === "object"
+      ? Object.fromEntries(
+          Object.keys(value)
+            .sort()
+            .map((key) => [key, canonicalize(value[key])]),
+        )
+      : value;
+
+const args = process.argv.slice(2);
+if (args.length !== 2 || args.some((arg) => !arg)) {
+  console.error("Usage: node scripts/compare-staging-baseline.mjs EXPECTED.json OBSERVED.json");
+  process.exitCode = 1;
+} else {
+  try {
+    const [a, b] = args.map((file) => JSON.parse(readFileSync(file, "utf8")));
+    for (const value of [a, b]) {
+      if (
+        !value ||
+        typeof value !== "object" ||
+        required.some((key) => !Object.hasOwn(value, key) || !Array.isArray(value[key])) ||
+        Object.keys(value).length !== required.length
+      ) {
+        throw new Error("Invalid snapshot");
+      }
+    }
+
+    // Prepare the entire result before printing: malformed inputs cannot emit a partial pass.
+    const results = [...required].sort().map((key) => ({
+      key,
+      equal: JSON.stringify(canonicalize(a[key])) === JSON.stringify(canonicalize(b[key])),
+    }));
+    for (const { key, equal } of results) {
+      console.log(`${key}: ${equal ? "MATCH" : "DIFFERENCE"}`);
+    }
+    process.exitCode = results.every(({ equal }) => equal) ? 0 : 1;
+  } catch {
+    // JSON and filesystem errors can contain raw input or private paths. Keep diagnostics fixed.
+    console.error("Baseline comparison failed: invalid, incomplete, or unreadable snapshot.");
+    process.exitCode = 1;
+  }
 }
-process.exitCode = different ? 1 : 0;
