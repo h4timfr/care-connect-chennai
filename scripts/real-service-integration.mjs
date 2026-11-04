@@ -643,17 +643,41 @@ async function runIntegration() {
       return true;
     });
     assert(discovery, "provider discovery requests completed");
-    const staffMemberships = await clients["clinic-staff"]
-      .from("clinic_memberships")
-      .select("clinic_id")
-      .eq("clinic_id", clinic);
+    const staffIdentity = await measure("auth.verify_clinic_staff_identity", () =>
+      clients["clinic-staff"].auth.getUser(),
+    );
+    assert(
+      !staffIdentity.error && staffIdentity.data.user?.id === users["clinic-staff"].id,
+      "clinic staff Auth identity matches its synthetic fixture",
+    );
+    const seededStaffMembership = await measure("postgrest.verify_seeded_clinic_membership", () =>
+      admin
+        .from("clinic_memberships")
+        .select("user_id,clinic_id,role,active")
+        .eq("user_id", users["clinic-staff"].id)
+        .eq("clinic_id", clinic)
+        .single(),
+    );
+    assert(
+      !seededStaffMembership.error &&
+        seededStaffMembership.data.role === "clinic_staff" &&
+        seededStaffMembership.data.active === true,
+      "service role confirms the synthetic active clinic membership fixture",
+    );
+    const staffMemberships = await measure("postgrest.clinic_staff_membership_read", () =>
+      clients["clinic-staff"]
+        .from("clinic_memberships")
+        .select("clinic_id")
+        .eq("clinic_id", clinic),
+    );
+    const membershipSqlState = safeSqlState(staffMemberships.error);
     const otherMemberships = await clients["other-patient"]
       .from("clinic_memberships")
       .select("clinic_id")
       .eq("clinic_id", clinic);
     assert(
       !staffMemberships.error && staffMemberships.data.length === 1,
-      "clinic staff reads its active membership",
+      `clinic staff reads its active membership${membershipSqlState ? ` (SQLSTATE ${membershipSqlState})` : ""}`,
     );
     assert(
       !otherMemberships.error && otherMemberships.data.length === 0,

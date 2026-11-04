@@ -218,6 +218,13 @@ test("provider discovery checks schedules under their intended anonymous RLS rol
   assert.match(runner, /anonymous role reads schedules for a published provider/);
 });
 
+test("clinic membership integration distinguishes Auth identity, fixture state, and RLS access", () => {
+  const runner = readFileSync(path.join(root, "scripts/real-service-integration.mjs"), "utf8");
+  assert.match(runner, /clinic staff Auth identity matches its synthetic fixture/);
+  assert.match(runner, /service role confirms the synthetic active clinic membership fixture/);
+  assert.match(runner, /clinic staff reads its active membership\$\{membershipSqlState/);
+});
+
 test("the workflow provisions only local Supabase services and never links a remote project", () => {
   const workflow = readFileSync(
     path.join(root, ".github/workflows/real-service-integration.yml"),
