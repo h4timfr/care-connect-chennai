@@ -211,6 +211,13 @@ test("verified clinic-doctor fixture uses the synthetic admin identity in transa
   );
 });
 
+test("provider discovery checks schedules under their intended anonymous RLS role", () => {
+  const runner = readFileSync(path.join(root, "scripts/real-service-integration.mjs"), "utf8");
+  assert.match(runner, /authenticated patient cannot read published schedules directly/);
+  assert.match(runner, /const publicDiscovery = createClient\(creds\.url, creds\.anonKey\)/);
+  assert.match(runner, /anonymous role reads schedules for a published provider/);
+});
+
 test("the workflow provisions only local Supabase services and never links a remote project", () => {
   const workflow = readFileSync(
     path.join(root, ".github/workflows/real-service-integration.yml"),

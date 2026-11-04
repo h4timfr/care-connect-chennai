@@ -619,14 +619,30 @@ async function runIntegration() {
     const discovery = await measure("postgrest.provider_discovery", async () => {
       const docs = await patient.from("doctors").select("id,name").eq("id", doctor).single();
       const clinics = await patient.from("clinics").select("id,name").eq("id", clinic).single();
-      const schedules = await patient.from("doctor_schedules").select("id").eq("clinic_id", clinic);
       assert(
-        !docs.error && !clinics.error && !schedules.error && schedules.data.length === 7,
-        "doctor, clinic and public schedule discovery",
+        !docs.error && docs.data.id === doctor,
+        "authenticated patient discovers the published doctor",
+      );
+      assert(
+        !clinics.error && clinics.data.id === clinic,
+        "authenticated patient discovers the published clinic",
+      );
+      await expectDenied(
+        patient.from("doctor_schedules").select("id").eq("clinic_id", clinic),
+        "authenticated patient cannot read published schedules directly",
+      );
+      const publicDiscovery = createClient(creds.url, creds.anonKey);
+      const schedules = await publicDiscovery
+        .from("doctor_schedules")
+        .select("id")
+        .eq("clinic_id", clinic);
+      assert(
+        !schedules.error && schedules.data.length === 7,
+        "anonymous role reads schedules for a published provider",
       );
       return true;
     });
-    assert(discovery, "public provider discovery returned real PostgREST rows");
+    assert(discovery, "provider discovery requests completed");
     const staffMemberships = await clients["clinic-staff"]
       .from("clinic_memberships")
       .select("clinic_id")
