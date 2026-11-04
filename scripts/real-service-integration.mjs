@@ -312,6 +312,11 @@ function assert(condition, label) {
   if (!condition) throw new Error(`integration assertion failed: ${label}`);
 }
 
+export function safeSqlState(error) {
+  const code = typeof error?.code === "string" ? error.code : "";
+  return /^[0-9A-Z]{5}$/.test(code) ? code : null;
+}
+
 async function expectDenied(promise, label) {
   let denied = false;
   try {
@@ -592,7 +597,11 @@ async function runIntegration() {
         p_booking_enabled: true,
       }),
     );
-    assert(!publish.error, "platform admin can publish a verified synthetic provider");
+    const publicationSqlState = safeSqlState(publish.error);
+    assert(
+      !publish.error,
+      `platform admin can publish a verified synthetic provider${publicationSqlState ? ` (SQLSTATE ${publicationSqlState})` : ""}`,
+    );
     const discovery = await measure("postgrest.provider_discovery", async () => {
       const docs = await patient.from("doctors").select("id,name").eq("id", doctor).single();
       const clinics = await patient.from("clinics").select("id,name").eq("id", clinic).single();

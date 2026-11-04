@@ -11,6 +11,7 @@ import {
   matchesCanonicalDisposableBaseline,
   removeUnseededApplicationUsers,
   rejectRemoteConfiguration,
+  safeSqlState,
   summarizeBrowserWorkflows,
   verifyRepositoryIntegrity,
 } from "./real-service-integration.mjs";
@@ -136,6 +137,12 @@ test("anonymous patient profile access accepts an explicit ACL rejection", () =>
     runner,
     /await expectDenied\(\s*createClient\(creds\.url, creds\.anonKey\)\.from\("patients"\)\.select\("id"\)\.limit\(1\),\s*"anonymous patient data request is denied"/,
   );
+});
+
+test("integration failure diagnostics expose only a validated SQLSTATE", () => {
+  assert.equal(safeSqlState({ code: "42501", message: "private detail" }), "42501");
+  assert.equal(safeSqlState({ code: "not-a-state", message: "private detail" }), null);
+  assert.equal(safeSqlState(new Error("private detail")), null);
 });
 
 test("pre-seed cleanup deletes application profiles only for valid run Auth IDs", async () => {
