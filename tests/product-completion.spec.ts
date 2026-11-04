@@ -167,13 +167,22 @@ for (const scheme of ["light", "dark"] as const) {
 // Patient / clinic / doctor sign-in entrances are covered in tests/portals.spec.ts.
 
 test.describe("Clinic applications", () => {
-  test("for-clinics page explains verification and links to clinic registration", async ({
+  test("for-clinics page separates application, publication and booking", async ({
     page,
     backend,
   }) => {
     await backend({}, { signedIn: false });
     await page.goto("/providers");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Bring your clinic");
+    await expect(
+      page.getByText("Applying does not automatically publish a listing or enable booking."),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Online booking is enabled separately when real schedules are ready."),
+    ).toBeVisible();
+    await expect(
+      page.getByText("They are not participating providers and cannot be booked."),
+    ).toBeVisible();
     await expect(page.getByText("About the sample listings")).toBeVisible();
     await page.getByRole("link", { name: "Apply to list your clinic" }).first().click();
     await expect(page).toHaveURL(/\/clinic\/signup$/);

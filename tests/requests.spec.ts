@@ -70,18 +70,36 @@ test("each route requests only what it shows, once", async ({ page }) => {
   expect(mock.calls.filter((c) => c.path.startsWith("/auth/v1/"))).toEqual([]);
 });
 
-test("public listings request explicit columns only", async ({ page }) => {
+test("public listings request safe columns and preserve publication filters", async ({ page }) => {
   const mock = await mockBackend(page, { signedIn: false });
   await page.goto("/discover");
   await page.waitForLoadState("networkidle");
   await page.fill("#discover-search", "adyar");
   await expect.poll(() => mock.callsTo("GET", "/rest/v1/doctors").length).toBe(2);
-  for (const call of [
-    ...mock.callsTo("GET", "/rest/v1/doctors"),
-    ...mock.callsTo("GET", "/rest/v1/clinics"),
-  ]) {
-    const select = new URLSearchParams(call.search).get("select") ?? "";
-    expect(select).not.toMatch(/(^|,)\*($|,)/);
+  const doctorCalls = mock.callsTo("GET", "/rest/v1/doctors");
+  const clinicCalls = mock.callsTo("GET", "/rest/v1/clinics");
+  expect(clinicCalls.length).toBeGreaterThan(0);
+  for (const call of [...doctorCalls, ...clinicCalls]) {
+    const params = new URLSearchParams(call.search);
+    const select = params.get("select") ?? "";
+    expect(select).not.toMatch(/(^|[,(])\s*\*\s*(?=[,)]|$)/);
     expect(select).not.toContain("user_id");
+    expect(select).not.toMatch(/(^|[,(])\s*(?:phone|email)\s*(?=[,)]|$)/);
+    expect(params.get("is_demo")).toBe("eq.false");
+  }
+  for (const call of clinicCalls) {
+    const params = new URLSearchParams(call.search);
+    expect(params.get("clinic_verification_state")).toBe("eq.verified");
+    expect(params.get("is_published")).toBe("eq.true");
+  }
+  for (const call of doctorCalls) {
+    const params = new URLSearchParams(call.search);
+    const select = params.get("select") ?? "";
+    expect(select).toContain("clinic_doctors!inner(");
+    expect(select).toContain("clinics!inner(");
+    expect(params.get("clinic_doctors.active")).toBe("eq.true");
+    expect(params.get("clinic_doctors.verification_state")).toBe("eq.verified");
+    expect(params.get("clinic_doctors.clinics.clinic_verification_state")).toBe("eq.verified");
+    expect(params.get("clinic_doctors.clinics.is_published")).toBe("eq.true");
   }
 });

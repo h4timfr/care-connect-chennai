@@ -14,7 +14,6 @@ import {
   Sparkles,
   Star,
   Stethoscope,
-  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -109,27 +108,7 @@ export function SampleBadge({ className }: { className?: string | undefined }) {
   );
 }
 
-/**
- * A real provider CareConnect has checked: a clinic that is not sample content, or a doctor who is
- * not sample content and has a verified, active clinic link (the same rule booking enforces).
- */
-export function VerifiedBadge({ className }: { className?: string | undefined }) {
-  const { t } = useI18n();
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-highlight-soft px-2 py-0.5 text-[11px] font-semibold text-highlight",
-        className,
-      )}
-      title={t("common.verifiedNote")}
-    >
-      <ShieldCheck className="h-3 w-3" aria-hidden />
-      {t("common.verified")}
-    </span>
-  );
-}
-
-/** Listed, but no verified active clinic–doctor link exists for online booking. */
+/** Online booking is not enabled for this listing. */
 export function NotBookableBadge({ className }: { className?: string | undefined }) {
   const { t } = useI18n();
   return (
@@ -162,8 +141,8 @@ export function ContactUnavailableBadge({ className }: { className?: string | un
 }
 
 /**
- * The one truthful status for a listing: sample content, verified for online booking (a verified,
- * active clinic–doctor link — the rule book_appointment enforces), or listed but not yet bookable.
+ * Booking and patient contact are independent capabilities. Their public status does not
+ * communicate the scope of any registration review, so the listing makes no generic verified claim.
  */
 export function ListingStatus({
   isSample,
@@ -177,9 +156,13 @@ export function ListingStatus({
   className?: string | undefined;
 }) {
   if (isSample) return <SampleBadge className={className} />;
-  if (!contactable) return <ContactUnavailableBadge className={className} />;
-  if (bookable) return <VerifiedBadge className={className} />;
-  return <NotBookableBadge className={className} />;
+  if (contactable && bookable) return null;
+  return (
+    <span className={cn("inline-flex flex-wrap items-center gap-1.5", className)}>
+      {!bookable ? <NotBookableBadge /> : null}
+      {!contactable ? <ContactUnavailableBadge /> : null}
+    </span>
+  );
 }
 
 export function SectionHeader({

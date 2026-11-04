@@ -658,7 +658,7 @@ export const en = {
   "admin.doctorRejected": "Doctor not verified",
   "admin.doctorVerified": "Doctor verified",
   "admin.doctorsHelp":
-    "Verify a doctor only after checking their medical council registration. Verified doctors become visible and bookable at that clinic.",
+    "Confirm registration and the doctor's relationship to this clinic before verifying the link. Publication and online booking are separate controls.",
   "admin.inactive": "Inactive",
   "admin.loadError": "We couldn't load this list",
   "admin.memberAdded": "Member added",
@@ -778,12 +778,12 @@ export const en = {
   "clinicDoctors.registration": "Registration",
   "clinicDoctors.rejectedNote": "Not verified. Contact CareConnect for details.",
   "clinicDoctors.verificationNote":
-    "Doctors become visible to patients and bookable only after CareConnect verifies their registration.",
+    "CareConnect reviews each doctor–clinic link before it can appear publicly. Publication and online booking require separate approval.",
   "common.verified": "Verified",
   "common.verifiedNote": "CareConnect has checked this provider's registration.",
   "nav.forClinics": "For clinics",
   "profile.providerBody":
-    "Clinics and doctors can apply to join CareConnect. Every provider is verified before patients can book.",
+    "Clinics and doctors can apply to join CareConnect. Review, public listing and online booking are separate steps.",
   "profile.providerLearn": "How it works",
   "profile.providerTitle": "Run a clinic?",
   "propose.about": "About the doctor",
@@ -819,10 +819,10 @@ export const en = {
     "Set weekly hours and appointment length for each verified doctor.",
   "providers.featuresTitle": "What your clinic gets",
   "providers.howBody":
-    "Listings on CareConnect are verified by our team. Nothing goes live until registration details have been checked.",
+    "Clinic applications and doctor–clinic relationships are reviewed before publication. Patient enquiries and online booking need separate approval.",
   "providers.howTitle": "How joining works",
   "providers.samplesBody":
-    "The clinics and doctors currently shown are labelled sample listings for demonstration. They are not real providers and cannot be booked. They will be removed as verified providers join.",
+    "Any sample listings are for demonstration only. They are not participating providers and cannot be booked.",
   "providers.samplesTitle": "About the sample listings",
   "providers.signIn": "Clinic & provider sign in",
   "providers.step1.body":
@@ -835,10 +835,10 @@ export const en = {
     "Your clinic admin proposes each doctor with their medical registration details.",
   "providers.step3.title": "Add your doctors",
   "providers.step4.body":
-    "Verified doctors appear in search and patients can request appointments.",
+    "Approved listings can appear in search. Online booking is enabled separately when real schedules are ready.",
   "providers.step4.title": "Go live",
   "providers.subtitle":
-    "Manage appointment requests, opening hours and patient messages in one place. Every clinic and doctor is verified before they're listed.",
+    "Manage appointment requests, opening hours and patient messages in one place. Applying does not automatically publish a listing or enable booking.",
   "providers.title": "Bring your clinic to patients across Chennai",
   "schedule.day": "Day",
   "schedule.done": "Done",

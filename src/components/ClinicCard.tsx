@@ -11,8 +11,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
   const { doctorsOfClinic } = useApp();
   const clinicDoctors = doctorsOfClinic(clinic.id);
   const doctorCount = clinicDoctors.length;
-  // "Verified" only when a doctor here is bookable (verified, active link); a clinic merely being
-  // in the directory is not a verification.
+  // Booking requires an active, verified link and an enabled clinic booking state.
   const bookable = clinicHasBookableDoctor(clinic.id, clinicDoctors);
   const [minFee, maxFee] = clinic.feeRange;
   const { t, fmt } = useI18n();

@@ -136,7 +136,7 @@ test.describe("Clinic portal visibility", () => {
 
 test.describe("Truthful listing status", () => {
   // Real (non-sample) listings: Clinic A has a verified, active doctor link; Clinic B only a
-  // pending one. "Verified" must follow the booking rule, never mere presence in the directory.
+  // pending one. Booking and contact indicators must follow their separate backend permissions.
   const realListings = () => {
     const state = defaultState();
     for (const row of [...state.clinics, ...state.doctors]) row["is_demo"] = false;
@@ -146,25 +146,29 @@ test.describe("Truthful listing status", () => {
   };
   const card = (page: Page, name: string) => page.locator("article").filter({ hasText: name });
 
-  test("doctor cards say Verified only for a bookable doctor", async ({ page, backend }) => {
-    await backend(realListings(), { signedIn: false });
-    await page.goto("/discover");
-    const verified = card(page, "Dr. Verified Tester");
-    const pending = card(page, "Dr. Pending Tester");
-    await expect(verified.getByText("Verified", { exact: true })).toBeVisible();
-    await expect(verified.getByText("Not yet bookable")).toHaveCount(0);
-    await expect(pending.getByText("Patient enquiries unavailable")).toBeVisible();
-    await expect(pending.getByText("Verified", { exact: true })).toHaveCount(0);
-  });
-
-  test("a clinic is Verified only when one of its doctors is bookable", async ({
+  test("doctor cards show booking without claiming registration verification", async ({
     page,
     backend,
   }) => {
     await backend(realListings(), { signedIn: false });
+    await page.goto("/discover");
+    const verified = card(page, "Dr. Verified Tester");
+    const pending = card(page, "Dr. Pending Tester");
+    await expect(verified.getByRole("link", { name: "Book", exact: true })).toBeVisible();
+    await expect(verified.getByText("Verified", { exact: true })).toHaveCount(0);
+    await expect(verified.getByText("Not yet bookable")).toHaveCount(0);
+    await expect(pending.getByText("Not yet bookable")).toBeVisible();
+    await expect(pending.getByText("Patient enquiries unavailable")).toBeVisible();
+    await expect(pending.getByText("Verified", { exact: true })).toHaveCount(0);
+  });
+
+  test("clinic cards distinguish booking from patient contact", async ({ page, backend }) => {
+    await backend(realListings(), { signedIn: false });
     await page.goto("/discover?tab=clinics");
-    await expect(card(page, "Test Clinic A").getByText("Verified", { exact: true })).toBeVisible();
+    await expect(card(page, "Test Clinic A").getByText("Not yet bookable")).toHaveCount(0);
+    await expect(card(page, "Test Clinic A").getByText("Verified", { exact: true })).toHaveCount(0);
     const clinicB = card(page, "Test Clinic B");
+    await expect(clinicB.getByText("Not yet bookable")).toBeVisible();
     await expect(clinicB.getByText("Patient enquiries unavailable")).toBeVisible();
     await expect(clinicB.getByText("Verified", { exact: true })).toHaveCount(0);
 
@@ -174,6 +178,31 @@ test.describe("Truthful listing status", () => {
     await page.goto(`/doctors/${ids.doctorPending}`);
     await expect(page.getByRole("heading", { level: 1, name: "Dr. Pending Tester" })).toBeVisible();
     await expect(page.getByText("Patient enquiries unavailable").first()).toBeVisible();
+  });
+
+  test("a bookable provider may independently disable patient enquiries", async ({
+    page,
+    backend,
+  }) => {
+    const listings = realListings();
+    listings.clinics[0]!["patient_contact_permission"] = "revoked";
+    await backend(listings, { signedIn: false });
+    await page.goto("/discover");
+    const provider = card(page, "Dr. Verified Tester");
+    await expect(provider.getByRole("link", { name: "Book", exact: true })).toBeVisible();
+    await expect(provider.getByText("Patient enquiries unavailable")).toBeVisible();
+    await expect(provider.getByText("Not yet bookable")).toHaveCount(0);
+  });
+
+  test("a contactable provider may independently disable booking", async ({ page, backend }) => {
+    const listings = realListings();
+    listings.clinics[0]!["booking_enabled"] = false;
+    await backend(listings, { signedIn: false });
+    await page.goto("/discover");
+    const provider = card(page, "Dr. Verified Tester");
+    await expect(provider.getByRole("link", { name: "Book", exact: true })).toHaveCount(0);
+    await expect(provider.getByText("Not yet bookable")).toBeVisible();
+    await expect(provider.getByText("Patient enquiries unavailable")).toHaveCount(0);
   });
 
   test("sample listings are never shown as verified", async ({ page, backend }) => {
