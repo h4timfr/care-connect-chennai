@@ -8,6 +8,7 @@ import {
   assertLoopbackUrl,
   assertLocalProjectRefMatchesConfig,
   rejectRemoteConfiguration,
+  summarizeBrowserWorkflows,
   verifyRepositoryIntegrity,
 } from "./real-service-integration.mjs";
 
@@ -89,6 +90,108 @@ test("the workflow provisions only local Supabase services and never links a rem
     /supabase\s+(?:link|db\s+push|migration\s+up\s+--linked|db\s+reset\s+--linked)/,
   );
   assert.match(workflow, /supabase stop --no-backup/);
+});
+
+test("browser evidence counts test cases, assertions, and observed HTTP operations separately", () => {
+  const summary = summarizeBrowserWorkflows([
+    {
+      name: "patient",
+      status: "PASS",
+      assertions: [{ name: "patient booking is confirmed", status: "PASS" }],
+      http_requests: 8,
+      request_failures: 0,
+    },
+    {
+      name: "clinic",
+      status: "FAIL",
+      assertions: [{ name: "clinic can see appointment", status: "FAIL" }],
+      http_requests: 5,
+      request_failures: 1,
+    },
+    {
+      name: "doctor",
+      status: "BLOCKED",
+      assertions: [],
+      http_requests: 0,
+      request_failures: 0,
+    },
+    {
+      name: "administrator",
+      status: "PASS",
+      assertions: [{ name: "admin publication change succeeds", status: "PASS" }],
+      http_requests: 6,
+      request_failures: 0,
+    },
+  ]);
+
+  assert.deepEqual(summary.test_cases, { total: 4, passed: 2, failed: 1, blocked: 1 });
+  assert.deepEqual(summary.workflow_counts, { passed: 2, failed: 1, blocked: 1 });
+  assert.deepEqual(
+    {
+      total: summary.assertions.total,
+      passed: summary.assertions.passed,
+      failed: summary.assertions.failed,
+    },
+    { total: 3, passed: 2, failed: 1 },
+  );
+  assert.deepEqual(summary.service_operations, {
+    kind: "observed browser HTTP requests",
+    observed: 19,
+    failed: 1,
+  });
+});
+
+test("browser workflow scenarios use UI actions and run independently", () => {
+  const spec = readFileSync(path.join(root, "tests/real-service/workflows.spec.ts"), "utf8");
+  const config = readFileSync(path.join(root, "playwright.config.ts"), "utf8");
+  for (const title of [
+    "patient books and cancels an appointment through the interface",
+    "clinic staff sees the created appointment in the clinic portal",
+    "doctor sees the appointment, receives a patient message, and replies in the portals",
+    "administrator reviews the clinic and changes publication through the interface",
+  ]) {
+    assert.ok(spec.includes(`test("${title}"`), `missing independent scenario: ${title}`);
+  }
+  assert.doesNotMatch(spec, /createClient|fetch\(|page\.request\.|\.rpc\(/);
+  assert.match(spec, /getByRole\("button", \{ name: "Request appointment" \}\)/);
+  assert.match(spec, /getByRole\("button", \{ name: "Send reply" \}\)/);
+  assert.match(spec, /getByRole\("tab", \{ name: "Provider publishing" \}\)/);
+  assert.ok(config.includes('"**/real-service/**"'));
+});
+
+test("real-service workflow triggers cover every imported project runtime dependency", () => {
+  const workflow = readFileSync(
+    path.join(root, ".github/workflows/real-service-integration.yml"),
+    "utf8",
+  );
+  for (const pathFilter of [
+    "scripts/staging-reconciliation-rehearsal.mjs",
+    "scripts/staging-reconciliation-rehearsal.test.mjs",
+    "scripts/run-sql-ci-step*.mjs",
+    "scripts/local-sql-test-target*.mjs",
+    "vite.config.ts",
+    "nitro.config.ts",
+    "src/**",
+    "package-lock.json",
+  ]) {
+    assert.ok(workflow.includes(`- "${pathFilter}"`), `missing CI path filter: ${pathFilter}`);
+  }
+  assert.match(workflow, /test-artifacts\/browser-workflow-summary\.json/);
+  assert.doesNotMatch(workflow, /browser-flow-summary\.json/);
+  const rehearsal = readFileSync(
+    path.join(root, ".github/workflows/staging-reconciliation-rehearsal.yml"),
+    "utf8",
+  );
+  for (const pathFilter of [
+    "playwright.config.ts",
+    "tests/deferred-toast.spec.ts",
+    "src/components/DeferredToaster.tsx",
+  ]) {
+    assert.ok(
+      rehearsal.includes(`- "${pathFilter}"`),
+      `missing mocked suite path filter: ${pathFilter}`,
+    );
+  }
 });
 
 test("generated integration artifacts and build output stay outside proposed commits", () => {

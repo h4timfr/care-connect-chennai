@@ -15,6 +15,9 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const artifacts = path.join(root, "test-artifacts");
+let activeAssertionResults = null;
+let currentIntegrationCheck = "fixture-creation";
+const browserWorkflowNames = ["patient", "clinic", "doctor", "administrator"];
 
 export function assertLoopbackUrl(raw, expectedPort) {
   let url;
@@ -150,6 +153,83 @@ function writeSafe(name, content) {
   writeFileSync(path.join(artifacts, name), content, { mode: 0o600 });
 }
 
+export function summarizeBrowserWorkflows(items) {
+  const workflowCounts = {
+    passed: items.filter((item) => item.status === "PASS").length,
+    failed: items.filter((item) => item.status === "FAIL").length,
+    blocked: items.filter((item) => item.status === "BLOCKED").length,
+  };
+  const assertions = items.flatMap((item) =>
+    item.assertions.map((assertion) => ({ workflow: item.name, ...assertion })),
+  );
+  return {
+    environment: "disposable-local-supabase",
+    test_cases: { total: items.length, ...workflowCounts },
+    workflows: items,
+    workflow_counts: workflowCounts,
+    assertions: {
+      total: assertions.length,
+      passed: assertions.filter((item) => item.status === "PASS").length,
+      failed: assertions.filter((item) => item.status === "FAIL").length,
+      results: assertions,
+    },
+    service_operations: {
+      kind: "observed browser HTTP requests",
+      observed: items.reduce((sum, item) => sum + item.http_requests, 0),
+      failed: items.reduce((sum, item) => sum + item.request_failures, 0),
+    },
+  };
+}
+
+function blockedBrowserWorkflows() {
+  return summarizeBrowserWorkflows(
+    browserWorkflowNames.map((name) => ({
+      name,
+      status: "BLOCKED",
+      assertions: [],
+      http_requests: 0,
+      request_failures: 0,
+    })),
+  );
+}
+
+function readBrowserWorkflowEvidence() {
+  const filename = path.join(artifacts, "browser-workflow-summary.json");
+  if (!existsSync(filename)) return blockedBrowserWorkflows();
+  try {
+    const source = JSON.parse(readFileSync(filename, "utf8"));
+    const byName = new Map(
+      Array.isArray(source.workflows) ? source.workflows.map((item) => [item.name, item]) : [],
+    );
+    const workflows = browserWorkflowNames.map((name) => {
+      const item = byName.get(name);
+      const status = ["PASS", "FAIL", "BLOCKED"].includes(item?.status) ? item.status : "BLOCKED";
+      const assertions = Array.isArray(item?.assertions)
+        ? item.assertions
+            .filter(
+              (assertion) =>
+                typeof assertion?.name === "string" && ["PASS", "FAIL"].includes(assertion?.status),
+            )
+            .map(({ name: assertionName, status: assertionStatus }) => ({
+              name: assertionName,
+              status: assertionStatus,
+            }))
+        : [];
+      const integer = (value) => (Number.isSafeInteger(value) && value >= 0 ? value : 0);
+      return {
+        name,
+        status,
+        assertions,
+        http_requests: integer(item?.http_requests),
+        request_failures: integer(item?.request_failures),
+      };
+    });
+    return summarizeBrowserWorkflows(workflows);
+  } catch {
+    return blockedBrowserWorkflows();
+  }
+}
+
 function statusValue(text, key) {
   const match = text.match(new RegExp(`^${key}=(.*)$`, "m"));
   if (!match) throw new Error("local service status was incomplete");
@@ -226,14 +306,9 @@ function password() {
   return `Cc!${randomBytes(24).toString("base64url")}a9`;
 }
 
-function duration(fn) {
-  const start = performance.now();
-  return Promise.resolve()
-    .then(fn)
-    .then((value) => ({ value, ms: Math.round(performance.now() - start) }));
-}
-
 function assert(condition, label) {
+  currentIntegrationCheck = label;
+  activeAssertionResults?.push({ name: label, status: condition ? "PASS" : "FAIL" });
   if (!condition) throw new Error(`integration assertion failed: ${label}`);
 }
 
@@ -307,20 +382,35 @@ async function runIntegration() {
   const users = {};
   const clients = {};
   const timings = {};
-  const outcomes = [];
+  const serviceAssertions = [];
+  const serviceOperations = [];
   const ids = { clinic_id: randomUUID(), doctor_id: randomUUID() };
   let storagePath;
   let cleanupResult;
   let initialCounts;
   let fixturesSeeded = false;
   let recoveryEmailAddress;
-  let currentCheck = "fixture-creation";
+  let serviceStatus = "RUNNING";
+  let browserRunnerFailed = false;
+  let cleanupSqlSucceeded = true;
+  activeAssertionResults = serviceAssertions;
+  currentIntegrationCheck = "fixture-creation";
+  writeSafe("browser-workflow-summary.json", JSON.stringify(blockedBrowserWorkflows(), null, 2));
   const measure = async (name, action) => {
-    currentCheck = name;
-    const result = await duration(action);
-    timings[name] = result.ms;
-    outcomes.push({ name, status: "PASS", duration_ms: result.ms });
-    return result.value;
+    currentIntegrationCheck = name;
+    const started = performance.now();
+    try {
+      const value = await action();
+      const elapsed = Math.round(performance.now() - started);
+      timings[name] = elapsed;
+      serviceOperations.push({ name, status: "COMPLETED", duration_ms: elapsed });
+      return value;
+    } catch (error) {
+      const elapsed = Math.round(performance.now() - started);
+      timings[name] = elapsed;
+      serviceOperations.push({ name, status: "THREW", duration_ms: elapsed });
+      throw error;
+    }
   };
   try {
     initialCounts = await verifyEmptyDisposableBaseline(admin);
@@ -534,14 +624,16 @@ async function runIntegration() {
     const available = slots.data.filter((slot) => slot.available).slice(0, 6);
     assert(available.length >= 6, "at least six synthetic booking slots are available");
     const booked = [];
-    for (const slot of available.slice(0, 5)) {
+    for (const [index, slot] of available.slice(0, 5).entries()) {
+      const appointmentReason =
+        index === 1 ? `Synthetic browser fixture ${runId}` : "Synthetic integration test";
       const appointment = await measure("rpc.book_appointment", () =>
         patient.rpc("book_appointment", {
           p_doctor_id: doctor,
           p_clinic_id: clinic,
           p_date: nextDate,
           p_time: slot.slot_time,
-          p_reason: "Synthetic integration test",
+          p_reason: appointmentReason,
         }),
       );
       assert(
@@ -833,14 +925,30 @@ async function runIntegration() {
       "anonymous booking is rejected",
     );
 
-    await runBrowserFlow({
+    const browserDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    const browserSlots = await measure("rpc.browser_booking_slots", () =>
+      patient.rpc("get_doctor_slots", {
+        p_doctor_id: ids.doctor_id,
+        p_clinic_id: ids.clinic_id,
+        p_date: browserDate,
+      }),
+    );
+    const browserSlot = browserSlots.data?.find((slot) => slot.available);
+    assert(
+      !browserSlots.error && browserSlot,
+      "a disposable slot exists for the UI booking workflow",
+    );
+    const browserTime = browserSlot.slot_time.slice(0, 5);
+    ids.browser_appointment_reason = `Synthetic UI appointment ${runId}`;
+    browserRunnerFailed = !(await runBrowserFlow({
       creds,
       users,
       ids,
       runId,
       conversationId,
-      browserDate: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
-    });
+      browserDate,
+      browserTime,
+    }));
     const signedOut = await measure("auth.logout", () => patient.auth.signOut());
     assert(!signedOut.error, "patient logout succeeds");
     const userAfterLogout = await patient.auth.getUser();
@@ -848,18 +956,9 @@ async function runIntegration() {
       Boolean(userAfterLogout.error) || !userAfterLogout.data.user,
       "logout removes active session",
     );
-    outcomes.push({
-      name: "real-service-integration",
-      status: "PASS",
-      assertions: outcomes.length,
-    });
+    serviceStatus = "PASS";
   } catch (error) {
-    outcomes.push({
-      name: "real-service-integration",
-      status: "FAIL",
-      stage: currentCheck,
-      category: safeFailureCategory(error),
-    });
+    serviceStatus = "FAIL";
     throw error;
   } finally {
     // Revoke every synthetic session before deleting Auth users; then remove only the run-owned object and rows.
@@ -880,11 +979,7 @@ async function runIntegration() {
           run_label: runLabel,
         });
       } catch {
-        outcomes.push({
-          name: "fixture-cleanup-sql",
-          status: "FAIL",
-          category: "owned-fixture-delete",
-        });
+        cleanupSqlSucceeded = false;
       }
     }
     for (const user of Object.values(users)) {
@@ -907,13 +1002,36 @@ async function runIntegration() {
       initialCounts,
     );
     cleanupResult.recovery_email_cleaned = recoveryMailCleaned;
-    cleanupResult.verified = cleanupResult.verified && recoveryMailCleaned;
-    if (!cleanupResult.verified)
-      outcomes.push({
-        name: "fixture-cleanup-verification",
-        status: "FAIL",
-        category: "owned-record-remains",
-      });
+    cleanupResult.sql_succeeded = cleanupSqlSucceeded;
+    cleanupResult.verified = cleanupResult.verified && recoveryMailCleaned && cleanupSqlSucceeded;
+    serviceAssertions.push({
+      name: "runner-owned synthetic fixtures are removed and verified",
+      status: cleanupResult.verified ? "PASS" : "FAIL",
+    });
+    const browserEvidence = readBrowserWorkflowEvidence();
+    const testCases = [
+      { name: "real-service-interaction-suite", status: serviceStatus },
+      {
+        name: "runner-owned-fixture-cleanup",
+        status: cleanupResult.verified ? "PASS" : "FAIL",
+      },
+      ...browserEvidence.workflows.map(({ name, status }) => ({ name, status })),
+    ];
+    const testCaseCounts = {
+      total: testCases.length,
+      passed: testCases.filter((item) => item.status === "PASS").length,
+      failed: testCases.filter((item) => item.status === "FAIL").length,
+      blocked: testCases.filter((item) => item.status === "BLOCKED").length,
+    };
+    const assertionCounts = {
+      total: serviceAssertions.length + browserEvidence.assertions.total,
+      passed:
+        serviceAssertions.filter((item) => item.status === "PASS").length +
+        browserEvidence.assertions.passed,
+      failed:
+        serviceAssertions.filter((item) => item.status === "FAIL").length +
+        browserEvidence.assertions.failed,
+    };
     writeSafe(
       "real-service-summary.json",
       JSON.stringify(
@@ -922,20 +1040,40 @@ async function runIntegration() {
           migration_count: 41,
           pg_tap_files: 22,
           initial_counts: initialCounts,
-          tests: outcomes,
+          test_cases: { ...testCaseCounts, results: testCases },
+          assertions: {
+            ...assertionCounts,
+            service: serviceAssertions,
+            browser: browserEvidence.assertions.results,
+          },
+          service_operations: {
+            kind: "instrumented service calls; COMPLETED means the call returned",
+            total: serviceOperations.length,
+            completed: serviceOperations.filter((item) => item.status === "COMPLETED").length,
+            threw: serviceOperations.filter((item) => item.status === "THREW").length,
+            results: serviceOperations,
+          },
+          workflows: browserEvidence.workflow_counts,
           timings_ms: timings,
           cleanup: cleanupResult,
+          failure:
+            serviceStatus === "FAIL"
+              ? { stage: currentIntegrationCheck, category: "service-integration" }
+              : null,
         },
         null,
         2,
       ),
     );
     console.log(
-      `Real-service outcomes: ${outcomes.filter((x) => x.status === "PASS").length} passed, ${outcomes.filter((x) => x.status === "FAIL").length} failed; cleanup ${cleanupResult.verified ? "verified" : "failed"}.`,
+      `Test cases: ${testCaseCounts.passed} passed, ${testCaseCounts.failed} failed, ${testCaseCounts.blocked} blocked. Assertions: ${assertionCounts.passed} passed, ${assertionCounts.failed} failed. Instrumented service operations: ${serviceOperations.length}; browser workflows: ${browserEvidence.workflow_counts.passed} passed, ${browserEvidence.workflow_counts.failed} failed, ${browserEvidence.workflow_counts.blocked} blocked; cleanup ${cleanupResult.verified ? "verified" : "failed"}.`,
     );
+    activeAssertionResults = null;
   }
   if (!cleanupResult?.verified)
     throw new Error("runner-owned fixture cleanup could not be independently verified");
+  if (browserRunnerFailed)
+    throw new Error("one or more real-service browser workflows did not pass");
 }
 
 function createExpiredJwt(secret) {
@@ -1070,7 +1208,15 @@ async function noInsert(state, body) {
   return state.delivered.includes(body);
 }
 
-async function runBrowserFlow({ creds, users, ids, runId, conversationId, browserDate }) {
+async function runBrowserFlow({
+  creds,
+  users,
+  ids,
+  runId,
+  conversationId,
+  browserDate,
+  browserTime,
+}) {
   const env = {
     PATH: process.env.PATH,
     HOME: process.env.HOME,
@@ -1089,9 +1235,12 @@ async function runBrowserFlow({ creds, users, ids, runId, conversationId, browse
     CARECONNECT_UNAUTHORIZED_EMAIL: users.unauthorized.email,
     CARECONNECT_UNAUTHORIZED_PASSWORD: users.unauthorized.password,
     CARECONNECT_CLINIC_ID: ids.clinic_id,
+    CARECONNECT_CLINIC_NAME: ids.clinic_name,
     CARECONNECT_DOCTOR_ID: ids.doctor_id,
+    CARECONNECT_BROWSER_APPOINTMENT_REASON: ids.browser_appointment_reason,
     CARECONNECT_CONVERSATION_ID: conversationId,
     CARECONNECT_BROWSER_DATE: browserDate,
+    CARECONNECT_BROWSER_TIME: browserTime,
     VITE_SUPABASE_URL: creds.url,
     VITE_SUPABASE_PUBLISHABLE_KEY: creds.anonKey,
     PLAYWRIGHT_REAL_SERVICE_BASE_URL: "http://127.0.0.1:4173",
@@ -1101,29 +1250,14 @@ async function runBrowserFlow({ creds, users, ids, runId, conversationId, browse
     ["playwright", "test", "--config=playwright.real-service.config.ts"],
     { cwd: root, env, encoding: "utf8", windowsHide: true, maxBuffer: 4 * 1024 * 1024 },
   );
-  const text = `${proc.stdout || ""}\n${proc.stderr || ""}`;
-  const passes = Number(text.match(/(\d+) passed/)?.[1] || 0);
-  const failures = Number(text.match(/(\d+) failed/)?.[1] || 0);
-  writeSafe(
-    "browser-flow-summary.json",
-    JSON.stringify(
-      {
-        environment: "disposable-local-supabase",
-        passed: passes,
-        failed: failures,
-        request_failures: sanitizeRequestFailureCount(text),
-        status: proc.status === 0 && passes > 0 ? "PASS" : "FAIL",
-      },
-      null,
-      2,
-    ),
+  const evidence = readBrowserWorkflowEvidence();
+  writeSafe("browser-workflow-summary.json", JSON.stringify(evidence, null, 2));
+  return (
+    proc.status === 0 &&
+    evidence.test_cases.total === browserWorkflowNames.length &&
+    evidence.workflow_counts.failed === 0 &&
+    evidence.workflow_counts.blocked === 0
   );
-  if (proc.status !== 0 || passes === 0 || failures)
-    throw new Error("real-service browser flow failed");
-}
-
-function sanitizeRequestFailureCount(text) {
-  return (text.match(/\b(?:ERR_|net::|HTTP [45]\d\d|Request failed)\b/g) || []).length;
 }
 
 function safeFailureCategory(error) {
