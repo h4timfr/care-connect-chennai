@@ -1,7 +1,7 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Loader2, MessageCircle } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";

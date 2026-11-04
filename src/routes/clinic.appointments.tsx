@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";

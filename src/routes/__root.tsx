@@ -15,7 +15,7 @@ import appCss from "../styles.css?url";
 import { AppProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/supabase/auth";
 import { isSupabaseConfigured, supabaseConfigMessage } from "@/lib/supabase/client";
-import { Toaster } from "@/components/ui/sonner";
+import { DeferredToaster } from "@/components/DeferredToaster";
 import { I18nProvider, languageInfo, loadMessages, useI18n } from "@/lib/i18n";
 import { resolveInitialLanguage } from "@/lib/i18n/initial";
 
@@ -169,7 +169,7 @@ function RootComponent() {
               <ConfigErrorBanner />
               {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
               <Outlet />
-              <Toaster position="top-center" richColors />
+              <DeferredToaster />
             </AppProvider>
           </AuthProvider>
         </I18nProvider>

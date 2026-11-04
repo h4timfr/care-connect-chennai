@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Bookmark, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Initials, ListingStatus, Rating } from "@/components/common";

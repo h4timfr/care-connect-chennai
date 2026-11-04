@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Banknote, CalendarDays, Stethoscope, Users, type LucideIcon } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { CatalogNotice } from "@/components/CatalogNotice";

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Loader2, MessageSquare, Send } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, Initials, PageLoader } from "@/components/common";
 import { Button } from "@/components/ui/button";

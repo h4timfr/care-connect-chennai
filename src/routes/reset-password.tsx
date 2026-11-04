@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { AuthCard, FormAlert } from "@/components/AuthCard";
 import { PageLoader } from "@/components/common";
 import { Button } from "@/components/ui/button";

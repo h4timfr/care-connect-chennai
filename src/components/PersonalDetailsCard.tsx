@@ -1,6 +1,6 @@
 import { Loader2, Pencil, User } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { FormAlert } from "@/components/AuthCard";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";

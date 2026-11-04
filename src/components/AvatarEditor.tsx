@@ -1,6 +1,6 @@
 import { Camera, Loader2, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { FormAlert } from "@/components/AuthCard";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Button } from "@/components/ui/button";

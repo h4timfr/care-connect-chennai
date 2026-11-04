@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { DoctorShell } from "@/components/layout/DoctorShell";
 import { FormAlert } from "@/components/AuthCard";
 import { InfoNotice } from "@/components/common";

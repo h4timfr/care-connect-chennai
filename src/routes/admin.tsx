@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { FormAlert } from "@/components/AuthCard";
 import { AdminGate } from "@/components/AdminGate";
