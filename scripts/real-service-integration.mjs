@@ -1041,7 +1041,7 @@ async function runIntegration() {
     );
     assert(
       patientDeliveries[0] && patientDeliveries[1],
-      `authorized patient message delivery (patient=${patientDeliveries[0] ? "PASS" : "FAIL"}; clinic_staff=${patientDeliveries[1] ? "PASS" : "FAIL"})`,
+      `Realtime authorized patient message delivery (patient=${patientDeliveries[0] ? "PASS" : "FAIL"}; clinic_staff=${patientDeliveries[1] ? "PASS" : "FAIL"})`,
     );
     const doctorDirectMessages = await clients.doctor
       .from("messages")
@@ -1075,7 +1075,7 @@ async function runIntegration() {
     );
     assert(
       replyDeliveries[0] && replyDeliveries[1],
-      `authorized doctor reply delivery (patient=${replyDeliveries[0] ? "PASS" : "FAIL"}; clinic_staff=${replyDeliveries[1] ? "PASS" : "FAIL"})`,
+      `Realtime authorized doctor reply delivery (patient=${replyDeliveries[0] ? "PASS" : "FAIL"}; clinic_staff=${replyDeliveries[1] ? "PASS" : "FAIL"})`,
     );
     const doctorInboxAfterReply = await clients.doctor.rpc("doctor_conversations");
     assert(
@@ -1652,11 +1652,11 @@ async function runBrowserFlow({
   );
 }
 
-function safeFailureCategory(error) {
+export function safeFailureCategory(error) {
   const message = String(error?.message || "");
   if (/realtime/i.test(message)) return "realtime-delivery";
   if (/cleanup/i.test(message)) return "cleanup";
-  if (/Auth|login|session|password/i.test(message)) return "auth";
+  if (/\b(?:Auth|login|session|password)\b/i.test(message)) return "auth";
   if (/Storage|avatar/i.test(message)) return "storage";
   if (/publication|booking|appointment/i.test(message)) return "booking-or-publication";
   if (/provider|clinic|doctor/i.test(message)) return "provider-workflow";

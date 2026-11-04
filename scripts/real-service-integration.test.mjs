@@ -15,6 +15,7 @@ import {
   matchesCanonicalDisposableBaseline,
   removeUnseededApplicationUsers,
   rejectRemoteConfiguration,
+  safeFailureCategory,
   safeSqlState,
   spawnSyncBounded,
   summarizeBrowserWorkflows,
@@ -122,6 +123,19 @@ test("Realtime delivery outcomes identify each subscriber without short-circuiti
   ]);
 
   assert.deepEqual(outcomes, [true, false]);
+});
+
+test("Realtime authorization assertion failures are not misclassified as Auth failures", () => {
+  assert.equal(
+    safeFailureCategory(
+      new Error("integration assertion failed: Realtime authorized patient message delivery"),
+    ),
+    "realtime-delivery",
+  );
+  assert.equal(
+    safeFailureCategory(new Error("integration assertion failed: authorized patient access")),
+    "service-assertion",
+  );
 });
 
 test("Auth cleanup stops refresh timers and disposes clients after signout hangs", async () => {
@@ -393,8 +407,8 @@ test("Realtime checks follow the message RLS contract and close bounded runner r
   assert.match(readiness, /relrowsecurity/);
   assert.match(runner, /map\(\s*prepareRealtimeAuth/);
   assert.match(runner, /collectRealtimeDeliveries\(\[receivedByPatient, receivedByClinic\]\)/);
-  assert.match(runner, /authorized patient message delivery \(patient=/);
-  assert.match(runner, /authorized doctor reply delivery \(patient=/);
+  assert.match(runner, /Realtime authorized patient message delivery \(patient=/);
+  assert.match(runner, /Realtime authorized doctor reply delivery \(patient=/);
   assert.match(
     runner,
     /realtimeChannel\(\s*clients\["clinic-staff"\],\s*conversationId,\s*realtimeResources,?\s*\)/,
