@@ -444,6 +444,7 @@ test.describe("Provider registration", () => {
     );
     await page.goto("/clinic/signup");
     await expect(page.getByText("will require verification")).toBeVisible();
+    await expect(page.getByText(/saved in this browser on this device/i)).toBeVisible();
     await page.getByLabel(/^Full name/).fill("Clinic Owner");
     await page.getByLabel(/^Email/).fill("owner@test.invalid");
     await page.getByLabel(/^Password/).fill("a-strong-pass-1");

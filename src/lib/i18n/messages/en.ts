@@ -740,7 +740,7 @@ export const en = {
   "apply.openPortal": "Open the clinic portal",
   "apply.phone": "Phone",
   "apply.privacy":
-    "We use these details only to verify your clinic and contact you about this application.",
+    "If you need to confirm your email or retry a failed application, these details are saved in this browser on this device until submission succeeds or you clear browser storage. We use them only to verify your clinic and contact you about this application.",
   "apply.registration": "Registration details",
   "apply.registrationHint":
     "For example your Clinical Establishments registration number and issuing authority.",
