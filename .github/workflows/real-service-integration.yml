@@ -111,6 +111,7 @@ jobs:
           node scripts/run-sql-ci-step.mjs concurrency
 
       - name: Exercise real Auth, PostgREST, Storage, Realtime, and browser workflows
+        timeout-minutes: 35
         shell: bash
         run: |
           set -euo pipefail
@@ -118,15 +119,17 @@ jobs:
 
       - name: Stop the disposable Supabase stack
         if: always()
+        timeout-minutes: 5
         shell: bash
         run: |
           set -euo pipefail
           if [ -f supabase/config.toml ]; then
-            supabase stop --no-backup >"$RUNNER_TEMP/careconnect-supabase-stop.raw.log" 2>&1 || true
+            timeout --signal=TERM --kill-after=15s 180s supabase stop --no-backup >"$RUNNER_TEMP/careconnect-supabase-stop.raw.log" 2>&1 || true
           fi
 
       - name: Upload sanitized integration evidence
         if: always()
+        timeout-minutes: 5
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: careconnect-real-service-${{ github.run_id }}

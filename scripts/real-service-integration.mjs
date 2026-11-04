@@ -40,6 +40,122 @@ export function assertLoopbackUrl(raw, expectedPort) {
   return url;
 }
 
+export function spawnSyncBounded(command, args, options = {}) {
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error("child process timeout must be a positive safe integer");
+  }
+  const spawnOptions = { ...options };
+  delete spawnOptions.timeoutMs;
+  return spawnSync(command, args, {
+    ...spawnOptions,
+    timeout: timeoutMs,
+    killSignal: "SIGTERM",
+  });
+}
+
+async function settleWithin(operation, timeoutMs) {
+  let timeout;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(operation),
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("Realtime shutdown timed out")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function closeRealtimeResources(resources, timeoutMs = 3_000) {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error("Realtime shutdown timeout must be a positive safe integer");
+  }
+
+  const channelFailures = [];
+  const teardownFailures = [];
+  const disconnectFailures = [];
+  const clients = new Set(resources.map(({ client }) => client));
+
+  await Promise.all(
+    resources.map(async ({ channel, state }, index) => {
+      for (const pending of state?.pending || []) {
+        try {
+          pending.cancel();
+        } catch {}
+      }
+      try {
+        const status = await settleWithin(() => channel.unsubscribe(timeoutMs), timeoutMs + 250);
+        if (status !== "ok") channelFailures.push(index);
+      } catch {
+        channelFailures.push(index);
+      } finally {
+        try {
+          channel.teardown();
+        } catch {
+          teardownFailures.push(index);
+        }
+      }
+    }),
+  );
+
+  await Promise.all(
+    [...clients].map(async (client, index) => {
+      try {
+        await settleWithin(() => client.realtime.disconnect(), timeoutMs + 250);
+      } catch {
+        disconnectFailures.push(index);
+      }
+    }),
+  );
+
+  return {
+    channels: resources.length,
+    clients: clients.size,
+    unsubscribe_failures: channelFailures.length,
+    teardown_failures: teardownFailures.length,
+    disconnect_failures: disconnectFailures.length,
+    verified:
+      channelFailures.length === 0 &&
+      teardownFailures.length === 0 &&
+      disconnectFailures.length === 0,
+  };
+}
+
+export async function closeAuthResources(clients, timeoutMs = 5_000) {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error("Auth shutdown timeout must be a positive safe integer");
+  }
+
+  let failures = 0;
+  const uniqueClients = new Set(clients);
+  await Promise.all(
+    [...uniqueClients].map(async (client) => {
+      try {
+        const result = await settleWithin(
+          () => client.auth.signOut({ scope: "global" }),
+          timeoutMs,
+        );
+        if (result?.error) failures += 1;
+      } catch {
+        failures += 1;
+      }
+      try {
+        await settleWithin(() => client.auth.stopAutoRefresh(), timeoutMs);
+      } catch {
+        failures += 1;
+      }
+      try {
+        await settleWithin(() => client.auth.dispose(), timeoutMs);
+      } catch {
+        failures += 1;
+      }
+    }),
+  );
+  return { clients: uniqueClients.size, failures, verified: failures === 0 };
+}
+
 export function rejectRemoteConfiguration(env, files = []) {
   const forbidden = Object.entries(env).filter(([name, value]) => {
     if (!value) return false;
@@ -91,7 +207,8 @@ function preflight({ stackStarted = false } = {}) {
   const projectRef = path.join(root, "supabase/.temp/project-ref");
   if (!stackStarted) linked.push(projectRef);
   rejectRemoteConfiguration(process.env, linked);
-  const cliVersion = spawnSync("supabase", ["--version"], {
+  const cliVersion = spawnSyncBounded("supabase", ["--version"], {
+    timeoutMs: 15_000,
     cwd: root,
     encoding: "utf8",
     windowsHide: true,
@@ -237,7 +354,8 @@ function statusValue(text, key) {
 }
 
 function getLocalCredentials() {
-  const proc = spawnSync("supabase", ["status", "--output", "env"], {
+  const proc = spawnSyncBounded("supabase", ["status", "--output", "env"], {
+    timeoutMs: 30_000,
     cwd: root,
     encoding: "utf8",
     windowsHide: true,
@@ -284,7 +402,8 @@ function psql(dbUrl, filename, variables) {
   ];
   for (const [key, value] of Object.entries(variables)) args.push("-v", `${key}=${String(value)}`);
   args.push("-f", path.join(root, filename));
-  const proc = spawnSync("/usr/bin/psql", args, {
+  const proc = spawnSyncBounded("/usr/bin/psql", args, {
+    timeoutMs: 30_000,
     cwd: root,
     encoding: "utf8",
     env: {
@@ -430,6 +549,9 @@ async function runIntegration() {
   ];
   const users = {};
   const clients = {};
+  const authClients = new Set();
+  const realtimeResources = [];
+  const realtimeShutdownResults = [];
   const timings = {};
   const serviceAssertions = [];
   const serviceOperations = [];
@@ -504,6 +626,7 @@ async function runIntegration() {
       );
       assert(!signedIn.error && signedIn.data.session, `${role} password login`);
       clients[role] = client;
+      authClients.add(client);
     }
     const patient = clients.patient;
     const refreshed = await measure("auth.session_refresh", () => patient.auth.refreshSession());
@@ -852,44 +975,110 @@ async function runIntegration() {
 
     const patientMessage = `Synthetic patient message ${runId}`;
     const doctorMessage = `Synthetic doctor reply ${runId}`;
-    const patientChannel = realtimeChannel(patient, conversationId);
-    const doctorChannel = realtimeChannel(clients.doctor, conversationId);
-    const outsiderChannel = realtimeChannel(clients["other-patient"], conversationId);
+    currentIntegrationCheck = "realtime-postgres-readiness";
+    psql(creds.databaseUrl, "tests/real-service/assert-realtime-readiness.sql", {});
+    assert(true, "PostgreSQL logical replication and messages publication are ready");
+
+    const patientChannel = realtimeChannel(patient, conversationId, realtimeResources);
+    const clinicChannel = realtimeChannel(
+      clients["clinic-staff"],
+      conversationId,
+      realtimeResources,
+    );
+    const doctorChannel = realtimeChannel(clients.doctor, conversationId, realtimeResources);
+    const outsiderChannel = realtimeChannel(
+      clients["other-patient"],
+      conversationId,
+      realtimeResources,
+    );
     const anonClient = createClient(creds.url, creds.anonKey, { auth: { persistSession: false } });
-    const anonChannel = realtimeChannel(anonClient, conversationId);
-    await Promise.all([
+    authClients.add(anonClient);
+    const anonChannel = realtimeChannel(anonClient, conversationId, realtimeResources);
+    const readiness = await Promise.all([
       subscribed(patientChannel),
+      subscribed(clinicChannel),
       subscribed(doctorChannel),
       subscribed(outsiderChannel),
       subscribed(anonChannel),
     ]);
-    const receivedByDoctor = waitForInsert(doctorChannel, patientMessage);
+    assert(readiness.every(Boolean), "all Realtime clients report subscription readiness");
+    const receivedByPatient = waitForInsert(patientChannel, patientMessage);
+    const receivedByClinic = waitForInsert(clinicChannel, patientMessage);
     const patientInsert = await patient.from("messages").insert({
       conversation_id: conversationId,
       sender_id: users.patient.id,
       body: patientMessage,
     });
     assert(!patientInsert.error, "patient sends authorized message through PostgREST");
-    await measure("realtime.patient_to_doctor_delivery", () => receivedByDoctor);
+    const patientDeliveries = await measure("realtime.patient_message_delivery", () =>
+      Promise.all([receivedByPatient, receivedByClinic]),
+    );
+    assert(
+      patientDeliveries.every(Boolean),
+      "patient and authorized clinic staff receive the patient message through Realtime",
+    );
+    const doctorDirectMessages = await clients.doctor
+      .from("messages")
+      .select("body")
+      .eq("conversation_id", conversationId);
+    assert(
+      !doctorDirectMessages.error &&
+        doctorDirectMessages.data.length === 0 &&
+        !doctorDirectMessages.data.some((row) => row.body === patientMessage),
+      "doctor cannot read protected raw messages outside the scoped inbox RPC",
+    );
     const doctorInbox = await clients.doctor.rpc("doctor_conversations");
     assert(
-      !doctorInbox.error && doctorInbox.data.some((row) => row.id === conversationId),
-      "doctor inbox RPC includes assigned conversation",
+      !doctorInbox.error &&
+        doctorInbox.data.some(
+          (row) =>
+            row.id === conversationId &&
+            Array.isArray(row.messages) &&
+            row.messages.some((message) => message.body === patientMessage),
+        ),
+      "doctor receives the patient message through the assigned-conversation RPC",
     );
-    const receivedByPatient = waitForInsert(patientChannel, doctorMessage);
+    const receivedByPatientReply = waitForInsert(patientChannel, doctorMessage);
+    const receivedByClinicReply = waitForInsert(clinicChannel, doctorMessage);
     const reply = await clients.doctor
       .from("messages")
       .insert({ conversation_id: conversationId, sender_id: users.doctor.id, body: doctorMessage });
     assert(!reply.error, "doctor replies only to assigned conversation");
-    await measure("realtime.doctor_to_patient_delivery", () => receivedByPatient);
+    const replyDeliveries = await measure("realtime.doctor_reply_delivery", () =>
+      Promise.all([receivedByPatientReply, receivedByClinicReply]),
+    );
+    assert(
+      replyDeliveries.every(Boolean),
+      "patient and authorized clinic staff receive the doctor reply through Realtime",
+    );
+    const doctorInboxAfterReply = await clients.doctor.rpc("doctor_conversations");
+    assert(
+      !doctorInboxAfterReply.error &&
+        doctorInboxAfterReply.data.some(
+          (row) =>
+            row.id === conversationId &&
+            Array.isArray(row.messages) &&
+            [patientMessage, doctorMessage].every((body) =>
+              row.messages.some((message) => message.body === body),
+            ),
+        ),
+      "doctor receives both message directions through the scoped inbox RPC",
+    );
     await new Promise((resolve) => setTimeout(resolve, 500));
     const outsiderDelivery = await noInsert(outsiderChannel, patientMessage);
     const anonDelivery = await noInsert(anonChannel, patientMessage);
+    const doctorRawDelivery = await noInsert(doctorChannel, patientMessage);
     assert(
-      !outsiderDelivery && !anonDelivery,
-      "unrelated and anonymous subscribers receive no message events",
+      !outsiderDelivery && !anonDelivery && !doctorRawDelivery,
+      "unrelated, anonymous, and doctor raw-table subscribers receive no unauthorized events",
     );
-    const refreshedChannel = realtimeChannel(clients.doctor, conversationId);
+
+    const beforeReconnect = await closeRealtimeResources(realtimeResources);
+    realtimeShutdownResults.push(beforeReconnect);
+    if (beforeReconnect.verified) realtimeResources.length = 0;
+    assert(beforeReconnect.verified, "Realtime channels close before reconnect verification");
+
+    const refreshedChannel = realtimeChannel(patient, conversationId, realtimeResources);
     await subscribed(refreshedChannel);
     const reconnection = `Synthetic reconnect check ${runId}`;
     const reconnected = waitForInsert(refreshedChannel, reconnection);
@@ -897,14 +1086,15 @@ async function runIntegration() {
       .from("messages")
       .insert({ conversation_id: conversationId, sender_id: users.patient.id, body: reconnection });
     assert(!reconnectMessage.error, "message insert succeeds after realtime reconnect");
-    await measure("realtime.reconnect_delivery", () => reconnected);
-    await Promise.all([
-      patientChannel.unsubscribe(),
-      doctorChannel.unsubscribe(),
-      outsiderChannel.unsubscribe(),
-      anonChannel.unsubscribe(),
-      refreshedChannel.unsubscribe(),
-    ]);
+    const reconnectDelivery = await measure("realtime.reconnect_delivery", () => reconnected);
+    assert(reconnectDelivery, "patient receives a message after a fresh Realtime connection");
+    const afterReconnect = await closeRealtimeResources(realtimeResources);
+    realtimeShutdownResults.push(afterReconnect);
+    if (afterReconnect.verified) realtimeResources.length = 0;
+    assert(
+      afterReconnect.verified,
+      "Realtime channels and sockets close after reconnect verification",
+    );
 
     storagePath = `${users.patient.id}/avatar`;
     const bucket = await admin.storage.getBucket("avatars");
@@ -1083,12 +1273,12 @@ async function runIntegration() {
     serviceStatus = "FAIL";
     throw error;
   } finally {
-    // Revoke every synthetic session before deleting Auth users; then remove only the run-owned object and rows.
-    for (const client of Object.values(clients)) {
-      try {
-        await client.auth.signOut({ scope: "global" });
-      } catch {}
-    }
+    // Close WebSockets before fixture cleanup so a failed subscription cannot hold the runner open.
+    const realtimeShutdown = await closeRealtimeResources(realtimeResources);
+    realtimeShutdownResults.push(realtimeShutdown);
+    realtimeResources.length = 0;
+    // Revoke sessions and stop auth timers before deleting run-owned identities and rows.
+    const authShutdown = await closeAuthResources([...authClients]);
     if (storagePath && users.patient) {
       try {
         await admin.storage.from("avatars").remove([storagePath]);
@@ -1132,11 +1322,18 @@ async function runIntegration() {
       ids,
       initialCounts,
     );
+    cleanupResult.realtime_shutdown = realtimeShutdownResults;
+    cleanupResult.realtime_shutdown_verified = realtimeShutdownResults.every(
+      (result) => result.verified,
+    );
+    cleanupResult.auth_shutdown = authShutdown;
     cleanupResult.recovery_email_cleaned = recoveryMailCleaned;
     cleanupResult.sql_succeeded = cleanupSqlSucceeded;
     cleanupResult.unseeded_application_profiles_cleaned = unseededApplicationProfilesCleaned;
     cleanupResult.verified =
       cleanupResult.verified &&
+      cleanupResult.realtime_shutdown_verified &&
+      authShutdown.verified &&
       recoveryMailCleaned &&
       cleanupSqlSucceeded &&
       unseededApplicationProfilesCleaned;
@@ -1202,7 +1399,7 @@ async function runIntegration() {
       ),
     );
     console.log(
-      `Test cases: ${testCaseCounts.passed} passed, ${testCaseCounts.failed} failed, ${testCaseCounts.blocked} blocked. Assertions: ${assertionCounts.passed} passed, ${assertionCounts.failed} failed. Instrumented service operations: ${serviceOperations.length}; browser workflows: ${browserEvidence.workflow_counts.passed} passed, ${browserEvidence.workflow_counts.failed} failed, ${browserEvidence.workflow_counts.blocked} blocked; cleanup ${cleanupResult.verified ? "verified" : "failed"}.`,
+      `Test cases: ${testCaseCounts.passed} passed, ${testCaseCounts.failed} failed, ${testCaseCounts.blocked} blocked. Assertions: ${assertionCounts.passed} passed, ${assertionCounts.failed} failed. Instrumented service operations: ${serviceOperations.length}; browser workflows: ${browserEvidence.workflow_counts.passed} passed, ${browserEvidence.workflow_counts.failed} failed, ${browserEvidence.workflow_counts.blocked} blocked; Realtime shutdown ${cleanupResult.realtime_shutdown_verified ? "verified" : "failed"}; Auth shutdown ${authShutdown.verified ? "verified" : "failed"}; cleanup ${cleanupResult.verified ? "verified" : "failed"}.`,
     );
     activeAssertionResults = null;
   }
@@ -1286,8 +1483,8 @@ async function deleteRecoveryEmail(email) {
   if (!response.ok) throw new Error("runner-owned recovery email cleanup failed");
 }
 
-function realtimeChannel(client, conversationId) {
-  const state = { delivered: [] };
+function realtimeChannel(client, conversationId, resources) {
+  const state = { delivered: [], pending: new Set() };
   const channel = client.channel(`careconnect-ci-${randomUUID()}`).on(
     "postgres_changes",
     {
@@ -1296,52 +1493,78 @@ function realtimeChannel(client, conversationId) {
       table: "messages",
       filter: `conversation_id=eq.${conversationId}`,
     },
-    (payload) => state.delivered.push(payload.new?.body),
+    (payload) => {
+      const body = payload.new?.body;
+      state.delivered.push(body);
+      for (const pending of state.pending) {
+        if (pending.body === body) pending.deliver();
+      }
+    },
   );
   state.channel = channel;
+  resources.push({ client, channel, state });
   return state;
 }
 
 function subscribed(state) {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error("realtime subscription readiness timeout")),
-      15000,
-    );
-    state.channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        clearTimeout(timeout);
-        resolve();
-      }
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        clearTimeout(timeout);
-        reject(new Error("realtime subscription failed"));
-      }
-    });
+    let finished = false;
+    let timeout;
+    const pending = {
+      cancel: () => finish(resolve, false),
+    };
+    const finish = (callback, value) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timeout);
+      state.pending.delete(pending);
+      callback(value);
+    };
+    state.pending.add(pending);
+    timeout = setTimeout(() => {
+      finish(reject, new Error("realtime subscription readiness timeout"));
+    }, 15_000);
+    try {
+      state.channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") finish(resolve, true);
+        if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+          finish(reject, new Error("realtime subscription failed"));
+        }
+      });
+    } catch {
+      finish(reject, new Error("realtime subscription failed"));
+    }
   });
 }
 
 function waitForInsert(state, body) {
   if (state.delivered.includes(body)) return Promise.resolve(true);
   return new Promise((resolve, reject) => {
-    let interval;
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-      reject(new Error("realtime message delivery timeout"));
-    }, 15000);
-    interval = setInterval(() => {
-      if (state.delivered.includes(body)) {
-        clearInterval(interval);
-        clearTimeout(timeout);
-        resolve(true);
-      }
-    }, 25);
+    let finished = false;
+    let timeout;
+    const finish = (callback, value) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timeout);
+      state.pending.delete(pending);
+      callback(value);
+    };
+    const pending = {
+      body,
+      deliver: () => finish(resolve, true),
+      cancel: () => finish(resolve, false),
+    };
+    state.pending.add(pending);
+    timeout = setTimeout(() => {
+      finish(reject, new Error("realtime message delivery timeout"));
+    }, 15_000);
   });
 }
 
-async function noInsert(state, body) {
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  return state.delivered.includes(body);
+function noInsert(state, body) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(state.delivered.includes(body)), 1_500);
+  });
 }
 
 async function runBrowserFlow({
@@ -1381,10 +1604,17 @@ async function runBrowserFlow({
     VITE_SUPABASE_PUBLISHABLE_KEY: creds.anonKey,
     PLAYWRIGHT_REAL_SERVICE_BASE_URL: "http://127.0.0.1:4173",
   };
-  const proc = spawnSync(
+  const proc = spawnSyncBounded(
     "npx",
     ["playwright", "test", "--config=playwright.real-service.config.ts"],
-    { cwd: root, env, encoding: "utf8", windowsHide: true, maxBuffer: 4 * 1024 * 1024 },
+    {
+      cwd: root,
+      env,
+      encoding: "utf8",
+      windowsHide: true,
+      maxBuffer: 4 * 1024 * 1024,
+      timeoutMs: 15 * 60 * 1000,
+    },
   );
   const evidence = readBrowserWorkflowEvidence();
   writeSafe("browser-workflow-summary.json", JSON.stringify(evidence, null, 2));

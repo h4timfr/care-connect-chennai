@@ -7,11 +7,14 @@ import { fileURLToPath } from "node:url";
 import {
   assertLoopbackUrl,
   assertLocalProjectRefMatchesConfig,
+  closeAuthResources,
+  closeRealtimeResources,
   countOwnedRecords,
   matchesCanonicalDisposableBaseline,
   removeUnseededApplicationUsers,
   rejectRemoteConfiguration,
   safeSqlState,
+  spawnSyncBounded,
   summarizeBrowserWorkflows,
   verifyRepositoryIntegrity,
 } from "./real-service-integration.mjs";
@@ -27,6 +30,86 @@ test("only the expected loopback Supabase API endpoint is accepted", () => {
     /refusing/,
   );
   assert.throws(() => assertLoopbackUrl("http://user:pass@127.0.0.1:54321", 54321), /refusing/);
+});
+
+test("Realtime cleanup tears down channels and disconnects sockets after unsubscribe hangs", async () => {
+  const calls = [];
+  const resource = {
+    client: {
+      realtime: {
+        async disconnect() {
+          calls.push("disconnect");
+          return "ok";
+        },
+      },
+    },
+    channel: {
+      unsubscribe() {
+        calls.push("unsubscribe");
+        return new Promise(() => {});
+      },
+      teardown() {
+        calls.push("teardown");
+      },
+    },
+    state: {
+      pending: new Set([
+        {
+          cancel() {
+            calls.push("cancel pending wait");
+          },
+        },
+      ]),
+    },
+  };
+  const started = Date.now();
+
+  const result = await closeRealtimeResources([resource], 30);
+
+  assert.ok(Date.now() - started < 2_000, "shutdown is bounded");
+  assert.deepEqual(calls, ["cancel pending wait", "unsubscribe", "teardown", "disconnect"]);
+  assert.equal(result.unsubscribe_failures, 1);
+  assert.equal(result.teardown_failures, 0);
+  assert.equal(result.disconnect_failures, 0);
+  assert.equal(result.verified, false);
+});
+
+test("Auth cleanup stops refresh timers and disposes clients after signout hangs", async () => {
+  const calls = [];
+  const client = {
+    auth: {
+      signOut() {
+        calls.push("signout");
+        return new Promise(() => {});
+      },
+      async stopAutoRefresh() {
+        calls.push("stop refresh");
+      },
+      async dispose() {
+        calls.push("dispose");
+      },
+    },
+  };
+  const started = Date.now();
+
+  const result = await closeAuthResources([client], 20);
+
+  assert.ok(Date.now() - started < 2_000, "Auth shutdown is bounded");
+  assert.deepEqual(calls, ["signout", "stop refresh", "dispose"]);
+  assert.equal(result.failures, 1);
+  assert.equal(result.verified, false);
+});
+
+test("bounded child execution terminates a hanging process", () => {
+  const started = Date.now();
+  const result = spawnSyncBounded(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+    timeoutMs: 150,
+    encoding: "utf8",
+  });
+
+  assert.equal(result.status, null);
+  assert.equal(result.error?.code, "ETIMEDOUT");
+  assert.ok(Date.now() - started < 5_000, "child process timeout returns promptly");
 });
 
 test("runtime accepts only the local CLI marker matching the unlinked project config", () => {
@@ -240,6 +323,50 @@ test("the workflow provisions only local Supabase services and never links a rem
     /supabase\s+(?:link|db\s+push|migration\s+up\s+--linked|db\s+reset\s+--linked)/,
   );
   assert.match(workflow, /supabase stop --no-backup/);
+});
+
+test("Realtime checks follow the message RLS contract and close bounded runner resources", () => {
+  const runner = readFileSync(path.join(root, "scripts/real-service-integration.mjs"), "utf8");
+  const readiness = readFileSync(
+    path.join(root, "tests/real-service/assert-realtime-readiness.sql"),
+    "utf8",
+  );
+  const workflow = readFileSync(
+    path.join(root, ".github/workflows/real-service-integration.yml"),
+    "utf8",
+  );
+
+  assert.match(readiness, /current_setting\('wal_level'\) <> 'logical'/);
+  assert.match(readiness, /pubname = 'supabase_realtime'[\s\S]*?AND pubinsert/);
+  assert.match(readiness, /schemaname = 'public'[\s\S]*?tablename = 'messages'/);
+  assert.match(readiness, /indisprimary/);
+  assert.match(readiness, /relrowsecurity/);
+  assert.match(
+    runner,
+    /realtimeChannel\(\s*clients\["clinic-staff"\],\s*conversationId,\s*realtimeResources,?\s*\)/,
+  );
+  assert.match(runner, /doctor cannot read protected raw messages outside the scoped inbox RPC/);
+  assert.match(runner, /doctor receives the patient message through the assigned-conversation RPC/);
+  assert.match(runner, /noInsert\(doctorChannel, patientMessage\)/);
+  assert.match(
+    runner,
+    /unrelated, anonymous, and doctor raw-table subscribers receive no unauthorized events/,
+  );
+  assert.match(runner, /finally \{\s*\/\/ Close WebSockets before fixture cleanup/);
+  assert.match(runner, /closeAuthResources\(\[\.\.\.authClients\]\)/);
+  assert.match(runner, /client\.auth\.stopAutoRefresh\(\)/);
+  assert.match(runner, /client\.auth\.dispose\(\)/);
+  assert.match(runner, /timeoutMs: 15 \* 60 \* 1000/);
+  assert.match(workflow, /Exercise real Auth,[\s\S]*?timeout-minutes: 35/);
+  assert.match(
+    workflow,
+    /Stop the disposable Supabase stack\s+if: always\(\)[\s\S]*?timeout-minutes: 5/,
+  );
+  assert.match(workflow, /timeout --signal=TERM --kill-after=15s 180s supabase stop/);
+  assert.match(
+    workflow,
+    /Upload sanitized integration evidence\s+if: always\(\)[\s\S]*?timeout-minutes: 5/,
+  );
 });
 
 test("browser evidence counts test cases, assertions, and observed HTTP operations separately", () => {
