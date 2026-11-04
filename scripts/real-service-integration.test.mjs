@@ -222,7 +222,8 @@ test("clinic membership integration distinguishes Auth identity, fixture state, 
   const runner = readFileSync(path.join(root, "scripts/real-service-integration.mjs"), "utf8");
   assert.match(runner, /clinic staff Auth identity matches its synthetic fixture/);
   assert.match(runner, /service role confirms the synthetic active clinic membership fixture/);
-  assert.match(runner, /clinic staff reads its active membership\$\{membershipSqlState/);
+  assert.match(runner, /clinic staff scope RPC returns its assigned clinic/);
+  assert.match(runner, /clinic staff reads its active membership \(\$\{membershipResponse/);
 });
 
 test("the workflow provisions only local Supabase services and never links a remote project", () => {

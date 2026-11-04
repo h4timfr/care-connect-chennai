@@ -664,6 +664,13 @@ async function runIntegration() {
         seededStaffMembership.data.active === true,
       "service role confirms the synthetic active clinic membership fixture",
     );
+    const staffClinicScope = await measure("rpc.verify_clinic_staff_scope", () =>
+      clients["clinic-staff"].rpc("get_my_clinic_contacts"),
+    );
+    assert(
+      !staffClinicScope.error && staffClinicScope.data.some((row) => row.clinic_id === clinic),
+      "clinic staff scope RPC returns its assigned clinic",
+    );
     const staffMemberships = await measure("postgrest.clinic_staff_membership_read", () =>
       clients["clinic-staff"]
         .from("clinic_memberships")
@@ -671,13 +678,17 @@ async function runIntegration() {
         .eq("clinic_id", clinic),
     );
     const membershipSqlState = safeSqlState(staffMemberships.error);
+    const membershipRows = Array.isArray(staffMemberships.data)
+      ? staffMemberships.data.length
+      : "unavailable";
+    const membershipResponse = staffMemberships.error ? "error" : `rows ${membershipRows}`;
     const otherMemberships = await clients["other-patient"]
       .from("clinic_memberships")
       .select("clinic_id")
       .eq("clinic_id", clinic);
     assert(
       !staffMemberships.error && staffMemberships.data.length === 1,
-      `clinic staff reads its active membership${membershipSqlState ? ` (SQLSTATE ${membershipSqlState})` : ""}`,
+      `clinic staff reads its active membership (${membershipResponse}${membershipSqlState ? `; SQLSTATE ${membershipSqlState}` : ""})`,
     );
     assert(
       !otherMemberships.error && otherMemberships.data.length === 0,
