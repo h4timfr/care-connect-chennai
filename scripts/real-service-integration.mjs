@@ -323,9 +323,42 @@ async function expectDenied(promise, label) {
   assert(denied, label);
 }
 
-async function verifyEmptyDisposableBaseline(admin) {
+const canonicalDisposableBaseline = Object.freeze({
+  users: 0,
+  patients: 0,
+  appointments: 0,
+  conversations: 0,
+  messages: 0,
+  clinic_memberships: 0,
+  clinic_doctors: 12,
+  doctor_schedules: 64,
+  doctors: 12,
+  clinics: 6,
+  audit_logs: 0,
+  notifications: 0,
+  provider_applications: 0,
+  doctor_applications: 0,
+  user_roles: 0,
+  auth_users: 0,
+  storage_objects: 0,
+});
+
+export function matchesCanonicalDisposableBaseline(counts) {
+  return Object.entries(canonicalDisposableBaseline).every(
+    ([table, expected]) => Number.isSafeInteger(counts?.[table]) && counts[table] === expected,
+  );
+}
+
+export async function countOwnedRecords(admin, table, column, values) {
+  const result = await admin
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .in(column, values);
+  return result.error ? null : result.count;
+}
+
+async function verifyDisposableBaseline(admin) {
   const counts = {};
-  let valid = true;
   for (const table of [
     "users",
     "patients",
@@ -345,15 +378,12 @@ async function verifyEmptyDisposableBaseline(admin) {
   ]) {
     const result = await admin.from(table).select("*", { count: "exact", head: true });
     counts[table] = result.error ? null : result.count;
-    if (result.error || result.count !== 0) valid = false;
   }
   const auth = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   counts.auth_users = auth.error ? null : auth.data.users.length;
-  if (auth.error || auth.data.users.length !== 0) valid = false;
   const storage = await admin.storage.from("avatars").list();
   counts.storage_objects = storage.error ? null : storage.data.length;
-  if (storage.error || storage.data.length !== 0) valid = false;
-  return { verified: valid, counts };
+  return { verified: matchesCanonicalDisposableBaseline(counts), counts };
 }
 
 async function runIntegration() {
@@ -413,10 +443,10 @@ async function runIntegration() {
     }
   };
   try {
-    initialCounts = await verifyEmptyDisposableBaseline(admin);
+    initialCounts = await verifyDisposableBaseline(admin);
     assert(
       initialCounts.verified,
-      "fresh local Supabase stack has no pre-existing test or user records",
+      "fresh local Supabase stack matches the canonical seed baseline and has no user/test records",
     );
     for (const role of roles) {
       const email = safeEmail(runId, role);
@@ -1292,11 +1322,7 @@ async function verifyCleanup(admin, userIds, ids, initialCounts) {
     ["doctors", "id", doctorIds],
     ["clinics", "id", clinicIds],
   ]) {
-    const query = await admin
-      .from(table)
-      .select("id", { count: "exact", head: true })
-      .in(column, values);
-    checks.push({ table, count: query.error ? null : query.count });
+    checks.push({ table, count: await countOwnedRecords(admin, table, column, values) });
   }
   let authUsersAbsent = true;
   for (const id of userIds) {

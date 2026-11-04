@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import {
   assertLoopbackUrl,
   assertLocalProjectRefMatchesConfig,
+  countOwnedRecords,
+  matchesCanonicalDisposableBaseline,
   rejectRemoteConfiguration,
   summarizeBrowserWorkflows,
   verifyRepositoryIntegrity,
@@ -61,6 +63,63 @@ test("repository migration and SQL test inventories match the integrity manifest
   assert.equal(result.files.length, 41);
   assert.equal(result.files.at(-1)?.slice(0, 5), "00062");
   assert.equal(result.tests.length, 22);
+});
+
+test("real-service startup accepts only the exact canonical disposable baseline", () => {
+  const baseline = {
+    users: 0,
+    patients: 0,
+    appointments: 0,
+    conversations: 0,
+    messages: 0,
+    clinic_memberships: 0,
+    clinic_doctors: 12,
+    doctor_schedules: 64,
+    doctors: 12,
+    clinics: 6,
+    audit_logs: 0,
+    notifications: 0,
+    provider_applications: 0,
+    doctor_applications: 0,
+    user_roles: 0,
+    auth_users: 0,
+    storage_objects: 0,
+  };
+  assert.equal(matchesCanonicalDisposableBaseline(baseline), true);
+  for (const table of Object.keys(baseline)) {
+    assert.equal(
+      matchesCanonicalDisposableBaseline({ ...baseline, [table]: baseline[table] + 1 }),
+      false,
+      `${table} must match its exact canonical baseline`,
+    );
+  }
+  assert.equal(matchesCanonicalDisposableBaseline({ ...baseline, users: null }), false);
+  assert.equal(matchesCanonicalDisposableBaseline({ clinics: 6 }), false);
+});
+
+test("ownership cleanup counts composite-key links without assuming an id column", async () => {
+  const calls = [];
+  const admin = {
+    from(table) {
+      return {
+        select(columns, options) {
+          calls.push({ table, columns, options });
+          return {
+            in(column, values) {
+              calls.push({ column, values });
+              return Promise.resolve({ count: 0, error: null });
+            },
+          };
+        },
+      };
+    },
+  };
+
+  assert.equal(await countOwnedRecords(admin, "clinic_doctors", "clinic_id", ["owned-id"]), 0);
+  assert.deepEqual(calls, [
+    { table: "clinic_doctors", columns: "*", options: { count: "exact", head: true } },
+    { column: "clinic_id", values: ["owned-id"] },
+  ]);
 });
 
 test("real-service fixtures use reserved synthetic identities and explicit ownership keys", () => {
