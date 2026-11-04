@@ -86,7 +86,15 @@ test("Realtime auth is synchronized from the current authenticated session befor
     auth: {
       async getSession() {
         calls.push("get session");
-        return { data: { session: { access_token: "synthetic-session-token" } }, error: null };
+        return {
+          data: {
+            session: {
+              access_token: "synthetic-session-token",
+              user: { id: "synthetic-user-id" },
+            },
+          },
+          error: null,
+        };
       },
       async getUser(token) {
         calls.push(`validate auth:${token}`);
@@ -112,8 +120,10 @@ test("Realtime auth is synchronized from the current authenticated session befor
   assert.deepEqual(diagnostics.auth, {
     mode: "authenticated",
     sessionPresent: true,
-    jwtValidated: true,
-    identityMatched: true,
+    sessionIdentityMatched: true,
+    authApiCheck: "accepted",
+    authApiStatus: null,
+    authApiErrorCode: "none",
     realtimeAuthSet: true,
   });
 });
@@ -140,19 +150,30 @@ test("Realtime auth refuses a missing session without configuring a channel", as
   assert.equal(configured, false);
 });
 
-test("Realtime JWT verification rejects a different authenticated identity", async () => {
+test("Realtime auth fails closed when the session identity differs from the intended user", async () => {
+  let authApiCalled = false;
+  let realtimeAuthSet = false;
   const client = {
     auth: {
       async getSession() {
-        return { data: { session: { access_token: "synthetic-session-token" } }, error: null };
+        return {
+          data: {
+            session: {
+              access_token: "synthetic-session-token",
+              user: { id: "other-user-id" },
+            },
+          },
+          error: null,
+        };
       },
       async getUser() {
+        authApiCalled = true;
         return { data: { user: { id: "other-user-id" } }, error: null };
       },
     },
     realtime: {
       async setAuth() {
-        assert.fail("Realtime auth must not be set for the wrong identity");
+        realtimeAuthSet = true;
       },
     },
   };
@@ -160,11 +181,55 @@ test("Realtime JWT verification rejects a different authenticated identity", asy
 
   await assert.rejects(
     prepareRealtimeAuth(client, "expected-user-id", diagnostics),
-    /authentication could not be verified/,
+    /session identity could not be verified/,
   );
-  assert.equal(diagnostics.auth.jwtValidated, true);
-  assert.equal(diagnostics.auth.identityMatched, false);
-  assert.equal(diagnostics.auth.realtimeAuthSet, false);
+  assert.equal(authApiCalled, false);
+  assert.equal(realtimeAuthSet, false);
+  assert.equal(diagnostics.auth.sessionIdentityMatched, false);
+});
+
+test("Auth API validation rejection is recorded without blocking Realtime diagnostics", async () => {
+  let realtimeAuthSet = false;
+  const client = {
+    auth: {
+      async getSession() {
+        return {
+          data: {
+            session: {
+              access_token: "synthetic-session-token",
+              user: { id: "synthetic-user-id" },
+            },
+          },
+          error: null,
+        };
+      },
+      async getUser() {
+        return {
+          data: { user: null },
+          error: { status: 401, code: "session_not_found", message: "private server detail" },
+        };
+      },
+    },
+    realtime: {
+      async setAuth(token) {
+        assert.equal(token, "synthetic-session-token");
+        realtimeAuthSet = true;
+      },
+    },
+  };
+  const diagnostics = { auth: {} };
+
+  assert.equal(await prepareRealtimeAuth(client, "synthetic-user-id", diagnostics), true);
+  assert.equal(realtimeAuthSet, true);
+  assert.deepEqual(diagnostics.auth, {
+    mode: "authenticated",
+    sessionPresent: true,
+    sessionIdentityMatched: true,
+    authApiCheck: "rejected",
+    authApiStatus: 401,
+    authApiErrorCode: "session_not_found",
+    realtimeAuthSet: true,
+  });
 });
 
 test("Realtime delivery outcomes identify each subscriber without short-circuiting", async () => {
@@ -231,8 +296,10 @@ test("Realtime payload diagnostics distinguish arrival, matching fields, and exp
       auth: {
         mode: "authenticated",
         sessionPresent: true,
-        jwtValidated: true,
-        identityMatched: true,
+        sessionIdentityMatched: true,
+        authApiCheck: "rejected",
+        authApiStatus: 401,
+        authApiErrorCode: "session_not_found",
         realtimeAuthSet: true,
         token: "private token",
       },

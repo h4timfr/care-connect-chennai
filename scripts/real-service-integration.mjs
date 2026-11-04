@@ -161,34 +161,82 @@ export async function prepareRealtimeAuth(client, expectedUserId, diagnostics) {
     diagnostics.auth = {
       mode: "authenticated",
       sessionPresent: false,
-      jwtValidated: false,
-      identityMatched: false,
+      sessionIdentityMatched: false,
+      authApiCheck: "not-checked",
+      authApiStatus: null,
+      authApiErrorCode: "none",
       realtimeAuthSet: false,
     };
   }
   const result = await client.auth.getSession();
-  const token = result?.data?.session?.access_token;
+  const session = result?.data?.session;
+  const token = session?.access_token;
   if (diagnostics) diagnostics.auth.sessionPresent = typeof token === "string" && token.length > 0;
   if (result?.error || typeof token !== "string" || token.length === 0) {
     throw new Error("Realtime subscription authentication is unavailable");
   }
 
-  const verified = await client.auth.getUser(token);
-  const authenticatedUserId = verified?.data?.user?.id;
-  const jwtValidated = !verified?.error && typeof authenticatedUserId === "string";
-  const identityMatched =
-    typeof expectedUserId === "string" && authenticatedUserId === expectedUserId;
+  const sessionIdentityMatched =
+    typeof expectedUserId === "string" && session.user?.id === expectedUserId;
   if (diagnostics) {
-    diagnostics.auth.jwtValidated = jwtValidated;
-    diagnostics.auth.identityMatched = identityMatched;
+    diagnostics.auth.sessionIdentityMatched = sessionIdentityMatched;
   }
-  if (!jwtValidated || !identityMatched) {
-    throw new Error("Realtime subscription authentication could not be verified");
+  if (!sessionIdentityMatched) {
+    throw new Error("Realtime subscription session identity could not be verified");
+  }
+
+  let authApiCheck;
+  try {
+    const verified = await client.auth.getUser(token);
+    const authenticatedUserId = verified?.data?.user?.id;
+    const authApiStatus = verified?.error ? safeAuthApiStatus(verified.error.status) : null;
+    const authApiErrorCode = verified?.error ? safeAuthApiErrorCode(verified.error.code) : "none";
+    authApiCheck = verified?.error
+      ? "rejected"
+      : typeof authenticatedUserId === "string"
+        ? authenticatedUserId === expectedUserId
+          ? "accepted"
+          : "identity-mismatch"
+        : "no-user";
+    if (diagnostics) {
+      diagnostics.auth.authApiCheck = authApiCheck;
+      diagnostics.auth.authApiStatus = authApiStatus;
+      diagnostics.auth.authApiErrorCode = authApiErrorCode;
+    }
+    if (authApiCheck === "identity-mismatch") {
+      throw new Error("Realtime Auth API identity did not match the current session");
+    }
+  } catch (error) {
+    if (error?.message === "Realtime Auth API identity did not match the current session") {
+      throw error;
+    }
+    authApiCheck = "unavailable";
+    if (diagnostics) {
+      diagnostics.auth.authApiCheck = authApiCheck;
+      diagnostics.auth.authApiStatus = safeAuthApiStatus(error?.status);
+      diagnostics.auth.authApiErrorCode = safeAuthApiErrorCode(error?.code);
+    }
   }
 
   await client.realtime.setAuth(token);
   if (diagnostics) diagnostics.auth.realtimeAuthSet = true;
   return true;
+}
+
+function safeAuthApiStatus(status) {
+  return Number.isInteger(status) && status >= 400 && status <= 599 ? status : null;
+}
+
+function safeAuthApiErrorCode(code) {
+  const allowed = [
+    "bad_jwt",
+    "invalid_jwt",
+    "session_not_found",
+    "token_expired",
+    "user_not_found",
+    "unexpected_failure",
+  ];
+  return allowed.includes(code) ? code : code ? "other" : "none";
 }
 
 export function sanitizeRealtimeDiagnostics(diagnostics) {
@@ -204,8 +252,19 @@ export function sanitizeRealtimeDiagnostics(diagnostics) {
     auth: {
       mode: validMode(item.auth?.mode),
       sessionPresent: item.auth?.sessionPresent === true,
-      jwtValidated: item.auth?.jwtValidated === true,
-      identityMatched: item.auth?.identityMatched === true,
+      sessionIdentityMatched: item.auth?.sessionIdentityMatched === true,
+      authApiCheck: [
+        "not-checked",
+        "accepted",
+        "rejected",
+        "identity-mismatch",
+        "no-user",
+        "unavailable",
+      ].includes(item.auth?.authApiCheck)
+        ? item.auth.authApiCheck
+        : "unavailable",
+      authApiStatus: safeAuthApiStatus(item.auth?.authApiStatus),
+      authApiErrorCode: safeAuthApiErrorCode(item.auth?.authApiErrorCode),
       realtimeAuthSet: item.auth?.realtimeAuthSet === true,
     },
     subscription: {
@@ -1136,7 +1195,7 @@ async function runIntegration() {
       );
       return true;
     });
-    assert(realtimeAuthReady, "authenticated Realtime clients use their current Auth session");
+    assert(realtimeAuthReady, "Realtime clients set the token for the expected session identity");
     const anonChannel = realtimeChannel(
       anonClient,
       "anonymous",
@@ -1672,8 +1731,10 @@ function realtimeChannel(client, role, conversationId, resources, diagnosticsCol
       auth: {
         mode: role === "anonymous" ? "anonymous" : "unknown",
         sessionPresent: false,
-        jwtValidated: false,
-        identityMatched: false,
+        sessionIdentityMatched: false,
+        authApiCheck: "not-checked",
+        authApiStatus: null,
+        authApiErrorCode: "none",
         realtimeAuthSet: false,
       },
       subscription: { statuses: [], ready: false },
