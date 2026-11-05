@@ -107,11 +107,18 @@ jobs:
           mkdir -p test-artifacts
           touch "$RUNNER_TEMP/careconnect-supabase-start-attempted"
           # Raw CLI output stays in runner-private temporary storage and is never uploaded.
+          start_ms=$(date +%s%3N)
           if supabase --network-id "$CARECONNECT_DOCKER_NETWORK" start >"$RUNNER_TEMP/careconnect-supabase-start.raw.log" 2>&1; then
-            node scripts/real-service-integration.mjs startup-summary
+            cli_status=0
           else
-            node scripts/real-service-integration.mjs startup-failure-summary
-            exit 1
+            cli_status=$?
+          fi
+          elapsed_ms=$(( $(date +%s%3N) - start_ms ))
+          if [ "$cli_status" -eq 0 ]; then
+            node scripts/real-service-integration.mjs startup-summary "$cli_status" "$elapsed_ms"
+          else
+            node scripts/real-service-integration.mjs startup-failure-summary "$cli_status" "$elapsed_ms"
+            exit "$cli_status"
           fi
 
       - name: Verify actual Docker bindings before application service requests
@@ -175,6 +182,7 @@ jobs:
           name: careconnect-real-service-${{ github.run_id }}
           path: |
             test-artifacts/startup.log
+            test-artifacts/startup-process.json
             test-artifacts/ledger.log
             test-artifacts/pgtap.log
             test-artifacts/concurrency.log

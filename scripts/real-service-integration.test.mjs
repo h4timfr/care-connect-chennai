@@ -17,6 +17,7 @@ import {
   recordRealtimePayload,
   realtimePostgresChangesOptions,
   sanitizeRealtimeDiagnostics,
+  sanitizeStartupProcess,
   countOwnedRecords,
   matchesCanonicalDisposableBaseline,
   removeUnseededApplicationUsers,
@@ -30,6 +31,18 @@ import {
 } from "./real-service-integration.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+test("startup process evidence accepts only bounded numeric exit and duration values", () => {
+  assert.deepEqual(sanitizeStartupProcess("42", "93200"), { cli_exit_code: 42, elapsed_ms: 93200 });
+  assert.deepEqual(sanitizeStartupProcess("256", "5400001"), {
+    cli_exit_code: null,
+    elapsed_ms: null,
+  });
+  assert.deepEqual(sanitizeStartupProcess("private-token", "-1"), {
+    cli_exit_code: null,
+    elapsed_ms: null,
+  });
+});
 
 test("startup diagnostics distinguish failure signatures without exposing raw output", () => {
   const secret = "synthetic-private-token";

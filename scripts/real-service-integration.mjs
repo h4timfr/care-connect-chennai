@@ -511,10 +511,26 @@ export function classifyStartupFailure(raw) {
   };
 }
 
-function rawStartupSummary(failed) {
+export function sanitizeStartupProcess(exitCode, elapsedMs) {
+  const safeInteger = (value, maximum) => {
+    if (typeof value !== "string" || !/^\d{1,8}$/.test(value)) return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed <= maximum ? parsed : null;
+  };
+  return {
+    cli_exit_code: safeInteger(exitCode, 255),
+    elapsed_ms: safeInteger(elapsedMs, 5_400_000),
+  };
+}
+
+function rawStartupSummary(failed, exitCode, elapsedMs) {
   const file = path.join(process.env.RUNNER_TEMP || "", "careconnect-supabase-start.raw.log");
   const raw = existsSync(file) ? readFileSync(file, "utf8") : "";
   const applied = migrationFiles().filter((name) => raw.includes(`Applying migration ${name}`));
+  writeSafe(
+    "startup-process.json",
+    JSON.stringify(sanitizeStartupProcess(exitCode, elapsedMs), null, 2),
+  );
   if (failed) {
     const diagnostics = classifyStartupFailure(raw);
     writeSafe(
@@ -2131,8 +2147,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       console.log(
         `Integrity PASS: ${files.length} migration files, ending ${files.at(-1)}; ${tests.length} pgTAP files; alias ${aliasFile}.`,
       );
-    } else if (command === "startup-summary") rawStartupSummary(false);
-    else if (command === "startup-failure-summary") rawStartupSummary(true);
+    } else if (command === "startup-summary")
+      rawStartupSummary(false, process.argv[3], process.argv[4]);
+    else if (command === "startup-failure-summary")
+      rawStartupSummary(true, process.argv[3], process.argv[4]);
     else if (command === "run") await runIntegration();
     else throw new Error("unknown real-service integration command");
   } catch (error) {
