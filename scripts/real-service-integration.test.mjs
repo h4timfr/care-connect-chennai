@@ -688,7 +688,12 @@ test("the workflow provisions only local Supabase services and never links a rem
   );
   assert.match(workflow, /runs-on:\s*ubuntu-24\.04/);
   assert.match(workflow, /version:\s*2\.117\.0/);
-  assert.match(workflow, /supabase --network-id "\$CARECONNECT_DOCKER_NETWORK" start/);
+  assert.match(workflow, /startup-observer\.mjs run/);
+  const startupObserver = readFileSync(path.join(root, "scripts/startup-observer.mjs"), "utf8");
+  assert.match(
+    startupObserver,
+    /spawn\("supabase", \["--debug", "--network-id", networkName, "start"\]/,
+  );
   assert.match(dockerGate, /com\.docker\.network\.bridge\.host_binding_ipv4/);
   assert.match(dockerGate, /127\.0\.0\.1/);
   assert.match(dockerGate, /"--internal"/);

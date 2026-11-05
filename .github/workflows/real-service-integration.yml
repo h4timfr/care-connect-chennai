@@ -13,6 +13,8 @@ on:
       - "scripts/verify-disposable-docker-bindings.test.mjs"
       - "scripts/startup-evidence.mjs"
       - "scripts/startup-evidence.test.mjs"
+      - "scripts/startup-observer.mjs"
+      - "scripts/startup-observer.test.mjs"
       - "scripts/staging-reconciliation-rehearsal.mjs"
       - "scripts/staging-reconciliation-rehearsal.test.mjs"
       - "tests/real-service/**"
@@ -80,7 +82,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test scripts/real-service-integration.test.mjs scripts/verify-disposable-docker-bindings.test.mjs scripts/startup-evidence.test.mjs scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs
+          node --test scripts/real-service-integration.test.mjs scripts/verify-disposable-docker-bindings.test.mjs scripts/startup-evidence.test.mjs scripts/startup-observer.test.mjs scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs
           test ! -e supabase/config.toml
           test ! -e supabase/.temp/linked-project.json
           test ! -e supabase/.temp/project-ref
@@ -110,19 +112,23 @@ jobs:
           umask 077
           mkdir -p test-artifacts
           touch "$RUNNER_TEMP/careconnect-supabase-start-attempted"
-          # Raw CLI output stays in runner-private temporary storage and is never uploaded.
-          start_ms=$(date +%s%3N)
-          if supabase --network-id "$CARECONNECT_DOCKER_NETWORK" start >"$RUNNER_TEMP/careconnect-supabase-start.raw.log" 2>&1; then
-            cli_status=0
+          # Debug output remains in runner-private temporary storage; only the
+          # run-labeled, allowlisted observer summary is uploaded.
+          if node scripts/startup-observer.mjs run \
+            "$CARECONNECT_DOCKER_NETWORK" "$CARECONNECT_DOCKER_NETWORK"; then
+            observer_status=0
           else
-            cli_status=$?
+            observer_status=$?
           fi
-          elapsed_ms=$(( $(date +%s%3N) - start_ms ))
-          if [ "$cli_status" -eq 0 ]; then
+          read -r cli_status elapsed_ms < <(node -e 'const x = require("node:fs").readFileSync("test-artifacts/startup-process.json", "utf8"); const p = JSON.parse(x); process.stdout.write(`${p.cli_exit_code === null ? "unavailable" : p.cli_exit_code} ${p.elapsed_ms ?? 0}\n`)')
+          if [ "$cli_status" = "0" ]; then
             node scripts/real-service-integration.mjs startup-summary "$cli_status" "$elapsed_ms"
           else
             node scripts/real-service-integration.mjs startup-failure-summary "$cli_status" "$elapsed_ms"
-            exit "$cli_status"
+            exit "$observer_status"
+          fi
+          if [ "$observer_status" -ne 0 ]; then
+            exit "$observer_status"
           fi
 
       - name: Capture sanitized startup evidence before cleanup
@@ -173,6 +179,10 @@ jobs:
           set -euo pipefail
           mkdir -p test-artifacts
           stop_status="SKIPPED"
+          observer_status="PASS"
+          if ! node scripts/startup-observer.mjs reap "$CARECONNECT_DOCKER_NETWORK"; then
+            observer_status="FAIL"
+          fi
           if [ -f "$RUNNER_TEMP/careconnect-supabase-start-attempted" ]; then
             if timeout --signal=TERM --kill-after=15s 180s supabase --network-id "$CARECONNECT_DOCKER_NETWORK" stop --no-backup >"$RUNNER_TEMP/careconnect-supabase-stop.raw.log" 2>&1; then
               stop_status="PASS"
@@ -185,7 +195,7 @@ jobs:
             "$CARECONNECT_DOCKER_NETWORK" \
             "$RUNNER_TEMP/careconnect-docker-network-owned.json" \
             test-artifacts/docker-network-cleanup-summary.json
-          [[ "$stop_status" == "PASS" || "$stop_status" == "SKIPPED" ]]
+          [[ ( "$stop_status" == "PASS" || "$stop_status" == "SKIPPED" ) && "$observer_status" == "PASS" ]]
 
       - name: Upload sanitized integration evidence
         if: always()
@@ -198,6 +208,8 @@ jobs:
             test-artifacts/startup-process.json
             test-artifacts/startup-images-before.json
             test-artifacts/startup-evidence.json
+            test-artifacts/startup-observer.json
+            test-artifacts/startup-observer-cleanup.json
             test-artifacts/ledger.log
             test-artifacts/pgtap.log
             test-artifacts/concurrency.log
