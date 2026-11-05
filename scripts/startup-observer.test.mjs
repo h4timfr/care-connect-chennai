@@ -162,6 +162,18 @@ test("a nonzero Postgres exit before healthy still establishes startup failure",
 });
 
 test("verified CLI markers classify later database and service startup stages", () => {
+  const earlier = "Starting database...\nInitialising schema...\n";
+  assert.equal(
+    classifyStartupStage({ raw: `${earlier}Starting containers...`, exitCode: 1 }),
+    "service_startup",
+  );
+  assert.equal(
+    classifyStartupStage({
+      raw: `${earlier}Starting containers...\nWaiting for health checks...`,
+      exitCode: 1,
+    }),
+    "service_health",
+  );
   assert.equal(
     classifyStartupStage({ raw: "Initialising schema...\nprivate error", exitCode: 1 }),
     "database_setup",

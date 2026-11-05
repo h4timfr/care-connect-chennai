@@ -182,8 +182,9 @@ export function classifyStartupStage({ raw, exitCode, eventCapture, events }) {
     (event) => event.event === "die" && event.exit_code !== null && event.exit_code !== 0,
   );
 
-  // This marker is emitted only after the host-side Postgres connection succeeds.
-  // It therefore takes precedence over earlier create/start/health lifecycle events.
+  // Prefer the furthest verified phase over earlier normal Postgres lifecycle events.
+  if (healthStarted) return "service_health";
+  if (servicesStarted) return "service_startup";
   if (schemaStarted) return "database_setup";
 
   if (databaseStarted && /failed to create docker container/i.test(clean))
@@ -207,8 +208,6 @@ export function classifyStartupStage({ raw, exitCode, eventCapture, events }) {
     (healthyIndex === -1 || nonzeroExitIndex < healthyIndex)
   )
     return "postgres_startup";
-  if (healthStarted) return "service_health";
-  if (servicesStarted) return "service_startup";
   return "unavailable";
 }
 
