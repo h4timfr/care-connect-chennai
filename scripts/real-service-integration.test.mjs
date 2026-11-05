@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import {
   assertLoopbackUrl,
   assertLocalProjectRefMatchesConfig,
+  authenticatedRealtimeAuthChecksPass,
+  classifyRealtimeChannelError,
   closeAuthResources,
   closeRealtimeResources,
   collectRealtimeDeliveries,
@@ -22,6 +24,7 @@ import {
   safeSqlState,
   spawnSyncBounded,
   summarizeBrowserWorkflows,
+  subscribed,
   verifyRepositoryIntegrity,
 } from "./real-service-integration.mjs";
 
@@ -232,6 +235,32 @@ test("Auth API validation rejection is recorded without blocking Realtime diagno
   });
 });
 
+test("an Auth API rejection remains a failed Realtime identity check", () => {
+  const authenticated = [
+    {
+      auth: {
+        mode: "authenticated",
+        sessionIdentityMatched: true,
+        authApiCheck: "accepted",
+        realtimeAuthSet: true,
+      },
+    },
+    {
+      auth: {
+        mode: "authenticated",
+        sessionIdentityMatched: true,
+        authApiCheck: "rejected",
+        realtimeAuthSet: true,
+      },
+    },
+    { auth: { mode: "anonymous", authApiCheck: "not-checked" } },
+  ];
+
+  assert.equal(authenticatedRealtimeAuthChecksPass(authenticated), false);
+  authenticated[1].auth.authApiCheck = "accepted";
+  assert.equal(authenticatedRealtimeAuthChecksPass(authenticated), true);
+});
+
 test("Realtime delivery outcomes identify each subscriber without short-circuiting", async () => {
   const outcomes = await collectRealtimeDeliveries([
     Promise.resolve(true),
@@ -247,6 +276,44 @@ test("Postgres Changes readiness waits for server-side subscription confirmation
       postgres_changes_options: { wait: true, timeout: 10_000 },
     },
   });
+});
+
+test("Realtime readiness accepts only authenticated subscriptions and an anonymous auth denial", async () => {
+  const makeState = (subscribe) => ({
+    pending: new Set(),
+    channel: { subscribe },
+    diagnostics: { subscription: { statuses: [], errorKinds: [], ready: false } },
+  });
+  const unauthorized = new Error("Unauthorized");
+
+  const patient = makeState((callback) => callback("SUBSCRIBED"));
+  assert.equal(await subscribed(patient), true);
+  assert.equal(patient.diagnostics.subscription.ready, true);
+
+  const anonymous = makeState((callback) => callback("CHANNEL_ERROR", unauthorized));
+  assert.equal(await subscribed(anonymous, { expectedStatus: "CHANNEL_ERROR" }), true);
+  assert.deepEqual(anonymous.diagnostics.subscription, {
+    statuses: ["CHANNEL_ERROR"],
+    errorKinds: ["authorization-denied"],
+    ready: false,
+  });
+
+  const anonymousTransportFailure = makeState((callback) =>
+    callback("CHANNEL_ERROR", new Error("private transport detail")),
+  );
+  await assert.rejects(
+    subscribed(anonymousTransportFailure, { expectedStatus: "CHANNEL_ERROR" }),
+    /not denied by authorization/,
+  );
+  assert.deepEqual(anonymousTransportFailure.diagnostics.subscription.errorKinds, ["transport"]);
+  assert.equal(
+    classifyRealtimeChannelError(new Error("binding mismatch between server and client bindings")),
+    "binding-mismatch",
+  );
+  assert.equal(
+    classifyRealtimeChannelError(new Error("PostgresChangesSubscribeTimeout")),
+    "timeout",
+  );
 });
 
 test("Realtime payload diagnostics distinguish arrival, matching fields, and expected message safely", () => {
@@ -305,6 +372,7 @@ test("Realtime payload diagnostics distinguish arrival, matching fields, and exp
       },
       subscription: {
         statuses: ["SUBSCRIBED", "private error text"],
+        errorKinds: ["authorization-denied", "private error text"],
         ready: true,
         error: "private error",
       },
@@ -319,6 +387,7 @@ test("Realtime payload diagnostics distinguish arrival, matching fields, and exp
     /private token|private error|private payload|private synthetic body/,
   );
   assert.match(serialized, /"statuses":\["SUBSCRIBED","OTHER"\]/);
+  assert.match(serialized, /"errorKinds":\["authorization-denied","other"\]/);
 });
 
 test("Realtime authorization assertion failures are not misclassified as Auth failures", () => {

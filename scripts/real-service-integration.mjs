@@ -239,6 +239,55 @@ function safeAuthApiErrorCode(code) {
   return allowed.includes(code) ? code : code ? "other" : "none";
 }
 
+function validRealtimeChannelErrorKind(kind) {
+  return [
+    "authorization-denied",
+    "binding-mismatch",
+    "timeout",
+    "configuration",
+    "transport",
+    "other",
+  ].includes(kind)
+    ? kind
+    : "other";
+}
+
+export function classifyRealtimeChannelError(error) {
+  if (!error) return "other";
+  const cause = error.cause;
+  const detail = [
+    error.message,
+    typeof cause === "string" ? cause : "",
+    cause && typeof cause === "object" ? cause.code : "",
+    cause && typeof cause === "object" ? cause.error : "",
+    cause && typeof cause === "object" ? cause.reason : "",
+  ]
+    .filter((value) => typeof value === "string" || typeof value === "number")
+    .join(" ")
+    .toLowerCase();
+  if (/unauthorized|forbidden|permission denied|not authorized/.test(detail)) {
+    return "authorization-denied";
+  }
+  if (/mismatch between server and client bindings/.test(detail)) return "binding-mismatch";
+  if (/timed? ?out|timeout|subscribe timeout/.test(detail)) return "timeout";
+  if (/realtimedisabledforconfiguration|realtime disabled/.test(detail)) return "configuration";
+  if (/socket|transport|connection lost|connection closed/.test(detail)) return "transport";
+  return "other";
+}
+
+export function authenticatedRealtimeAuthChecksPass(diagnostics) {
+  const authenticated = diagnostics.filter((item) => item.auth?.mode === "authenticated");
+  return (
+    authenticated.length > 0 &&
+    authenticated.every(
+      (item) =>
+        item.auth.sessionIdentityMatched === true &&
+        item.auth.authApiCheck === "accepted" &&
+        item.auth.realtimeAuthSet === true,
+    )
+  );
+}
+
 export function sanitizeRealtimeDiagnostics(diagnostics) {
   const validStatus = (status) =>
     ["SUBSCRIBED", "CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status) ? status : "OTHER";
@@ -270,6 +319,9 @@ export function sanitizeRealtimeDiagnostics(diagnostics) {
     subscription: {
       statuses: Array.isArray(item.subscription?.statuses)
         ? item.subscription.statuses.map(validStatus)
+        : [],
+      errorKinds: Array.isArray(item.subscription?.errorKinds)
+        ? item.subscription.errorKinds.map(validRealtimeChannelErrorKind)
         : [],
       ready: item.subscription?.ready === true,
     },
@@ -1203,14 +1255,19 @@ async function runIntegration() {
       realtimeResources,
       realtimeDiagnostics,
     );
-    const readiness = await Promise.all([
-      subscribed(patientChannel),
-      subscribed(clinicChannel),
-      subscribed(doctorChannel),
-      subscribed(outsiderChannel),
-      subscribed(anonChannel),
-    ]);
-    assert(readiness.every(Boolean), "all Realtime clients report subscription readiness");
+    const readiness = await measure("realtime.subscription.readiness", () =>
+      Promise.all([
+        subscribed(patientChannel),
+        subscribed(clinicChannel),
+        subscribed(doctorChannel),
+        subscribed(outsiderChannel),
+        subscribed(anonChannel, { expectedStatus: "CHANNEL_ERROR" }),
+      ]),
+    );
+    assert(
+      readiness.every(Boolean),
+      "authorized Realtime clients are ready and anonymous subscription is denied",
+    );
     const receivedByPatient = waitForInsert(patientChannel, patientMessage);
     const receivedByClinic = waitForInsert(clinicChannel, patientMessage);
     const patientInsert = await patient.from("messages").insert({
@@ -1300,6 +1357,10 @@ async function runIntegration() {
     assert(
       !outsiderDelivery && !anonDelivery && !doctorRawDelivery,
       "unrelated, anonymous, and doctor raw-table subscribers receive no unauthorized events",
+    );
+    assert(
+      authenticatedRealtimeAuthChecksPass(realtimeDiagnostics),
+      "Auth API accepts every authenticated Realtime identity",
     );
 
     const beforeReconnect = await closeRealtimeResources(realtimeResources);
@@ -1737,7 +1798,7 @@ function realtimeChannel(client, role, conversationId, resources, diagnosticsCol
         authApiErrorCode: "none",
         realtimeAuthSet: false,
       },
-      subscription: { statuses: [], ready: false },
+      subscription: { statuses: [], errorKinds: [], ready: false },
       rowVisibility: { checked: false, visible: false, rowCount: 0 },
       delivery: {
         eventCount: 0,
@@ -1768,7 +1829,10 @@ function realtimeChannel(client, role, conversationId, resources, diagnosticsCol
   return state;
 }
 
-function subscribed(state) {
+export function subscribed(state, { expectedStatus = "SUBSCRIBED" } = {}) {
+  if (!["SUBSCRIBED", "CHANNEL_ERROR"].includes(expectedStatus)) {
+    throw new Error("invalid expected Realtime subscription status");
+  }
   return new Promise((resolve, reject) => {
     let finished = false;
     let timeout;
@@ -1787,14 +1851,26 @@ function subscribed(state) {
       finish(reject, new Error("realtime subscription readiness timeout"));
     }, 15_000);
     try {
-      state.channel.subscribe((status) => {
+      state.channel.subscribe((status, error) => {
         const safeStatus = ["SUBSCRIBED", "CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)
           ? status
           : "OTHER";
         state.diagnostics.subscription.statuses.push(safeStatus);
-        if (status === "SUBSCRIBED") {
-          state.diagnostics.subscription.ready = true;
+        const errorKind = error ? classifyRealtimeChannelError(error) : null;
+        if (errorKind) state.diagnostics.subscription.errorKinds.push(errorKind);
+        if (status === expectedStatus) {
+          if (status === "CHANNEL_ERROR" && errorKind !== "authorization-denied") {
+            finish(
+              reject,
+              new Error("anonymous Realtime subscription was not denied by authorization"),
+            );
+            return;
+          }
+          if (status === "SUBSCRIBED") {
+            state.diagnostics.subscription.ready = true;
+          }
           finish(resolve, true);
+          return;
         }
         if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
           finish(reject, new Error("realtime subscription failed"));
