@@ -644,14 +644,36 @@ test("the workflow provisions only local Supabase services and never links a rem
     path.join(root, ".github/workflows/real-service-integration.yml"),
     "utf8",
   );
+  const dockerGate = readFileSync(
+    path.join(root, "scripts/verify-disposable-docker-bindings.mjs"),
+    "utf8",
+  );
   assert.match(workflow, /runs-on:\s*ubuntu-24\.04/);
   assert.match(workflow, /version:\s*2\.117\.0/);
-  assert.match(workflow, /supabase start/);
+  assert.match(workflow, /supabase --network-id "\$CARECONNECT_DOCKER_NETWORK" start/);
+  assert.match(dockerGate, /com\.docker\.network\.bridge\.host_binding_ipv4/);
+  assert.match(dockerGate, /127\.0\.0\.1/);
+  assert.match(dockerGate, /"--internal"/);
+  assert.match(dockerGate, /"::1"/);
+  assert.match(workflow, /docker-bindings\.mjs verify/);
+  const bindingGate = workflow.indexOf(
+    "Verify actual Docker bindings before application service requests",
+  );
+  const migrations = workflow.indexOf("Verify migration ledger and reviewed SQL integrity");
+  const integration = workflow.indexOf(
+    "Exercise real Auth, PostgREST, Storage, Realtime, and browser workflows",
+  );
+  assert.ok(bindingGate >= 0 && bindingGate < migrations && bindingGate < integration);
+  assert.match(
+    workflow,
+    /Verify actual Docker bindings before application service requests\s+if: \$\{\{ always\(\) && steps\.start_supabase\.outcome != 'skipped' \}\}/,
+  );
   assert.doesNotMatch(
     workflow,
     /supabase\s+(?:link|db\s+push|migration\s+up\s+--linked|db\s+reset\s+--linked)/,
   );
-  assert.match(workflow, /supabase stop --no-backup/);
+  assert.match(workflow, /supabase --network-id "\$CARECONNECT_DOCKER_NETWORK" stop --no-backup/);
+  assert.match(workflow, /docker-network-cleanup-summary\.json/);
 });
 
 test("Realtime checks follow the message RLS contract and close bounded runner resources", () => {
@@ -703,7 +725,10 @@ test("Realtime checks follow the message RLS contract and close bounded runner r
     workflow,
     /Stop the disposable Supabase stack\s+if: always\(\)[\s\S]*?timeout-minutes: 5/,
   );
-  assert.match(workflow, /timeout --signal=TERM --kill-after=15s 180s supabase stop/);
+  assert.match(
+    workflow,
+    /timeout --signal=TERM --kill-after=15s 180s supabase --network-id "\$CARECONNECT_DOCKER_NETWORK" stop/,
+  );
   assert.match(
     workflow,
     /Upload sanitized integration evidence\s+if: always\(\)[\s\S]*?timeout-minutes: 5/,

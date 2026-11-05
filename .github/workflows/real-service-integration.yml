@@ -9,6 +9,8 @@ on:
       - ".github/workflows/real-service-integration.yml"
       - "scripts/real-service-integration.mjs"
       - "scripts/real-service-integration.test.mjs"
+      - "scripts/verify-disposable-docker-bindings.mjs"
+      - "scripts/verify-disposable-docker-bindings.test.mjs"
       - "scripts/staging-reconciliation-rehearsal.mjs"
       - "scripts/staging-reconciliation-rehearsal.test.mjs"
       - "tests/real-service/**"
@@ -41,6 +43,9 @@ jobs:
     name: Fresh local Supabase services and real browser workflows
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    env:
+      CARECONNECT_DOCKER_NETWORK: careconnect-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      CARECONNECT_DOCKER_RUN_LABEL: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Check out the selected branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -73,7 +78,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test scripts/real-service-integration.test.mjs scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs
+          node --test scripts/real-service-integration.test.mjs scripts/verify-disposable-docker-bindings.test.mjs scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs
           if [ ! -f supabase/config.toml ]; then
             test ! -e supabase/.temp/linked-project.json
             test ! -e supabase/.temp/project-ref
@@ -82,19 +87,41 @@ jobs:
           node scripts/real-service-integration.mjs preflight
           supabase --version >/dev/null
 
-      - name: Start a fresh disposable Supabase stack
+      - name: Create and verify the private loopback-only Docker network
         shell: bash
         run: |
           set -euo pipefail
           umask 077
           mkdir -p test-artifacts
+          node scripts/verify-disposable-docker-bindings.mjs create \
+            "$CARECONNECT_DOCKER_NETWORK" "$CARECONNECT_DOCKER_RUN_LABEL" \
+            test-artifacts/docker-network-summary.json \
+            "$RUNNER_TEMP/careconnect-docker-network-owned.json"
+
+      - name: Start a fresh disposable Supabase stack
+        id: start_supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p test-artifacts
+          touch "$RUNNER_TEMP/careconnect-supabase-start-attempted"
           # Raw CLI output stays in runner-private temporary storage and is never uploaded.
-          if supabase start >"$RUNNER_TEMP/careconnect-supabase-start.raw.log" 2>&1; then
+          if supabase --network-id "$CARECONNECT_DOCKER_NETWORK" start >"$RUNNER_TEMP/careconnect-supabase-start.raw.log" 2>&1; then
             node scripts/real-service-integration.mjs startup-summary
           else
             node scripts/real-service-integration.mjs startup-failure-summary
             exit 1
           fi
+
+      - name: Verify actual Docker bindings before application service requests
+        if: ${{ always() && steps.start_supabase.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-disposable-docker-bindings.mjs verify \
+            "$CARECONNECT_DOCKER_NETWORK" supabase/config.toml \
+            test-artifacts/docker-network-summary.json "$CARECONNECT_DOCKER_RUN_LABEL"
 
       - name: Verify migration ledger and reviewed SQL integrity
         shell: bash
@@ -123,9 +150,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f supabase/config.toml ]; then
-            timeout --signal=TERM --kill-after=15s 180s supabase stop --no-backup >"$RUNNER_TEMP/careconnect-supabase-stop.raw.log" 2>&1 || true
+          mkdir -p test-artifacts
+          stop_status="SKIPPED"
+          if [ -f "$RUNNER_TEMP/careconnect-supabase-start-attempted" ]; then
+            if timeout --signal=TERM --kill-after=15s 180s supabase --network-id "$CARECONNECT_DOCKER_NETWORK" stop --no-backup >"$RUNNER_TEMP/careconnect-supabase-stop.raw.log" 2>&1; then
+              stop_status="PASS"
+            else
+              stop_status="FAIL"
+            fi
           fi
+          node -e 'const fs = require("node:fs"); fs.writeFileSync("test-artifacts/docker-stop-summary.json", JSON.stringify({ status: process.argv[1], stack_stop_attempted: process.argv[1] !== "SKIPPED" }, null, 2) + "\n", { mode: 0o600 })' "$stop_status"
+          node scripts/verify-disposable-docker-bindings.mjs cleanup \
+            "$CARECONNECT_DOCKER_NETWORK" \
+            "$RUNNER_TEMP/careconnect-docker-network-owned.json" \
+            test-artifacts/docker-network-cleanup-summary.json
+          [[ "$stop_status" == "PASS" || "$stop_status" == "SKIPPED" ]]
 
       - name: Upload sanitized integration evidence
         if: always()
@@ -141,5 +180,8 @@ jobs:
             test-artifacts/real-service-summary.json
             test-artifacts/browser-workflow-summary.json
             test-artifacts/browser-failure-trace.json
+            test-artifacts/docker-network-summary.json
+            test-artifacts/docker-network-cleanup-summary.json
+            test-artifacts/docker-stop-summary.json
           if-no-files-found: warn
           retention-days: 7
