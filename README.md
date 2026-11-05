@@ -78,7 +78,9 @@ Supabase endpoints fail the tests.
 
 Mocked browser builds set `CARECONNECT_ISOLATED_TEST=1` to disable local dotenv loading in Vite,
 the shared build plugin, and the Nitro configuration. Only explicit synthetic environment values
-are used. Run `npm run test:unit` rather than discovering every `*.test.ts` file: the manual
+are used. A test-only Node preload also hides private dotenv files from Nitro discovery and
+rejects attempts to read dotenv files or original Supabase link markers. This is a guard for
+trusted synthetic test code, not an operating-system sandbox. Run `npm run test:unit` rather than discovering every `*.test.ts` file: the manual
 security script requires a separately confirmed disposable target.
 
 SQL tests in `supabase/tests/` are pgTAP checks for grants, RLS, booking, messaging, provider

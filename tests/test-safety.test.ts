@@ -30,3 +30,48 @@ test("manual account-creation checks refuse execution before loading dotenv", ()
     rmdirSync(directory);
   }
 });
+
+test("synthetic test preload blocks sync, promise and stream dotenv reads before contents", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "careconnect-env-denial-"));
+  try {
+    writeFileSync(path.join(directory, ".env"), "PRIVATE_SENTINEL=never-print-this\n");
+    for (const code of [
+      "require('fs').readFileSync('.env')",
+      "require('fs').readFileSync('.ENV')",
+      "require('fs').createReadStream('.env')",
+      "require('fs/promises').readFile('.env')",
+    ]) {
+      const result = spawnSync(
+        process.execPath,
+        ["--import", new URL("../scripts/deny-local-env.mjs", import.meta.url).href, "-e", code],
+        {
+          cwd: directory,
+          env: { ...process.env, CARECONNECT_ENV_GUARD_ROOT: directory },
+          encoding: "utf8",
+        },
+      );
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /read blocked in synthetic tests/);
+      assert.doesNotMatch(result.stdout + result.stderr, /never-print-this/);
+    }
+    const discovery = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        new URL("../scripts/deny-local-env.mjs", import.meta.url).href,
+        "-e",
+        "const fs=require('fs'); console.log(fs.existsSync('.env'), fs.statSync('.env', {throwIfNoEntry:false}) === undefined)",
+      ],
+      {
+        cwd: directory,
+        env: { ...process.env, CARECONNECT_ENV_GUARD_ROOT: directory },
+        encoding: "utf8",
+      },
+    );
+    assert.equal(discovery.status, 0);
+    assert.equal(discovery.stdout.trim(), "false true");
+  } finally {
+    unlinkSync(path.join(directory, ".env"));
+    rmdirSync(directory);
+  }
+});

@@ -1,4 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
+import { pathToFileURL } from "node:url";
+import path from "node:path";
 
 // The normal suite uses a reserved URL and a server built with dummy Supabase settings.
 // The mocked suite never attaches to a caller-provided server: an existing server may have been
@@ -48,6 +50,8 @@ export default defineConfig({
         ? {}
         : {
             CARECONNECT_ISOLATED_TEST: "1",
+            CARECONNECT_ENV_GUARD_ROOT: process.cwd(),
+            NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${pathToFileURL(path.resolve("scripts/deny-local-env.mjs")).href}`,
             VITE_SUPABASE_URL: MOCK_SUPABASE_URL,
             VITE_SUPABASE_PUBLISHABLE_KEY: MOCK_SUPABASE_KEY,
           }),
