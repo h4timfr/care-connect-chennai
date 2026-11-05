@@ -42,6 +42,7 @@ export default defineConfig({
     command: "npm run build && node .output/server/index.mjs",
     env: {
       NITRO_PRESET: "node-server",
+      NITRO_HOST: "127.0.0.1",
       PORT: String(PORT),
       ...(liveSmoke
         ? {}
