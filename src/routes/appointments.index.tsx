@@ -31,6 +31,7 @@ function AppointmentsList() {
     patient,
     isLoadingPatient,
     patientError,
+    refetchPatient,
   } = useApp();
   const { loading, user } = useProtectedRoute();
   const { t } = useI18n();
@@ -61,7 +62,7 @@ function AppointmentsList() {
       <ErrorState
         title={t("appointments.loadError")}
         message={t(describeDataError(patientError ?? status.error))}
-        onRetry={status.refetch}
+        onRetry={patientError ? refetchPatient : status.refetch}
       />
     );
   } else if (!patient) {

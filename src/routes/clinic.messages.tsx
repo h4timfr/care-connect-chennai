@@ -47,7 +47,7 @@ function ClinicMessages() {
     const mine = conversations
       .filter((c) => c.clinicId === activeClinic.id)
       .sort((a, b) => lastSentAt(b).localeCompare(lastSentAt(a)));
-    body = <ClinicInbox conversations={mine} />;
+    body = <ClinicInbox key={`${activeClinic.id}:${requestedId ?? ""}`} conversations={mine} />;
   }
 
   return (

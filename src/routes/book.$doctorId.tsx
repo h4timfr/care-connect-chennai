@@ -57,7 +57,15 @@ function BookAppointment() {
   const { doctorId } = Route.useParams();
   const search = Route.useSearch();
   const { loading: authLoading, user } = useProtectedRoute();
-  const { doctorById, clinicById, patient, isLoadingPatient, patientError, catalog } = useApp();
+  const {
+    doctorById,
+    clinicById,
+    patient,
+    isLoadingPatient,
+    patientError,
+    refetchPatient,
+    catalog,
+  } = useApp();
   const { t, fmt } = useI18n();
 
   if (authLoading || !user) {
@@ -84,7 +92,7 @@ function BookAppointment() {
         <ErrorState
           title={t("book.loadError")}
           message={t(describeDataError(patientError ?? catalog.error))}
-          onRetry={catalog.refetch}
+          onRetry={patientError ? refetchPatient : catalog.refetch}
         />
       </PatientShell>
     );

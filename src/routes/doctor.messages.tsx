@@ -104,7 +104,7 @@ function Inbox() {
         ))}
       </ul>
       {active ? (
-        <Thread conversation={active} />
+        <Thread key={active.id} conversation={active} />
       ) : (
         <div className="surface-card grid place-items-center p-10 text-sm text-muted-foreground">
           {search.c ? t("messages.unavailable") : t("messages.select")}

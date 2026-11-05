@@ -35,6 +35,7 @@ function MessagesView() {
     patient,
     isLoadingPatient,
     patientError,
+    refetchPatient,
   } = useApp();
   const { loading, user } = useProtectedRoute();
   const { t } = useI18n();
@@ -52,7 +53,7 @@ function MessagesView() {
       <ErrorState
         title={t("messages.loadError")}
         message={t(describeDataError(patientError ?? status.error))}
-        onRetry={status.refetch}
+        onRetry={patientError ? refetchPatient : status.refetch}
       />
     );
   } else if (!patient) {
@@ -61,7 +62,7 @@ function MessagesView() {
     const mine = conversations
       .filter((c) => c.patientId === patient.id)
       .sort((a, b) => lastSentAt(b).localeCompare(lastSentAt(a)));
-    body = <Inbox conversations={mine} />;
+    body = <Inbox key={requestedId ?? ""} conversations={mine} />;
   }
 
   return (
