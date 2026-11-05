@@ -52,9 +52,9 @@ export function isoDate(d: Date) {
 }
 
 export function addDays(base: Date, days: number) {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d;
+  // Booking dates use Asia/Kolkata, which has no daylight-saving transitions. Advancing in
+  // the viewer's timezone can repeat or skip an India-local date around their DST change.
+  return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 export interface SpecialtyInfo {
