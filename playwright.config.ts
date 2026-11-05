@@ -10,6 +10,7 @@ const MOCK_SUPABASE_URL = "https://careconnect-test.invalid";
 const MOCK_SUPABASE_KEY = "sb_publishable_local_test_only";
 
 if (!liveSmoke) {
+  process.env.CARECONNECT_ISOLATED_TEST = "1";
   if (externalBaseUrl) {
     throw new Error(
       "PLAYWRIGHT_BASE_URL is disabled in mocked test mode; use the test-managed server.",
@@ -45,6 +46,7 @@ export default defineConfig({
       ...(liveSmoke
         ? {}
         : {
+            CARECONNECT_ISOLATED_TEST: "1",
             VITE_SUPABASE_URL: MOCK_SUPABASE_URL,
             VITE_SUPABASE_PUBLISHABLE_KEY: MOCK_SUPABASE_KEY,
           }),

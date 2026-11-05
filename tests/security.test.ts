@@ -1,6 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 
+// Opt in before loading any local configuration. Generic test discovery must be harmless.
+if (!process.env.SECURITY_TEST_CONFIRM_HOST) {
+  console.error("Manual security checks require an explicitly confirmed disposable target.");
+  process.exit(1);
+}
+
 config();
 
 const url = process.env.VITE_SUPABASE_URL;

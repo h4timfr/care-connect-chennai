@@ -4,6 +4,7 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
+    "test:unit": "tsx --test tests/appointment-time.test.ts tests/supabase-config.test.ts tests/toast.test.ts tests/test-safety.test.ts",
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",

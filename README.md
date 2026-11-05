@@ -47,6 +47,7 @@ npm run dev            # http://localhost:8080
 | `npm run build`             | Production build (requires configured Supabase build variables)        |
 | `npm run lint`              | ESLint + Prettier checks                                               |
 | `npm run typecheck`         | Type check                                                             |
+| `npm run test:unit`         | Safe unit suite; excludes the manual account-creation script           |
 | `npm run validate:frontend` | Lint, type check and production build; does not run SQL tests          |
 | `npx playwright test`       | Mocked browser suite; builds and serves the app with dummy credentials |
 
@@ -74,6 +75,11 @@ can contact the configured Supabase project. Do not enable live smoke mode again
 The mocked suites use synthetic in-process records and the reserved `.invalid` host. They do not
 need accounts or data in a real project. Unrecognised mock requests and attempts to reach hosted
 Supabase endpoints fail the tests.
+
+Mocked browser builds set `CARECONNECT_ISOLATED_TEST=1` to disable local dotenv loading in Vite,
+the shared build plugin, and the Nitro configuration. Only explicit synthetic environment values
+are used. Run `npm run test:unit` rather than discovering every `*.test.ts` file: the manual
+security script requires a separately confirmed disposable target.
 
 SQL tests in `supabase/tests/` are pgTAP checks for grants, RLS, booking, messaging, provider
 onboarding, candidate isolation and publication/contactability boundaries. They require a compatible

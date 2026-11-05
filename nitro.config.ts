@@ -1,7 +1,10 @@
 import { loadEnv } from "vite";
 import { resolveSupabaseConfig } from "./src/lib/supabase/config";
 
-const env = loadEnv("production", process.cwd());
+const env =
+  process.env.CARECONNECT_ISOLATED_TEST === "1"
+    ? process.env
+    : loadEnv("production", process.cwd());
 const supabaseConfig = resolveSupabaseConfig(env, process.env.VERCEL_ENV);
 if (!supabaseConfig.ok) {
   throw new Error(supabaseConfig.error);
