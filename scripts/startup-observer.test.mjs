@@ -95,6 +95,72 @@ test("Postgres start and health failures use explicit event evidence", () => {
   );
 });
 
+test("a normal Postgres start alone does not establish a startup failure", () => {
+  assert.equal(
+    classifyStartupStage({
+      raw: "Starting database...",
+      exitCode: 1,
+      eventCapture: "completed",
+      events: [
+        { service: "db", event: "create", exit_code: null },
+        { service: "db", event: "start", exit_code: null },
+      ],
+    }),
+    "unavailable",
+  );
+});
+
+test("healthy Postgres followed by rollback is not classified as startup failure", () => {
+  assert.equal(
+    classifyStartupStage({
+      raw: "Starting database...",
+      exitCode: 1,
+      eventCapture: "completed",
+      events: [
+        { service: "db", event: "create", exit_code: null },
+        { service: "db", event: "start", exit_code: null },
+        { service: "db", event: "health_status: healthy", exit_code: null },
+        { service: "db", event: "kill", exit_code: null },
+        { service: "db", event: "die", exit_code: 0 },
+        { service: "db", event: "destroy", exit_code: null },
+      ],
+    }),
+    "unavailable",
+  );
+});
+
+test("Initialising schema takes precedence over earlier normal Postgres events", () => {
+  assert.equal(
+    classifyStartupStage({
+      raw: "Starting database...\nInitialising schema...\nprivate error",
+      exitCode: 1,
+      eventCapture: "completed",
+      events: [
+        { service: "db", event: "create", exit_code: null },
+        { service: "db", event: "start", exit_code: null },
+        { service: "db", event: "health_status: healthy", exit_code: null },
+      ],
+    }),
+    "database_setup",
+  );
+});
+
+test("a nonzero Postgres exit before healthy still establishes startup failure", () => {
+  assert.equal(
+    classifyStartupStage({
+      raw: "Starting database...",
+      exitCode: 1,
+      eventCapture: "completed",
+      events: [
+        { service: "db", event: "create", exit_code: null },
+        { service: "db", event: "start", exit_code: null },
+        { service: "db", event: "die", exit_code: 17 },
+      ],
+    }),
+    "postgres_startup",
+  );
+});
+
 test("verified CLI markers classify later database and service startup stages", () => {
   assert.equal(
     classifyStartupStage({ raw: "Initialising schema...\nprivate error", exitCode: 1 }),

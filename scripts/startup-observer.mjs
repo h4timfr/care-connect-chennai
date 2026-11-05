@@ -176,27 +176,37 @@ export function classifyStartupStage({ raw, exitCode, eventCapture, events }) {
   const servicesStarted = hasLine(clean, "Starting containers...");
   const healthStarted = hasLine(clean, "Waiting for health checks...");
   const dbEvents = trustedEvents.filter((event) => event.service === "db");
+  const healthyIndex = dbEvents.findIndex((event) => event.event === "health_status: healthy");
+  const unhealthyIndex = dbEvents.findIndex((event) => event.event === "health_status: unhealthy");
+  const nonzeroExitIndex = dbEvents.findIndex(
+    (event) => event.event === "die" && event.exit_code !== null && event.exit_code !== 0,
+  );
+
+  // This marker is emitted only after the host-side Postgres connection succeeds.
+  // It therefore takes precedence over earlier create/start/health lifecycle events.
+  if (schemaStarted) return "database_setup";
 
   if (databaseStarted && /failed to create docker container/i.test(clean))
     return "postgres_creation";
   if (
     databaseStarted &&
     /failed to start docker container/i.test(clean) &&
+    healthyIndex === -1 &&
     dbEvents.some((event) => event.event === "create")
   )
     return "postgres_startup";
-  if (databaseStarted && dbEvents.some((event) => event.event === "health_status: unhealthy"))
+  if (
+    databaseStarted &&
+    unhealthyIndex !== -1 &&
+    (healthyIndex === -1 || unhealthyIndex < healthyIndex)
+  )
     return "postgres_health";
   if (
     databaseStarted &&
-    dbEvents.some(
-      (event) =>
-        event.event === "start" ||
-        (event.event === "die" && event.exit_code !== null && event.exit_code !== 0),
-    )
+    nonzeroExitIndex !== -1 &&
+    (healthyIndex === -1 || nonzeroExitIndex < healthyIndex)
   )
     return "postgres_startup";
-  if (schemaStarted && !servicesStarted) return "database_setup";
   if (healthStarted) return "service_health";
   if (servicesStarted) return "service_startup";
   return "unavailable";
