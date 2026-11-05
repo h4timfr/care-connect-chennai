@@ -462,24 +462,68 @@ function preflight({ stackStarted = false } = {}) {
   );
 }
 
+export function classifyStartupFailure(raw) {
+  const lines = String(raw).split(/\r?\n/);
+  const signatures = [
+    ["cli-network-flag-rejected", /(?:unknown|unrecognized|invalid) (?:flag|option).*network-id/i],
+    [
+      "docker-daemon",
+      /(?:cannot connect to|failed to connect to|error during connect).*docker daemon|docker daemon.*(?:unavailable|not running)/i,
+    ],
+    [
+      "image-pull",
+      /(?:failed to pull|error pulling image|pull access denied|manifest unknown|image pull failed|failed to resolve reference)/i,
+    ],
+    [
+      "dns-resolution",
+      /no such host|temporary failure in name resolution|name or service not known/i,
+    ],
+    [
+      "network-connectivity",
+      /network is unreachable|connection refused|i\/o timeout|tls handshake timeout/i,
+    ],
+    [
+      "network-attachment",
+      /(?:network .*not found|failed to (?:create|connect|attach).*network|error (?:creating|connecting).*network)/i,
+    ],
+    ["port-binding", /address already in use|port is already allocated|failed to bind.*port/i],
+    ["disk-space", /no space left on device|disk quota exceeded/i],
+    [
+      "configuration",
+      /(?:config(?:uration)? file.*(?:not found|missing)|failed to (?:read|parse).*config)/i,
+    ],
+    [
+      "container-health",
+      /(?:container .*unhealthy|health check.*(?:failed|timeout)|unhealthy containers)/i,
+    ],
+  ];
+  const categories = signatures
+    .filter(([, pattern]) => lines.some((line) => pattern.test(line)))
+    .map(([name]) => name);
+  return {
+    categories: categories.length ? categories : ["unclassified"],
+    image_pull_output_observed: lines.some((line) =>
+      /pulling (?:docker )?image|pulling from/i.test(line),
+    ),
+    container_start_output_observed: lines.some((line) =>
+      /starting containers|starting container/i.test(line),
+    ),
+  };
+}
+
 function rawStartupSummary(failed) {
   const file = path.join(process.env.RUNNER_TEMP || "", "careconnect-supabase-start.raw.log");
   const raw = existsSync(file) ? readFileSync(file, "utf8") : "";
   const applied = migrationFiles().filter((name) => raw.includes(`Applying migration ${name}`));
   if (failed) {
-    const labels = [
-      [/docker.*(?:unavailable|daemon|socket)/i, "Docker engine startup failed"],
-      [/port.*(?:use|allocated)/i, "local port conflict"],
-      [/pull|registry|network|tls/i, "container image/network startup failure"],
-      [/migration|sqlstate|syntax/i, "database migration startup failure"],
-    ];
-    const reason =
-      labels.find(([pattern]) => pattern.test(raw))?.[1] || "unclassified startup failure";
+    const diagnostics = classifyStartupFailure(raw);
     writeSafe(
       "startup.log",
-      `Supabase local startup failed: ${reason}.\nMigration attempts: ${applied.length}.\n`,
+      `Supabase local startup failed.\nMigration attempts: ${applied.length}.\nSanitized diagnostics: ${JSON.stringify(diagnostics)}\n`,
     );
-    console.log(`Startup FAIL: ${reason}; migration attempts ${applied.length}.`);
+    console.log(
+      `Startup FAIL: ${diagnostics.categories.join(", ")}; migration attempts ${applied.length}.`,
+    );
     return;
   }
   writeSafe(

@@ -8,6 +8,7 @@ import {
   assertLoopbackUrl,
   assertLocalProjectRefMatchesConfig,
   authenticatedRealtimeAuthChecksPass,
+  classifyStartupFailure,
   classifyRealtimeChannelError,
   closeAuthResources,
   closeRealtimeResources,
@@ -29,6 +30,30 @@ import {
 } from "./real-service-integration.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+test("startup diagnostics distinguish failure signatures without exposing raw output", () => {
+  const secret = "synthetic-private-token";
+  const result = classifyStartupFailure(
+    `Pulling image ${secret}\nfailed to pull image: no such host ${secret}`,
+  );
+  assert.deepEqual(result.categories, ["image-pull", "dns-resolution"]);
+  assert.equal(result.image_pull_output_observed, true);
+  assert.equal(JSON.stringify(result).includes(secret), false);
+  assert.deepEqual(classifyStartupFailure("Pulling image\nnetwork initialized").categories, [
+    "unclassified",
+  ]);
+  assert.deepEqual(classifyStartupFailure("unknown flag: --network-id").categories, [
+    "cli-network-flag-rejected",
+  ]);
+  assert.deepEqual(
+    classifyStartupFailure("failed to connect container to network: network test not found")
+      .categories,
+    ["network-attachment"],
+  );
+  assert.deepEqual(classifyStartupFailure("bind: address already in use").categories, [
+    "port-binding",
+  ]);
+});
 
 test("only the expected loopback Supabase API endpoint is accepted", () => {
   assert.equal(assertLoopbackUrl("http://127.0.0.1:54321", 54321).port, "54321");
