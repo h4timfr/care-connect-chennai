@@ -681,6 +681,7 @@ test("the workflow provisions only local Supabase services and never links a rem
   assert.match(dockerGate, /"--internal"/);
   assert.match(dockerGate, /"::1"/);
   assert.match(workflow, /docker-bindings\.mjs verify/);
+  assert.match(workflow, /"\$\{\{ steps\.start_supabase\.outcome \}\}"/);
   const bindingGate = workflow.indexOf(
     "Verify actual Docker bindings before application service requests",
   );

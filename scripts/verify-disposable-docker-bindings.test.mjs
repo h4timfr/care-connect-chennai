@@ -1,12 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assessDockerRuntime, parseSsListeners } from "./verify-disposable-docker-bindings.mjs";
+import {
+  applyStartupOutcome,
+  assessDockerRuntime,
+  parseSsListeners,
+} from "./verify-disposable-docker-bindings.mjs";
 
 const networkName = "careconnect-run-123-1";
 const runLabel = "123-1";
 const projectId = "care-connect-chennai";
 const networkId = "a".repeat(64);
 const containerId = "b".repeat(64);
+
+test("startup failure or cancellation cannot pass the binding gate", () => {
+  const assessment = { status: "PASS", published_ports: [] };
+  for (const outcome of ["failure", "cancelled"]) {
+    assert.deepEqual(applyStartupOutcome(assessment, outcome), {
+      ...assessment,
+      status: "NOT_EVALUATED",
+      reason: "stack-unavailable",
+    });
+  }
+  assert.equal(applyStartupOutcome(assessment, "success").status, "PASS");
+  assert.equal(applyStartupOutcome(assessment, undefined).status, "FAIL");
+});
 
 function runtime({ hostIps = ["127.0.0.1"], listeners = [] } = {}) {
   const network = {

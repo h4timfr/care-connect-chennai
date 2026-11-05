@@ -294,7 +294,15 @@ async function createNetwork(name, runLabel, evidencePath, markerPath) {
   }
 }
 
-function verifyRuntime(name, configPath, evidencePath, runLabel) {
+export function applyStartupOutcome(assessment, outcome) {
+  if (outcome === "success") return assessment;
+  if (["failure", "cancelled"].includes(outcome)) {
+    return { ...assessment, status: "NOT_EVALUATED", reason: "stack-unavailable" };
+  }
+  return { ...assessment, status: "FAIL", reason: "startup-outcome-unknown" };
+}
+
+function verifyRuntime(name, configPath, evidencePath, runLabel, startupOutcome) {
   try {
     const network = inspectNetwork(name);
     const projectId = loadConfigProjectId(configPath);
@@ -313,15 +321,24 @@ function verifyRuntime(name, configPath, evidencePath, runLabel) {
       listeners,
       malformedListenerLines: malformedLines,
     });
+    const result = applyStartupOutcome(assessment, startupOutcome);
     writeEvidence(evidencePath, {
       stage: "docker-port-bindings-before-integration",
-      ...assessment,
+      ...result,
     });
-    console.log(`Disposable Docker port-binding gate ${assessment.status}.`);
-    if (assessment.status !== "PASS") process.exitCode = 1;
+    console.log(
+      `Disposable Docker port-binding gate ${result.status}${result.reason ? `: ${result.reason}` : ""}.`,
+    );
+    if (result.status !== "PASS") process.exitCode = 1;
   } catch {
-    saveFailure(evidencePath, "docker-runtime-inspection-failed");
-    console.error("Disposable Docker port-binding gate FAIL (sanitized inspection failure).");
+    const result = applyStartupOutcome(
+      { status: "FAIL", failure_codes: ["docker-runtime-inspection-failed"] },
+      startupOutcome,
+    );
+    writeEvidence(evidencePath, { stage: "docker-port-bindings-before-integration", ...result });
+    console.error(
+      `Disposable Docker port-binding gate ${result.status} (sanitized inspection failure).`,
+    );
     process.exitCode = 1;
   }
 }
@@ -417,17 +434,17 @@ function cleanupNetwork(name, markerPath, evidencePath) {
   }
 }
 
-const [mode, networkName, third, fourth, fifth] = process.argv.slice(2);
+const [mode, networkName, third, fourth, fifth, sixth] = process.argv.slice(2);
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   if (mode === "create") {
     await createNetwork(networkName, third, fourth, fifth);
   } else if (mode === "verify") {
-    verifyRuntime(networkName, third, fourth, fifth);
+    verifyRuntime(networkName, third, fourth, fifth, sixth);
   } else if (mode === "cleanup") {
     cleanupNetwork(networkName, third, fourth);
   } else {
     console.error(
-      "Usage: create <network> <run-label> <evidence> <marker> | verify <network> <config> <evidence> <run-label> | cleanup <network> <marker> <evidence>",
+      "Usage: create <network> <run-label> <evidence> <marker> | verify <network> <config> <evidence> <run-label> <startup-outcome> | cleanup <network> <marker> <evidence>",
     );
     process.exitCode = 2;
   }

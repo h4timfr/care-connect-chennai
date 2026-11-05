@@ -121,7 +121,8 @@ jobs:
           set -euo pipefail
           node scripts/verify-disposable-docker-bindings.mjs verify \
             "$CARECONNECT_DOCKER_NETWORK" supabase/config.toml \
-            test-artifacts/docker-network-summary.json "$CARECONNECT_DOCKER_RUN_LABEL"
+            test-artifacts/docker-network-summary.json "$CARECONNECT_DOCKER_RUN_LABEL" \
+            "${{ steps.start_supabase.outcome }}"
 
       - name: Verify migration ledger and reviewed SQL integrity
         shell: bash
