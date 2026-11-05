@@ -106,7 +106,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
     setSending(true);
     try {
       await sendMessage(active.id, body);
-      setText("");
+      setText((current) => (current === text ? "" : current));
     } catch (err) {
       toast.error(t("messages.notSent", { reason: t(describeDataError(err)) }));
     } finally {

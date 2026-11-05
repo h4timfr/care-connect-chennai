@@ -126,7 +126,7 @@ function Thread({ conversation }: { conversation: DoctorConversation }) {
     if (!text || !user) return;
     try {
       await reply.mutateAsync({ conversationId: conversation.id, senderId: user.id, body: text });
-      setBody("");
+      setBody((current) => (current === body ? "" : current));
     } catch (err) {
       toast.error(t("doctorMessages.sendFailed", { reason: t(describeDataError(err)) }));
     }

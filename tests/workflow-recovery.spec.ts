@@ -35,6 +35,37 @@ test("patient drafts do not cross conversation boundaries", async ({ page, backe
   await expect(input).toHaveValue("");
 });
 
+for (const clinic of [false, true]) {
+  test(`${clinic ? "clinic" : "patient"} keeps composer edits made during a pending send`, async ({
+    page,
+    backend,
+  }) => {
+    const state = defaultState();
+    const mock = await backend({
+      conversations: [conversationRow([])],
+      delays: { messages: 1000 },
+      memberships: clinic
+        ? [{ clinic_id: ids.clinicA, role: "clinic_staff", clinics: state.clinics[0] }]
+        : [],
+    });
+    await page.goto(`/${clinic ? "clinic/messages" : "messages"}?c=${ids.conversation}`);
+    const input = page.getByLabel(clinic ? "Reply to patient" : "Message", { exact: true });
+    const send = page.getByRole("button", { name: clinic ? "Send reply" : "Send message" });
+    await input.fill("First message");
+    const request = page.waitForRequest(
+      (r) => r.method() === "POST" && r.url().includes("/rest/v1/messages"),
+    );
+    await send.click();
+    await request;
+    await input.fill("Next message drafted while sending");
+    await expect(send).toBeEnabled();
+    await expect(input).toHaveValue("Next message drafted while sending");
+    expect(mock.callsTo("POST", "/rest/v1/messages").at(-1)?.body).toMatchObject({
+      body: "First message",
+    });
+  });
+}
+
 test("clinic drafts do not cross patient boundaries", async ({ page, backend }) => {
   const state = defaultState();
   await backend({
@@ -63,6 +94,7 @@ test("doctor drafts do not cross patient boundaries and retain scoped RPC reads"
   state.doctors[0]!["user_id"] = ids.user;
   const mock = await backend({
     doctors: state.doctors,
+    delays: { messages: 1000 },
     doctorConversations: ["First Patient", "Second Patient"].map((name, index) => ({
       id: `doctor-conversation-${index}`,
       clinic_id: ids.clinicA,
@@ -77,6 +109,16 @@ test("doctor drafts do not cross patient boundaries and retain scoped RPC reads"
   await input.fill("Private draft for first patient");
   await page.getByRole("button", { name: /Second Patient/ }).click();
   await expect(input).toHaveValue("");
+  await input.fill("Doctor reply");
+  const send = page.getByRole("button", { name: "Send reply" });
+  const request = page.waitForRequest(
+    (r) => r.method() === "POST" && r.url().includes("/rest/v1/messages"),
+  );
+  await send.click();
+  await request;
+  await input.fill("Next doctor reply");
+  await expect(send).toBeEnabled();
+  await expect(input).toHaveValue("Next doctor reply");
   expect(mock.callsTo("POST", "/rest/v1/rpc/doctor_conversations").length).toBeGreaterThan(0);
   expect(mock.callsTo("GET", "/rest/v1/messages")).toHaveLength(0);
 });
