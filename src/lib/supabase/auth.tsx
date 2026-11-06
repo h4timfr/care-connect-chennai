@@ -13,6 +13,9 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./client";
 import { watchPasswordRecovery } from "./recovery";
 import { clearPrivateQueryCache } from "./private-query-cache";
+import { useI18n } from "@/lib/i18n";
+import { toast } from "@/lib/toast";
+import { describeDataError } from "./errors";
 
 // Must run before React mounts so the one-off PASSWORD_RECOVERY event can't be missed.
 watchPasswordRecovery();
@@ -21,13 +24,14 @@ interface AuthState {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const principalId = useRef<string | null>(null);
@@ -76,9 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    clearPrivateQueryCache(queryClient);
-  }, [queryClient]);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      clearPrivateQueryCache(queryClient);
+      return true;
+    } catch (error) {
+      toast.error(t(describeDataError(error)));
+      return false;
+    }
+  }, [queryClient, t]);
 
   return (
     <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>

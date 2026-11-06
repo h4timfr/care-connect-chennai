@@ -29,8 +29,7 @@ export function MissingProfile({
           variant="outline"
           size="sm"
           onClick={async () => {
-            await signOut();
-            navigate({ to: "/login" });
+            if (await signOut()) navigate({ to: "/login" });
           }}
         >
           {t("common.signOut")}

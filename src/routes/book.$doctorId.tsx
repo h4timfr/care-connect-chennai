@@ -259,20 +259,23 @@ function BookingForm({
           </h2>
           <div role="radiogroup" aria-labelledby="clinic-heading" className="grid gap-2">
             {clinics.map((c) => (
-              <button
+              <label
                 key={c.id}
-                type="button"
-                role="radio"
-                aria-checked={c.id === clinicId}
-                onClick={() => selectClinic(c.id)}
                 className={cn(
-                  "rounded-lg border p-3 text-start text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "cursor-pointer rounded-lg border p-3 text-start text-sm transition-colors focus-within:ring-2 focus-within:ring-ring",
                   c.id === clinicId ? "border-primary bg-primary-soft/50" : "hover:bg-muted",
                 )}
               >
+                <input
+                  className="sr-only"
+                  type="radio"
+                  name="booking-clinic"
+                  checked={c.id === clinicId}
+                  onChange={() => selectClinic(c.id)}
+                />
                 <span className="block font-medium">{c.name}</span>
                 <span className="block text-muted-foreground">{c.address}</span>
-              </button>
+              </label>
             ))}
           </div>
         </section>

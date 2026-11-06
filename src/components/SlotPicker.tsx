@@ -116,7 +116,7 @@ export function SlotGrid({
             </p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {partSlots.map((slot) => {
-                const selected = value === slot.slot_time;
+                const selected = (value?.length === 5 ? `${value}:00` : value) === slot.slot_time;
                 return (
                   <button
                     key={slot.slot_time}

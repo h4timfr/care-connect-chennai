@@ -63,8 +63,7 @@ function ProfilePage() {
   }
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate({ to: "/login" });
+    if (await signOut()) navigate({ to: "/login" });
   };
 
   const savedDoctors = patient.savedDoctorIds
