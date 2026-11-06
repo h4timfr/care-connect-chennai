@@ -12,6 +12,10 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  requireServicePreExposureIsolation,
+  reportServiceExecutionBlock,
+} from "./service-execution-boundary.mjs";
 
 const projectLabel = "com.supabase.cli.project";
 const workflowLabel = "com.careconnect.disposable-real-service-run";
@@ -417,6 +421,7 @@ function expectedContext(projectId, networkName) {
 }
 
 async function runStartup(projectId, networkName) {
+  requireServicePreExposureIsolation();
   const runnerTemp = process.env.RUNNER_TEMP;
   const owner = readJson(path.join(runnerTemp ?? "", "careconnect-startup-owner.json"), 1024);
   const networkOwner = readJson(
@@ -647,8 +652,10 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     process.exitCode = await main();
-  } catch {
-    console.error("Startup observer failed closed.");
-    process.exitCode = 125;
+  } catch (error) {
+    if (!reportServiceExecutionBlock(error)) {
+      console.error("Startup observer failed closed.");
+      process.exitCode = 125;
+    }
   }
 }

@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/staging-reconciliation-rehearsal.yml"
       - "scripts/staging-reconciliation-rehearsal*.mjs"
+      - "scripts/service-execution-boundary*.mjs"
       - "scripts/compare-staging-baseline*.mjs"
       - "scripts/migration-integrity.json"
       - "scripts/staging-readonly-inventory.sql"
@@ -57,7 +58,11 @@ jobs:
           test -x /usr/bin/psql
 
       - name: Run rehearsal guard/unit tests
-        run: node --test scripts/compare-staging-baseline.test.mjs scripts/staging-reconciliation-rehearsal.test.mjs scripts/local-sql-test-target.test.mjs scripts/run-sql-ci-step.test.mjs
+        run: node --test scripts/compare-staging-baseline.test.mjs scripts/staging-reconciliation-rehearsal.test.mjs scripts/local-sql-test-target.test.mjs scripts/run-sql-ci-step.test.mjs scripts/service-execution-boundary.test.mjs
+
+      - name: Require pre-exposure service isolation
+        # Required failure, not a skipped or optional rehearsal, until prevention is supported.
+        run: node scripts/service-execution-boundary.mjs
 
       - name: Rehearse staging timestamp-ledger normalization and all migrations
         shell: bash
@@ -72,6 +77,7 @@ jobs:
         with:
           name: careconnect-staging-state-rehearsal-${{ github.run_id }}
           path: |
+            test-artifacts/service-execution-boundary.json
             test-artifacts/staging-reconciliation.log
             test-artifacts/rehearsal-failure.log
             test-artifacts/ledger.log

@@ -11,6 +11,7 @@ on:
       - "supabase/tests/**"
       - "scripts/test-booking-concurrency.mjs"
       - "scripts/run-sql-ci-step*.mjs"
+      - "scripts/service-execution-boundary*.mjs"
       - "scripts/local-sql-test-target*.mjs"
   workflow_dispatch:
 
@@ -36,7 +37,11 @@ jobs:
           version: 2.117.0
 
       - name: Test the allow-listed CI summaries and local target guard
-        run: node --test scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs
+        run: node --test scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs scripts/service-execution-boundary.test.mjs
+
+      - name: Require pre-exposure service isolation
+        # Fail before initialization or startup; post-start inspection cannot prevent exposure.
+        run: node scripts/service-execution-boundary.mjs
 
       - name: Assert this job is unlinked and has no remote credentials
         shell: bash
@@ -87,6 +92,7 @@ jobs:
         with:
           name: careconnect-sql-test-logs-${{ github.run_id }}
           path: |
+            test-artifacts/service-execution-boundary.json
             test-artifacts/startup.log
             test-artifacts/ledger.log
             test-artifacts/pgtap.log
@@ -94,7 +100,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-# Re-run isolated SQL validation after Supabase query optimizations
+  # Re-run isolated SQL validation after Supabase query optimizations
   frontend-validation:
     name: Frontend lint, typecheck, build, and diff check
     runs-on: ubuntu-24.04

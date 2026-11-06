@@ -22,6 +22,10 @@ import {
   localSqlEnvironment,
 } from "./local-sql-test-target.mjs";
 import { summarize } from "./run-sql-ci-step.mjs";
+import {
+  requireServicePreExposureIsolation,
+  reportServiceExecutionBlock,
+} from "./service-execution-boundary.mjs";
 
 export const targetVersions = [
   ...Array.from({ length: 23 }, (_, i) => String(i + 1).padStart(5, "0")),
@@ -166,6 +170,7 @@ export function assertCliArguments(args) {
 }
 
 async function main() {
+  requireServicePreExposureIsolation();
   check(process.platform === "linux" && process.argv.slice(2).join(" ") === "--execute");
   check(process.env.RUNNER_TEMP && path.isAbsolute(process.env.RUNNER_TEMP));
   assertNoRemoteEnvironment(process.env);
@@ -951,10 +956,11 @@ async function main() {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.slice(2).join(" ") === "--help") {
     process.stdout.write(
-      "Linux disposable runner only: node scripts/staging-reconciliation-rehearsal.mjs --execute\nRequires Docker, pinned Supabase CLI 2.117.0, /usr/bin/psql and RUNNER_TEMP outside the checkout. No linked/hosted credentials.\n",
+      "Currently BLOCKED: verified pre-exposure service isolation is unavailable; no environment opt-in.\nLinux disposable runner only: node scripts/staging-reconciliation-rehearsal.mjs --execute\nRequires Docker, pinned Supabase CLI 2.117.0, /usr/bin/psql and RUNNER_TEMP outside the checkout. No linked/hosted credentials.\n",
     );
   } else
-    main().catch(() => {
+    main().catch((error) => {
+      if (reportServiceExecutionBlock(error)) return;
       process.stderr.write("Rehearsal preflight/cleanup failed; raw diagnostics withheld.\n");
       process.exitCode = 1;
     });

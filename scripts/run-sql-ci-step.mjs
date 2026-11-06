@@ -13,6 +13,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripVTControlCharacters } from "node:util";
 import { localSqlEnvironment } from "./local-sql-test-target.mjs";
+import {
+  requireServicePreExposureIsolation,
+  reportServiceExecutionBlock,
+} from "./service-execution-boundary.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const kinds = ["startup", "ledger", "pgtap", "concurrency"];
@@ -499,6 +503,7 @@ export function runCapturedStep({ kind, command, args, rawRoot, artifactRoot, cw
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
+    requireServicePreExposureIsolation();
     const kind = process.argv[2];
     const commands = {
       startup: ["supabase", ["start"]],
@@ -528,8 +533,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     });
     process.stdout.write(result.summary);
     process.exitCode = result.exitCode;
-  } catch {
-    process.stderr.write("SQL CI capture failed; command output was not published.\n");
-    process.exitCode = 1;
+  } catch (error) {
+    if (!reportServiceExecutionBlock(error)) {
+      process.stderr.write("SQL CI capture failed; command output was not published.\n");
+      process.exitCode = 1;
+    }
   }
 }

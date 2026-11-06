@@ -5,6 +5,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import {
+  requireServicePreExposureIsolation,
+  reportServiceExecutionBlock,
+} from "./service-execution-boundary.mjs";
+import {
   aliasFile,
   targetVersions,
   validateInventory,
@@ -809,6 +813,7 @@ async function verifyDisposableBaseline(admin) {
 }
 
 async function runIntegration() {
+  requireServicePreExposureIsolation();
   // `supabase start` may write its local project-ref marker. The initial CI
   // preflight already rejected linked metadata before startup; recheck all
   // guards while allowing only the generated marker that matches config.toml.
@@ -2154,7 +2159,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     else if (command === "run") await runIntegration();
     else throw new Error("unknown real-service integration command");
   } catch (error) {
-    console.error(`Real-service integration failed: ${safeFailureCategory(error)}.`);
-    process.exitCode = 1;
+    if (!reportServiceExecutionBlock(error)) {
+      console.error(`Real-service integration failed: ${safeFailureCategory(error)}.`);
+      process.exitCode = 1;
+    }
   }
 }

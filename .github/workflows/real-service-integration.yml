@@ -15,6 +15,7 @@ on:
       - "scripts/startup-evidence.test.mjs"
       - "scripts/startup-observer.mjs"
       - "scripts/startup-observer.test.mjs"
+      - "scripts/service-execution-boundary*.mjs"
       - "scripts/staging-reconciliation-rehearsal.mjs"
       - "scripts/staging-reconciliation-rehearsal.test.mjs"
       - "tests/real-service/**"
@@ -77,6 +78,13 @@ jobs:
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Validate pre-exposure boundary regressions
+        run: node --test scripts/service-execution-boundary.test.mjs
+
+      - name: Require pre-exposure service isolation
+        # Required failure before config/ownership inspection, network creation or startup.
+        run: node scripts/service-execution-boundary.mjs
 
       - name: Validate guards and initialize unlinked local configuration
         shell: bash
@@ -204,6 +212,7 @@ jobs:
         with:
           name: careconnect-real-service-${{ github.run_id }}
           path: |
+            test-artifacts/service-execution-boundary.json
             test-artifacts/startup.log
             test-artifacts/startup-process.json
             test-artifacts/startup-images-before.json
