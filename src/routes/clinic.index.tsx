@@ -89,7 +89,7 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
   return (
     <div className="space-y-6">
       <CatalogNotice />
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 min-[375px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <Stat
           label={t("clinicDashboard.todaysVisits")}
           value={fmt.number(todays.length)}
