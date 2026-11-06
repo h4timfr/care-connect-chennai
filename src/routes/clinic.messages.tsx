@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Loader2, MessageSquare, Send } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, type FormEvent } from "react";
+import { useMessageDraft } from "@/hooks/useMessageDraft";
+import { useAuth } from "@/lib/supabase/auth";
 import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, Initials, PageLoader } from "@/components/common";
@@ -24,6 +26,7 @@ const MAX_MESSAGE_LENGTH = 2000;
 const lastSentAt = (c: Conversation) => c.messages[c.messages.length - 1]?.sentAt ?? "";
 
 function ClinicMessages() {
+  const { user } = useAuth();
   const { conversations, conversationsStatus: status, activeClinic } = useApp();
   const { t } = useI18n();
   const { c: requestedId } = Route.useSearch();
@@ -47,7 +50,12 @@ function ClinicMessages() {
     const mine = conversations
       .filter((c) => c.clinicId === activeClinic.id)
       .sort((a, b) => lastSentAt(b).localeCompare(lastSentAt(a)));
-    body = <ClinicInbox key={`${activeClinic.id}:${requestedId ?? ""}`} conversations={mine} />;
+    body = (
+      <ClinicInbox
+        key={`${user?.id}:${activeClinic.id}:${requestedId ?? ""}`}
+        conversations={mine}
+      />
+    );
   }
 
   return (
@@ -61,8 +69,7 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
   const { sendMessage, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/clinic/messages" });
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
+  const { text, setText, sending, send } = useMessageDraft();
   const endRef = useRef<HTMLDivElement>(null);
   const { t, fmt } = useI18n();
   const sentLabel = (iso: string) =>
@@ -90,14 +97,10 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
     e?.preventDefault();
     const body = text.trim();
     if (!body || !active || sending) return;
-    setSending(true);
     try {
-      await sendMessage(active.id, body);
-      setText((current) => (current === text ? "" : current));
+      await send((body) => sendMessage(active.id, body));
     } catch (err) {
       toast.error(t("messages.notSent", { reason: t(describeDataError(err)) }));
-    } finally {
-      setSending(false);
     }
   };
 

@@ -1,6 +1,48 @@
 import { conversationRow, defaultState, ids } from "./support/mock-backend";
 import { expect, test } from "./support/fixtures";
 
+for (const role of ["patient", "clinic", "doctor"] as const) {
+  test(`${role} preserves a retyped identical draft during send`, async ({ page, backend }) => {
+    const state = defaultState();
+    if (role === "doctor") state.doctors[0]!["user_id"] = ids.user;
+    await backend({
+      doctors: state.doctors,
+      memberships:
+        role === "clinic"
+          ? [{ clinic_id: ids.clinicA, role: "clinic_staff", clinics: state.clinics[0] }]
+          : [],
+      conversations: [conversationRow([])],
+      doctorConversations: [
+        {
+          id: ids.conversation,
+          clinic_id: ids.clinicA,
+          clinic_name: "Test Clinic A",
+          patient_name: "Draft Patient",
+          messages: [],
+        },
+      ],
+      delays: { messages: 1000 },
+    });
+    await page.goto(
+      `/${role === "patient" ? "messages" : `${role}/messages`}?c=${ids.conversation}`,
+    );
+    const input = page.getByRole("textbox");
+    await input.fill("Retyped draft");
+    const requested = page.waitForRequest(
+      (r) => r.method() === "POST" && r.url().includes("/rest/v1/messages"),
+    );
+    const send = page.getByRole("button", {
+      name: role === "patient" ? "Send message" : "Send reply",
+    });
+    await send.click();
+    await requested;
+    await input.fill("New edit");
+    await input.fill("Retyped draft");
+    await expect(send).toBeEnabled();
+    await expect(input).toHaveValue("Retyped draft");
+  });
+}
+
 for (const [url, recovered] of [
   [`/book/${ids.doctorVerified}`, "Book an appointment"],
   ["/appointments", "No upcoming appointments"],

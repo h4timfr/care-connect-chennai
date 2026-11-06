@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2, MessageSquare, Send } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
+import { useMessageDraft } from "@/hooks/useMessageDraft";
 import { toast } from "@/lib/toast";
 import { DoctorShell } from "@/components/layout/DoctorShell";
 import { EmptyState, ErrorState, InfoNotice, PageLoader } from "@/components/common";
@@ -36,6 +37,7 @@ function DoctorMessagesPage() {
 }
 
 function Inbox() {
+  const { user } = useAuth();
   const { t } = useI18n();
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -104,7 +106,7 @@ function Inbox() {
         ))}
       </ul>
       {active ? (
-        <Thread key={active.id} conversation={active} />
+        <Thread key={`${user?.id}:${active.id}`} conversation={active} />
       ) : (
         <div className="surface-card grid place-items-center p-10 text-sm text-muted-foreground">
           {search.c ? t("messages.unavailable") : t("messages.select")}
@@ -118,15 +120,16 @@ function Thread({ conversation }: { conversation: DoctorConversation }) {
   const { t, fmt } = useI18n();
   const { user } = useAuth();
   const reply = useDoctorReply();
-  const [body, setBody] = useState("");
+  const { text: body, setText: setBody, sending, send: submit } = useMessageDraft();
 
   const send = async (e: FormEvent) => {
     e.preventDefault();
     const text = body.trim();
     if (!text || !user) return;
     try {
-      await reply.mutateAsync({ conversationId: conversation.id, senderId: user.id, body: text });
-      setBody((current) => (current === body ? "" : current));
+      await submit((body) =>
+        reply.mutateAsync({ conversationId: conversation.id, senderId: user.id, body }),
+      );
     } catch (err) {
       toast.error(t("doctorMessages.sendFailed", { reason: t(describeDataError(err)) }));
     }
@@ -187,10 +190,10 @@ function Thread({ conversation }: { conversation: DoctorConversation }) {
         />
         <Button
           type="submit"
-          disabled={reply.isPending || !body.trim()}
+          disabled={sending || !body.trim()}
           aria-label={t("doctorMessages.send")}
         >
-          {reply.isPending ? (
+          {sending ? (
             <Loader2 className="animate-spin" aria-hidden />
           ) : (
             <Send className="rtl:rotate-180" aria-hidden />

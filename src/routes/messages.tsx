@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Loader2, MessageSquare, Send } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, type FormEvent } from "react";
+import { useMessageDraft } from "@/hooks/useMessageDraft";
 import { toast } from "@/lib/toast";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { EmptyState, ErrorState, Initials, PageLoader } from "@/components/common";
@@ -62,7 +63,7 @@ function MessagesView() {
     const mine = conversations
       .filter((c) => c.patientId === patient.id)
       .sort((a, b) => lastSentAt(b).localeCompare(lastSentAt(a)));
-    body = <Inbox key={requestedId ?? ""} conversations={mine} />;
+    body = <Inbox key={`${user.id}:${requestedId ?? ""}`} conversations={mine} />;
   }
 
   return (
@@ -79,8 +80,7 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
   const { sendMessage, clinicById, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/messages" });
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
+  const { text, setText, sending, send } = useMessageDraft();
   const endRef = useRef<HTMLDivElement>(null);
   const { t, fmt } = useI18n();
 
@@ -103,14 +103,10 @@ function Inbox({ conversations }: { conversations: Conversation[] }) {
     e?.preventDefault();
     const body = text.trim();
     if (!body || !active || sending) return;
-    setSending(true);
     try {
-      await sendMessage(active.id, body);
-      setText((current) => (current === text ? "" : current));
+      await send((body) => sendMessage(active.id, body));
     } catch (err) {
       toast.error(t("messages.notSent", { reason: t(describeDataError(err)) }));
-    } finally {
-      setSending(false);
     }
   };
 
