@@ -137,3 +137,7 @@ The initial indirect dotenv read and initial wildcard mocked frontend listener a
 ## Final checkpoint — 2026-11-06
 
 Final complete mocked Chromium suite: **283 passed, 0 failed (4.8 minutes)**. Safe unit suite: **17 passed, 0 failed**. Script suite: **171 passed, 0 failed**. Final code typecheck, lint, formatting and diff checks passed. Playwright rebuilt the final application using synthetic settings before the complete suite. These results use installed Vite 8.1.5, not locked Vite 8.3.5. No further code changes followed this verification. The report commit and final resource/worktree check are recorded in the final handoff.
+
+## Post-overnight audit correction — 2026-11-06
+
+See [the deep-engineering audit continuation](CARECONNECT_POST_OVERNIGHT_DEEP_ENGINEERING_REPORT.md) for corrected evidence and new local commits. The earlier dotenv-isolation conclusion did not cover Nitro's implicit c12 loader, and the original text-equality draft fix did not cover editing and retyping identical content. Both limitations were reproduced and corrected. Dependencies were restored to locked Vite 8.3.5; final continuation results are 298 mocked browser tests, 23 safe unit tests and 171 script tests passing. Historical exposure remains uncertain, and actual Supabase integration remains blocked. This additive note preserves the original execution record.
