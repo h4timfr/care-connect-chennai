@@ -25,6 +25,26 @@ test("manual account-creation checks refuse execution before loading dotenv", ()
     assert.equal(result.status, 1);
     assert.match(result.stderr, /explicitly confirmed disposable target/);
     assert.doesNotMatch(result.stdout + result.stderr, /sentinel|injected env|Starting Security/);
+    const inheritedConfirmation = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        pathToFileURL(path.join(root, "node_modules/tsx/dist/loader.mjs")).href,
+        path.join(root, "tests/security.test.ts"),
+      ],
+      {
+        cwd: directory,
+        env: { ...env, SECURITY_TEST_CONFIRM_HOST: "sentinel.invalid" },
+        encoding: "utf8",
+        timeout: 10000,
+      },
+    );
+    assert.equal(inheritedConfirmation.status, 1);
+    assert.match(inheritedConfirmation.stderr, /explicitly confirmed disposable target/);
+    assert.doesNotMatch(
+      inheritedConfirmation.stdout + inheritedConfirmation.stderr,
+      /injected env|Starting Security/,
+    );
   } finally {
     unlinkSync(path.join(directory, ".env"));
     rmdirSync(directory);

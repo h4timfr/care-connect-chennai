@@ -82,6 +82,8 @@ are used. A test-only Node preload also hides private dotenv files from Nitro di
 rejects attempts to read dotenv files or original Supabase link markers. This is a guard for
 trusted synthetic test code, not an operating-system sandbox. Run `npm run test:unit` rather than discovering every `*.test.ts` file: the manual
 security script requires a separately confirmed disposable target.
+It also requires the explicit `--execute-manual-security` argument and refuses Node test-runner
+discovery, even if a target-confirmation variable was inherited.
 
 SQL tests in `supabase/tests/` are pgTAP checks for grants, RLS, booking, messaging, provider
 onboarding, candidate isolation and publication/contactability boundaries. They require a compatible
