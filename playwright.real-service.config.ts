@@ -1,10 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const localUrl = process.env.VITE_SUPABASE_URL;
-const publicKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const baseURL = process.env.PLAYWRIGHT_REAL_SERVICE_BASE_URL;
+const localUrl = process.env["VITE_SUPABASE_URL"];
+const publicKey = process.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
+const baseURL = process.env["PLAYWRIGHT_REAL_SERVICE_BASE_URL"];
 
-if (process.env.CARECONNECT_REAL_SERVICE !== "1") {
+if (process.env["CARECONNECT_REAL_SERVICE"] !== "1") {
   throw new Error("Real-service browser tests require the dedicated disposable-stack runner.");
 }
 if (!localUrl || !publicKey || !baseURL) {

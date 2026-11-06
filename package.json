@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit --incremental false",
+    "typecheck:tests": "tsc --noEmit --incremental false -p tsconfig.tests.json",
     "test:supabase-config": "tsx --test tests/supabase-config.test.ts",
     "validate:frontend": "npm run lint && npm run typecheck && npm run build",
     "format": "prettier --write .",

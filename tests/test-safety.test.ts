@@ -12,7 +12,8 @@ test("manual account-creation checks refuse execution before loading dotenv", ()
   try {
     writeFileSync(path.join(directory, ".env"), "VITE_SUPABASE_URL=https://sentinel.invalid\n");
     const env = { ...process.env };
-    delete env.SECURITY_TEST_CONFIRM_HOST;
+    delete env["SECURITY_TEST_CONFIRM_HOST"];
+    delete env["NODE_TEST_CONTEXT"];
     const result = spawnSync(
       process.execPath,
       [
@@ -45,6 +46,28 @@ test("manual account-creation checks refuse execution before loading dotenv", ()
       inheritedConfirmation.stdout + inheritedConfirmation.stderr,
       /injected env|Starting Security/,
     );
+    const discovery = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        pathToFileURL(path.join(root, "node_modules/tsx/dist/loader.mjs")).href,
+        path.join(root, "tests/security.test.ts"),
+        "--execute-manual-security",
+      ],
+      {
+        cwd: directory,
+        env: {
+          ...env,
+          SECURITY_TEST_CONFIRM_HOST: "sentinel.invalid",
+          NODE_TEST_CONTEXT: "child-v8",
+        },
+        encoding: "utf8",
+        timeout: 10000,
+      },
+    );
+    assert.equal(discovery.status, 1);
+    assert.match(discovery.stderr, /explicitly confirmed disposable target/);
+    assert.doesNotMatch(discovery.stdout + discovery.stderr, /injected env|Starting Security/);
   } finally {
     unlinkSync(path.join(directory, ".env"));
     rmdirSync(directory);

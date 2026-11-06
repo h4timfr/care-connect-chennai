@@ -22,7 +22,7 @@ async function setLanguageCookie(page: Page, lang: string) {
 }
 
 const ENGLISH_KEYS = Object.keys(en);
-const ENGLISH_STRINGS = new Set(Object.values(en).filter((v) => !v.includes("{")));
+const ENGLISH_STRINGS = new Set<string>(Object.values(en).filter((v) => !v.includes("{")));
 
 test.describe("Language selection", () => {
   test("choosing a language translates the page, survives a reload and is server-rendered", async ({

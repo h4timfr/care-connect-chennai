@@ -429,7 +429,7 @@ export async function mockBackend(
     state: overrides = {},
   }: { signedIn?: boolean; expiredSession?: boolean; state?: Partial<MockState> } = {},
 ): Promise<MockBackend> {
-  if (process.env.VITE_SUPABASE_URL !== "https://careconnect-test.invalid") {
+  if (process.env["VITE_SUPABASE_URL"] !== "https://careconnect-test.invalid") {
     throw new Error("Mocked Playwright tests require the isolated careconnect-test.invalid URL.");
   }
   const state: MockState = { ...defaultState(), ...overrides };

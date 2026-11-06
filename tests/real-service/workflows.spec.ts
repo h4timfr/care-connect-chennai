@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-const runId = process.env.CARECONNECT_RUN_ID!;
+const runId = process.env["CARECONNECT_RUN_ID"]!;
 const workflows = [
   { id: "patient", title: "patient booking and cancellation" },
   { id: "clinic", title: "clinic appointment visibility" },
@@ -90,18 +90,18 @@ async function patientAppointment(page: Page) {
   await signIn(
     page,
     "patient",
-    process.env.CARECONNECT_PATIENT_EMAIL!,
-    process.env.CARECONNECT_PATIENT_PASSWORD!,
+    process.env["CARECONNECT_PATIENT_EMAIL"]!,
+    process.env["CARECONNECT_PATIENT_PASSWORD"]!,
   );
 }
 
 test("patient books and cancels an appointment through the interface", async ({ page }) => {
   addNetworkEvidence(page);
-  const clinicId = process.env.CARECONNECT_CLINIC_ID!;
-  const doctorId = process.env.CARECONNECT_DOCTOR_ID!;
-  const date = process.env.CARECONNECT_BROWSER_DATE!;
-  const time = process.env.CARECONNECT_BROWSER_TIME!;
-  const reason = process.env.CARECONNECT_BROWSER_APPOINTMENT_REASON!;
+  const clinicId = process.env["CARECONNECT_CLINIC_ID"]!;
+  const doctorId = process.env["CARECONNECT_DOCTOR_ID"]!;
+  const date = process.env["CARECONNECT_BROWSER_DATE"]!;
+  const time = process.env["CARECONNECT_BROWSER_TIME"]!;
+  const reason = process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]!;
 
   await patientAppointment(page);
   await page.goto(
@@ -160,8 +160,8 @@ test("clinic staff sees the created appointment in the clinic portal", async ({ 
   await signIn(
     page,
     "clinic",
-    process.env.CARECONNECT_CLINIC_EMAIL!,
-    process.env.CARECONNECT_CLINIC_PASSWORD!,
+    process.env["CARECONNECT_CLINIC_EMAIL"]!,
+    process.env["CARECONNECT_CLINIC_PASSWORD"]!,
   );
   await page.goto("/clinic/appointments");
   await check(
@@ -172,7 +172,7 @@ test("clinic staff sees the created appointment in the clinic portal", async ({ 
     .getByRole("row")
     .filter({ hasText: "Synthetic CI Patient" })
     .filter({ hasText: "Synthetic CI Doctor" })
-    .filter({ hasText: process.env.CARECONNECT_BROWSER_APPOINTMENT_REASON! })
+    .filter({ hasText: process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]! })
     .first();
   await check(
     expect(appointmentRow).toBeVisible({ timeout: 20_000 }),
@@ -185,7 +185,7 @@ test("doctor sees the appointment, receives a patient message, and replies in th
   browser,
 }) => {
   addNetworkEvidence(page);
-  const conversationId = process.env.CARECONNECT_CONVERSATION_ID!;
+  const conversationId = process.env["CARECONNECT_CONVERSATION_ID"]!;
   const patientMessage = "Synthetic UI patient message " + runId;
   const doctorReply = "Synthetic UI doctor reply " + runId;
 
@@ -208,14 +208,14 @@ test("doctor sees the appointment, receives a patient message, and replies in th
   await signIn(
     doctorPage,
     "doctor",
-    process.env.CARECONNECT_DOCTOR_EMAIL!,
-    process.env.CARECONNECT_DOCTOR_PASSWORD!,
+    process.env["CARECONNECT_DOCTOR_EMAIL"]!,
+    process.env["CARECONNECT_DOCTOR_PASSWORD"]!,
   );
   await doctorPage.goto("/doctor/appointments");
   const appointment = doctorPage
     .getByRole("listitem")
     .filter({ hasText: "Synthetic CI Patient" })
-    .filter({ hasText: process.env.CARECONNECT_BROWSER_APPOINTMENT_REASON! });
+    .filter({ hasText: process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]! });
   await check(
     expect(appointment).toBeVisible({ timeout: 20_000 }),
     "doctor appointments page displays the appointment created through patient UI",
@@ -250,8 +250,8 @@ test("administrator reviews the clinic and changes publication through the inter
   await signIn(
     page,
     "patient",
-    process.env.CARECONNECT_ADMIN_EMAIL!,
-    process.env.CARECONNECT_ADMIN_PASSWORD!,
+    process.env["CARECONNECT_ADMIN_EMAIL"]!,
+    process.env["CARECONNECT_ADMIN_PASSWORD"]!,
   );
   await page.goto("/admin");
   await check(
@@ -263,7 +263,7 @@ test("administrator reviews the clinic and changes publication through the inter
   await page.getByRole("tab", { name: "Provider publishing" }).click();
   const clinic = page
     .getByRole("listitem")
-    .filter({ has: page.getByRole("heading", { name: process.env.CARECONNECT_CLINIC_NAME! }) });
+    .filter({ has: page.getByRole("heading", { name: process.env["CARECONNECT_CLINIC_NAME"]! }) });
   await check(
     expect(clinic).toBeVisible({ timeout: 20_000 }),
     "publication panel displays the synthetic clinic",
