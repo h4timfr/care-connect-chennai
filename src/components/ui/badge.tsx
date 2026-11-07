@@ -15,6 +15,9 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
+        soft: "border-transparent bg-primary-soft text-primary",
+        // Indigo: a provider whose clinic link has been verified by CareConnect.
+        verified: "border-transparent bg-highlight-soft text-highlight",
       },
     },
     defaultVariants: {

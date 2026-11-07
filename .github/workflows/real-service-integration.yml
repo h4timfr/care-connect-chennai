@@ -1,0 +1,232 @@
+name: Disposable Supabase real-service integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/careconnect-frontend-repair
+    paths:
+      - ".github/workflows/real-service-integration.yml"
+      - "scripts/real-service-integration.mjs"
+      - "scripts/real-service-integration.test.mjs"
+      - "scripts/verify-disposable-docker-bindings.mjs"
+      - "scripts/verify-disposable-docker-bindings.test.mjs"
+      - "scripts/startup-evidence.mjs"
+      - "scripts/startup-evidence.test.mjs"
+      - "scripts/startup-observer.mjs"
+      - "scripts/startup-observer.test.mjs"
+      - "scripts/service-execution-boundary*.mjs"
+      - "scripts/staging-reconciliation-rehearsal.mjs"
+      - "scripts/staging-reconciliation-rehearsal.test.mjs"
+      - "tests/real-service/**"
+      - "playwright.real-service.config.ts"
+      - "vite.config.ts"
+      - "nitro.config.ts"
+      - "tsconfig.json"
+      - "index.html"
+      - "public/**"
+      - "supabase/config.toml"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "scripts/migration-integrity.json"
+      - "scripts/run-sql-ci-step*.mjs"
+      - "scripts/local-sql-test-target*.mjs"
+      - "scripts/test-booking-concurrency.mjs"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: careconnect-real-service-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-service-integration:
+    name: Fresh local Supabase services and real browser workflows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARECONNECT_DOCKER_NETWORK: careconnect-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      CARECONNECT_DOCKER_RUN_LABEL: ${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Check out the selected branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.117.0
+
+      - name: Install local PostgreSQL client
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+          test -x /usr/bin/psql
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate pre-exposure boundary regressions
+        run: node --test scripts/service-execution-boundary.test.mjs
+
+      - name: Require pre-exposure service isolation
+        # Required failure before config/ownership inspection, network creation or startup.
+        run: node scripts/service-execution-boundary.mjs
+
+      - name: Validate guards and initialize unlinked local configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/real-service-integration.test.mjs scripts/verify-disposable-docker-bindings.test.mjs scripts/startup-evidence.test.mjs scripts/startup-observer.test.mjs scripts/run-sql-ci-step.test.mjs scripts/local-sql-test-target.test.mjs
+          test ! -e supabase/config.toml
+          test ! -e supabase/.temp/linked-project.json
+          test ! -e supabase/.temp/project-ref
+          supabase init --yes >/dev/null 2>&1
+          node scripts/real-service-integration.mjs preflight
+          node scripts/startup-evidence.mjs configure "$CARECONNECT_DOCKER_NETWORK" supabase/config.toml
+          node scripts/startup-evidence.mjs before "$CARECONNECT_DOCKER_NETWORK" test-artifacts/startup-images-before.json
+          node scripts/real-service-integration.mjs preflight
+          supabase --version >/dev/null
+
+      - name: Create and verify the private loopback-only Docker network
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p test-artifacts
+          node scripts/verify-disposable-docker-bindings.mjs create \
+            "$CARECONNECT_DOCKER_NETWORK" "$CARECONNECT_DOCKER_RUN_LABEL" \
+            test-artifacts/docker-network-summary.json \
+            "$RUNNER_TEMP/careconnect-docker-network-owned.json"
+
+      - name: Start a fresh disposable Supabase stack
+        id: start_supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p test-artifacts
+          touch "$RUNNER_TEMP/careconnect-supabase-start-attempted"
+          # Debug output remains in runner-private temporary storage; only the
+          # run-labeled, allowlisted observer summary is uploaded.
+          if node scripts/startup-observer.mjs run \
+            "$CARECONNECT_DOCKER_NETWORK" "$CARECONNECT_DOCKER_NETWORK"; then
+            observer_status=0
+          else
+            observer_status=$?
+          fi
+          read -r cli_status elapsed_ms < <(node -e 'const x = require("node:fs").readFileSync("test-artifacts/startup-process.json", "utf8"); const p = JSON.parse(x); process.stdout.write(`${p.cli_exit_code === null ? "unavailable" : p.cli_exit_code} ${p.elapsed_ms ?? 0}\n`)')
+          if [ "$cli_status" = "0" ]; then
+            node scripts/real-service-integration.mjs startup-summary "$cli_status" "$elapsed_ms"
+          else
+            node scripts/real-service-integration.mjs startup-failure-summary "$cli_status" "$elapsed_ms"
+            exit "$observer_status"
+          fi
+          if [ "$observer_status" -ne 0 ]; then
+            exit "$observer_status"
+          fi
+
+      - name: Capture sanitized startup evidence before cleanup
+        if: ${{ always() && steps.start_supabase.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/startup-evidence.mjs after "$CARECONNECT_DOCKER_NETWORK" \
+            test-artifacts/startup-evidence.json "$CARECONNECT_DOCKER_NETWORK" \
+            "${{ steps.start_supabase.outcome }}"
+
+      - name: Verify actual Docker bindings before application service requests
+        if: ${{ always() && steps.start_supabase.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-disposable-docker-bindings.mjs verify \
+            "$CARECONNECT_DOCKER_NETWORK" supabase/config.toml \
+            test-artifacts/docker-network-summary.json "$CARECONNECT_DOCKER_RUN_LABEL" \
+            "${{ steps.start_supabase.outcome }}"
+
+      - name: Verify migration ledger and reviewed SQL integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/real-service-integration.mjs verify-migrations
+          node scripts/run-sql-ci-step.mjs ledger
+
+      - name: Run the complete pgTAP suite and booking concurrency scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-sql-ci-step.mjs pgtap
+          node scripts/run-sql-ci-step.mjs concurrency
+
+      - name: Exercise real Auth, PostgREST, Storage, Realtime, and browser workflows
+        timeout-minutes: 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/real-service-integration.mjs run
+
+      - name: Stop the disposable Supabase stack
+        if: always()
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test-artifacts
+          stop_status="SKIPPED"
+          observer_status="PASS"
+          if ! node scripts/startup-observer.mjs reap "$CARECONNECT_DOCKER_NETWORK"; then
+            observer_status="FAIL"
+          fi
+          if [ -f "$RUNNER_TEMP/careconnect-supabase-start-attempted" ]; then
+            if timeout --signal=TERM --kill-after=15s 180s supabase --network-id "$CARECONNECT_DOCKER_NETWORK" stop --no-backup >"$RUNNER_TEMP/careconnect-supabase-stop.raw.log" 2>&1; then
+              stop_status="PASS"
+            else
+              stop_status="FAIL"
+            fi
+          fi
+          node -e 'const fs = require("node:fs"); fs.writeFileSync("test-artifacts/docker-stop-summary.json", JSON.stringify({ status: process.argv[1], stack_stop_attempted: process.argv[1] !== "SKIPPED" }, null, 2) + "\n", { mode: 0o600 })' "$stop_status"
+          node scripts/verify-disposable-docker-bindings.mjs cleanup \
+            "$CARECONNECT_DOCKER_NETWORK" \
+            "$RUNNER_TEMP/careconnect-docker-network-owned.json" \
+            test-artifacts/docker-network-cleanup-summary.json
+          [[ ( "$stop_status" == "PASS" || "$stop_status" == "SKIPPED" ) && "$observer_status" == "PASS" ]]
+
+      - name: Upload sanitized integration evidence
+        if: always()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: careconnect-real-service-${{ github.run_id }}
+          path: |
+            test-artifacts/service-execution-boundary.json
+            test-artifacts/startup.log
+            test-artifacts/startup-process.json
+            test-artifacts/startup-images-before.json
+            test-artifacts/startup-evidence.json
+            test-artifacts/startup-observer.json
+            test-artifacts/startup-observer-cleanup.json
+            test-artifacts/ledger.log
+            test-artifacts/pgtap.log
+            test-artifacts/concurrency.log
+            test-artifacts/real-service-summary.json
+            test-artifacts/browser-workflow-summary.json
+            test-artifacts/browser-failure-trace.json
+            test-artifacts/docker-network-summary.json
+            test-artifacts/docker-network-cleanup-summary.json
+            test-artifacts/docker-stop-summary.json
+          if-no-files-found: warn
+          retention-days: 7

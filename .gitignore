@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 .output
+.vercel/output/
+/tmp/
 .vinxi
 .tanstack/**
 .nitro
@@ -35,3 +37,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Playwright artifacts
+test-results/
+playwright-report/
+test-artifacts/
+
+# Supabase CLI local state (linked project, versions, pooler URL)
+supabase/.temp/

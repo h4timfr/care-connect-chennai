@@ -1,0 +1,55 @@
+name: Frontend quality with synthetic backend
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "package*.json"
+      - "*.config.*"
+      - "tsconfig*.json"
+      - ".github/workflows/frontend-quality.yml"
+  push:
+    branches: [claude/careconnect-frontend-repair]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "package*.json"
+      - "*.config.*"
+      - "tsconfig*.json"
+      - ".github/workflows/frontend-quality.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CARECONNECT_ISOLATED_TEST: "1"
+      VITE_SUPABASE_URL: https://careconnect-test.invalid
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_local_test_only
+      NITRO_PRESET: node-server
+      NITRO_HOST: 127.0.0.1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check types and lint
+        run: npm run typecheck && npm run typecheck:tests && npm run lint
+      - name: Run safe unit and harness tests
+        run: npm run test:unit && node --test scripts/*.test.mjs
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+      - name: Build and exercise the frontend using synthetic fixtures
+        # Playwright owns the server, builds with dotenv disabled, and blocks hosted Supabase.
+        # This job is independent of disposable SQL/Auth/Realtime release verification.
+        run: npx playwright test --workers=2 --reporter=list

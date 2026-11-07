@@ -1,6 +1,7 @@
 # Supabase Local Setup Guide
 
-Follow these steps to transition the application from using mock data to your own real Supabase backend.
+Follow these steps to run CareConnect against **your own new** Supabase project (for example a
+throwaway development project). To run against the existing CareConnect project you only need step 2.
 
 ## 1. Create Supabase Project
 
@@ -13,16 +14,36 @@ Follow these steps to transition the application from using mock data to your ow
    ```bash
    cp .env.example .env
    ```
-2. Retrieve your **Project URL** and **anon public key** from the Supabase Dashboard (Settings > API).
-3. Paste them into `.env`:
+2. Retrieve your **Project URL** and **publishable key** from the Supabase Dashboard (Settings > API).
+   Never use a secret / `service_role` key here.
+3. Paste them into `.env` and restart the dev server:
    ```env
-   VITE_SUPABASE_URL="https://your-project.supabase.co"
-   VITE_SUPABASE_ANON_KEY="your-anon-key"
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
    ```
+
+## Vercel Preview configuration
+
+Set these variables in the Vercel **Preview** environment, not as shared Production/Preview values:
+
+```env
+VITE_SUPABASE_TARGET=staging
+VITE_SUPABASE_STAGING_URL=https://your-staging-project.supabase.co
+VITE_SUPABASE_STAGING_PUBLISHABLE_KEY=your-staging-publishable-key
+```
+
+The application validates the staging URL against the approved CareConnect staging project. Use
+the publishable key from that same project. Preview builds fail when either staging value is
+missing, the URL points elsewhere, or the staging key matches the configured Production key.
+Production continues to use `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Never use a
+secret or `service_role` key in any `VITE_` variable.
 
 ## 3. Apply Migrations
 
 You need to apply the database schema, enums, and Row Level Security policies.
+
+> **Only for a brand-new project you own.** Never run `db push` (or `db reset`) against the shared
+> CareConnect production project; its migration history is managed separately.
 
 1. Install the Supabase CLI if you haven't already.
 2. Link your project:
@@ -54,11 +75,10 @@ npm run dev
 - **Appointment Creation**: Navigate through a doctor profile, pick a slot, and book. Verify the appointment row appears in the `appointments` table in your Supabase dashboard.
 - **Row Level Security**: Try fetching appointments via raw SQL or the API as an anonymous user; you should see zero rows, proving RLS is active.
 
-## Current Migration Status
+## Data sources
 
-The application is undergoing an incremental migration to Supabase.
+Every screen reads from Supabase: clinics, doctors, schedules and slots, appointments,
+conversations and messages. There is no mock-data fallback; empty tables show empty states.
 
-- **Real Supabase**: Authentication (`/login`), Appointments (Booking, Fetching, Cancelling).
-- **Mock Data**: Clinics, Doctors, Conversations, Messages, Schedules.
-
-These mock domains will continue to function seamlessly through the UI while the backend rollout progresses.
+Online booking requires a doctor–clinic link (`clinic_doctors`) that is `active` and
+`verification_state = 'verified'`. Only platform admins can verify links.
