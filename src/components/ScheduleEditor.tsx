@@ -27,7 +27,9 @@ export function ScheduleRow({
 }) {
   const { t, fmt } = useI18n();
   const remove = useDeleteSchedule();
+  const [removed, setRemoved] = useState(false);
   const inFlight = useRef(false);
+  const deleted = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -51,13 +53,17 @@ export function ScheduleRow({
           size="sm"
           variant="ghost"
           aria-label={t("schedule.remove", { day: fmt.weekday(s.dayOfWeek) })}
-          disabled={remove.isPending}
+          disabled={remove.isPending || removed}
           onClick={async () => {
-            if (inFlight.current) return;
+            if (inFlight.current || deleted.current) return;
             inFlight.current = true;
             try {
               await remove.mutateAsync({ id: s.id, clinicId, doctorId: s.doctorId });
-              if (mounted.current) toast.success(t("schedule.removed"));
+              deleted.current = true;
+              if (mounted.current) {
+                setRemoved(true);
+                toast.success(t("schedule.removed"));
+              }
             } catch (err) {
               if (mounted.current) toast.error(t(describeDataError(err)));
             } finally {

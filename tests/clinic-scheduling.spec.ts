@@ -198,3 +198,47 @@ test("a delayed schedule response cannot change the newly selected clinic", asyn
     clinic_id: ids.clinicA,
   });
 });
+
+test("a deleted schedule stays locked while the list refresh is pending", async ({
+  page,
+  backend,
+}) => {
+  const state = defaultState();
+  const mock = await backend({
+    memberships: [membership(state.clinics[0]!)],
+    schedules: [
+      {
+        id: "schedule-one",
+        clinic_id: ids.clinicA,
+        doctor_id: ids.doctorVerified,
+        day_of_week: 1,
+        start_time: "09:00:00",
+        end_time: "13:00:00",
+        slot_minutes: 30,
+      },
+    ],
+  });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let gets = 0;
+  await page.route("**/rest/v1/doctor_schedules?*", async (route) => {
+    if (route.request().method() === "GET" && ++gets > 1) await gate;
+    await route.fallback();
+  });
+  await page.goto("/clinic/doctors");
+  const card = page.getByRole("listitem").filter({ hasText: "Dr. Verified Tester" });
+  await card.getByRole("button", { name: "Edit hours" }).click();
+  const remove = card.getByRole("button", { name: "Remove hours for Monday" });
+  await remove.click();
+  try {
+    await expect.poll(() => gets).toBeGreaterThan(1);
+    await expect(remove).toBeDisabled();
+    await remove.dispatchEvent("click");
+    expect(mock.callsTo("DELETE", "/rest/v1/doctor_schedules")).toHaveLength(1);
+  } finally {
+    release();
+  }
+  await expect(remove).toHaveCount(0);
+});
