@@ -206,10 +206,12 @@ export function useUpdateMyDoctor() {
         .single();
       if (error) throw error;
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["my_doctor"] });
-      queryClient.invalidateQueries({ queryKey: ["doctors"] });
-    },
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["my_doctor"] }),
+        queryClient.invalidateQueries({ queryKey: ["doctors"] }),
+        queryClient.invalidateQueries({ queryKey: ["doctor-search"] }),
+      ]),
   });
 }
 

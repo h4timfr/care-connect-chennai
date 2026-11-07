@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../database.types";
 import { isPrivilegedSupabaseKey, resolveSupabaseConfig } from "./config";
 
-const config = resolveSupabaseConfig(import.meta.env);
+const config = resolveSupabaseConfig(import.meta.env, import.meta.env["VITE_VERCEL_ENV"]);
 const supabaseUrl = config.ok ? config.url : undefined;
 const supabaseKey = config.ok ? config.key : undefined;
 
