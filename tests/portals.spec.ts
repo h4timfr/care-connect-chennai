@@ -744,3 +744,113 @@ test("mobile appointment actions remain keyboard accessible when the doctor is u
     ),
   ).toBeLessThanOrEqual(1);
 });
+
+test("doctor appointments separate past and future at India-local time", async ({
+  page,
+  backend,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-11-07T04:30:00Z"));
+  const row = (id: string, time: string, patient: string, status = "confirmed") => ({
+    id,
+    clinic_id: ids.clinicA,
+    clinic_name: "Test Clinic A",
+    date: "2026-11-07",
+    time,
+    status,
+    reason: null,
+    patient_name: patient,
+  });
+  const mock = await backend({
+    doctorAppointments: [
+      row("earlier", "09:59:00", "Earlier Patient"),
+      row("later", "10:01:00", "Later Patient"),
+      row("cancelled", "11:00:00", "Cancelled Patient", "cancelled"),
+      row("missing", "12:00:00", ""),
+    ],
+  });
+  makeDoctor(mock, "verified");
+  await page.goto("/doctor/appointments");
+  const upcoming = page.getByRole("region", { name: "Upcoming" });
+  const past = page.getByRole("region", { name: "Past and cancelled" });
+  await expect(upcoming.getByText("Later Patient")).toBeVisible();
+  await expect(past.getByText("Earlier Patient")).toBeVisible();
+  await expect(past.getByText("Cancelled Patient")).toBeVisible();
+  await expect(upcoming.getByText("Unknown patient")).toBeVisible();
+  await page.goto("/doctor");
+  await expect(page.getByText("Later Patient")).toBeVisible();
+  await expect(page.getByText("Earlier Patient")).toHaveCount(0);
+  expect(mock.callsTo("GET", "/rest/v1/appointments")).toHaveLength(0);
+});
+
+test("doctor dashboard retries an appointment request failure", async ({ page, backend }) => {
+  const mock = await backend();
+  makeDoctor(mock, "verified");
+  let failed = false;
+  await page.route("**/rest/v1/rpc/doctor_appointments", async (route) => {
+    if (!failed) {
+      failed = true;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ code: "unavailable", message: "Temporary failure" }),
+      });
+    } else await route.fallback();
+  });
+  await page.goto("/doctor");
+  const retry = page.getByRole("button", { name: "Try again" });
+  await expect(retry).toBeVisible();
+  await retry.click();
+  await expect(retry).toHaveCount(0);
+  await expect(page.getByText("No upcoming appointments")).toBeVisible();
+});
+
+test("doctor appointments and messaging fit and remain keyboard usable at representative widths", async ({
+  page,
+  backend,
+}) => {
+  const longName = "SyntheticPatient".repeat(10);
+  const mock = await backend({
+    doctorAppointments: [
+      {
+        id: "future",
+        clinic_id: ids.clinicA,
+        clinic_name: "Test Clinic A",
+        date: "2099-01-05",
+        time: "10:00:00",
+        status: "confirmed",
+        reason: null,
+        patient_name: longName,
+      },
+    ],
+    doctorConversations: [
+      {
+        id: "doctor-conversation-mobile",
+        clinic_id: ids.clinicA,
+        clinic_name: "Test Clinic A",
+        patient_name: longName,
+        messages: [],
+      },
+    ],
+  });
+  makeDoctor(mock, "verified");
+  for (const width of [320, 375, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/doctor/appointments");
+    await expect(page.getByText(longName)).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await page.goto("/doctor/messages");
+    const conversation = page.getByRole("button", { name: new RegExp(longName) });
+    await conversation.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("textbox")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+  }
+});

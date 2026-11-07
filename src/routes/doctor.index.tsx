@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays } from "lucide-react";
 import { DoctorShell } from "@/components/layout/DoctorShell";
-import { EmptyState, InfoNotice, StatusBadge } from "@/components/common";
+import { EmptyState, ErrorState, InfoNotice, StatusBadge } from "@/components/common";
 import { LinkStatus } from "@/components/ProviderStatus";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { useDoctorAppointments, type MyDoctor } from "@/lib/supabase/doctor";
 import { describeDataError, isNotDeployed } from "@/lib/supabase/errors";
-import { isoDate } from "@/lib/format";
+import { isAppointmentInPast } from "@/lib/appointment-time";
 
 export const Route = createFileRoute("/doctor/")({
   head: () => ({ meta: [{ title: "Doctor Portal — CareConnect" }] }),
@@ -27,9 +27,13 @@ function Dashboard({ me }: { me: MyDoctor }) {
   const { t, fmt } = useI18n();
   const verified = me.links.some((l) => l.verified && l.active);
   const appointments = useDoctorAppointments(true);
-  const today = isoDate(new Date());
   const upcoming = (appointments.data ?? [])
-    .filter((a) => a.date >= today && a.status !== "cancelled" && a.status !== "completed")
+    .filter(
+      (a) =>
+        !isAppointmentInPast(a.date, a.time) &&
+        a.status !== "cancelled" &&
+        a.status !== "completed",
+    )
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
     .slice(0, 5);
 
@@ -74,11 +78,15 @@ function Dashboard({ me }: { me: MyDoctor }) {
         {appointments.isLoading ? (
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : appointments.error ? (
-          <InfoNotice className="text-sm">
-            {isNotDeployed(appointments.error)
-              ? t("doctorPortal.notDeployed")
-              : t(describeDataError(appointments.error))}
-          </InfoNotice>
+          isNotDeployed(appointments.error) ? (
+            <InfoNotice className="text-sm">{t("doctorPortal.notDeployed")}</InfoNotice>
+          ) : (
+            <ErrorState
+              title={t("doctorAppointments.loadError")}
+              message={t(describeDataError(appointments.error))}
+              onRetry={() => void appointments.refetch()}
+            />
+          )
         ) : upcoming.length === 0 ? (
           <EmptyState icon={CalendarDays} title={t("doctorAppointments.noneUpcoming")} />
         ) : (
@@ -90,7 +98,7 @@ function Dashboard({ me }: { me: MyDoctor }) {
               >
                 <div className="min-w-0">
                   <p className="font-medium [overflow-wrap:anywhere]" dir="auto">
-                    {a.patientName}
+                    {a.patientName || t("common.unknownPatient")}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {fmt.longDate(a.date)} · {fmt.time(a.time)} ·{" "}

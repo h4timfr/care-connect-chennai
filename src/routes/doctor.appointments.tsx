@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays } from "lucide-react";
 import { DoctorShell } from "@/components/layout/DoctorShell";
 import { EmptyState, ErrorState, InfoNotice, PageLoader, StatusBadge } from "@/components/common";
-import { isoDate } from "@/lib/format";
+import { isAppointmentInPast } from "@/lib/appointment-time";
 import { useI18n } from "@/lib/i18n";
 import { useDoctorAppointments, type DoctorAppointment } from "@/lib/supabase/doctor";
 import { describeDataError, isNotDeployed } from "@/lib/supabase/errors";
@@ -41,10 +41,14 @@ function AppointmentsList() {
       />
     );
   }
-  const today = isoDate(new Date());
   const all = appointments.data ?? [];
   const upcoming = all
-    .filter((a) => a.date >= today && a.status !== "cancelled" && a.status !== "completed")
+    .filter(
+      (a) =>
+        !isAppointmentInPast(a.date, a.time) &&
+        a.status !== "cancelled" &&
+        a.status !== "completed",
+    )
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const past = all.filter((a) => !upcoming.includes(a));
 
@@ -87,7 +91,7 @@ function Section({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-medium [overflow-wrap:anywhere]" dir="auto">
-                    {a.patientName}
+                    {a.patientName || t("common.unknownPatient")}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {fmt.longDate(a.date)} · {fmt.time(a.time)} ·{" "}

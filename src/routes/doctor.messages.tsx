@@ -1,8 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2, MessageSquare, Send } from "lucide-react";
-import { type FormEvent } from "react";
-import { useMessageDraft } from "@/hooks/useMessageDraft";
-import { toast } from "@/lib/toast";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { DoctorShell } from "@/components/layout/DoctorShell";
 import { EmptyState, ErrorState, InfoNotice, PageLoader } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -39,8 +37,6 @@ function DoctorMessagesPage() {
 function Inbox() {
   const { user } = useAuth();
   const { t } = useI18n();
-  const search = Route.useSearch();
-  const navigate = useNavigate();
   // doctor_conversations() returns only conversations about this doctor at verified clinics.
   const conversations = useDoctorConversations(true);
 
@@ -66,12 +62,63 @@ function Inbox() {
       />
     );
   }
+  return <InboxContent key={user?.id} list={list} />;
+}
+
+function InboxContent({ list }: { list: DoctorConversation[] }) {
+  const { user } = useAuth();
+  const { t } = useI18n();
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const reply = useDoctorReply();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const revisions = useRef<Record<string, number>>({});
+  const inFlight = useRef(new Set<string>());
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   // An id from the URL only selects among this doctor's own conversations.
   const active = search.c ? list.find((c) => c.id === search.c) : undefined;
-
+  const text = active ? (drafts[active.id] ?? "") : "";
+  const setText = (value: string) => {
+    if (!active) return;
+    const id = active.id;
+    revisions.current[id] = (revisions.current[id] ?? 0) + 1;
+    setDrafts((previous) => ({ ...previous, [id]: value }));
+  };
+  const send = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!active || !user || !text.trim() || inFlight.current.has(active.id)) return;
+    const id = active.id;
+    const revision = revisions.current[id] ?? 0;
+    inFlight.current.add(id);
+    setPending((previous) => ({ ...previous, [id]: true }));
+    setErrors((previous) => ({ ...previous, [id]: "" }));
+    try {
+      await reply.mutateAsync({ conversationId: id, senderId: user.id, body: text.trim() });
+      if (mounted.current && (revisions.current[id] ?? 0) === revision) {
+        setDrafts((previous) => ({ ...previous, [id]: "" }));
+      }
+    } catch (err) {
+      if (mounted.current)
+        setErrors((previous) => ({
+          ...previous,
+          [id]: t("doctorMessages.sendFailed", { reason: t(describeDataError(err)) }),
+        }));
+    } finally {
+      inFlight.current.delete(id);
+      if (mounted.current) setPending((previous) => ({ ...previous, [id]: false }));
+    }
+  };
   return (
-    <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <ul className="space-y-2" aria-label={t("doctorMessages.title")}>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <ul className="min-w-0 space-y-2" aria-label={t("doctorMessages.title")}>
         {list.map((c) => (
           <li key={c.id}>
             <button
@@ -83,8 +130,8 @@ function Inbox() {
                 active?.id === c.id && "border-primary/50 bg-primary-soft/50",
               )}
             >
-              <span className="flex items-center justify-between gap-2">
-                <span className="truncate font-medium" dir="auto">
+              <span className="flex min-w-0 items-center justify-between gap-2">
+                <span className="min-w-0 truncate font-medium" dir="auto">
                   {c.patientName}
                 </span>
                 {c.messages[c.messages.length - 1]?.from === "patient" ? (
@@ -106,7 +153,14 @@ function Inbox() {
         ))}
       </ul>
       {active ? (
-        <Thread key={`${user?.id}:${active.id}`} conversation={active} />
+        <Thread
+          conversation={active}
+          body={text}
+          setBody={setText}
+          sending={!!pending[active.id]}
+          error={errors[active.id]}
+          send={send}
+        />
       ) : (
         <div className="surface-card grid place-items-center p-10 text-sm text-muted-foreground">
           {search.c ? t("messages.unavailable") : t("messages.select")}
@@ -116,25 +170,22 @@ function Inbox() {
   );
 }
 
-function Thread({ conversation }: { conversation: DoctorConversation }) {
+function Thread({
+  conversation,
+  body,
+  setBody,
+  sending,
+  error,
+  send,
+}: {
+  conversation: DoctorConversation;
+  body: string;
+  setBody: (value: string) => void;
+  sending: boolean;
+  error: string | undefined;
+  send: (e: FormEvent) => void;
+}) {
   const { t, fmt } = useI18n();
-  const { user } = useAuth();
-  const reply = useDoctorReply();
-  const { text: body, setText: setBody, sending, send: submit } = useMessageDraft();
-
-  const send = async (e: FormEvent) => {
-    e.preventDefault();
-    const text = body.trim();
-    if (!text || !user) return;
-    try {
-      await submit((body) =>
-        reply.mutateAsync({ conversationId: conversation.id, senderId: user.id, body }),
-      );
-    } catch (err) {
-      toast.error(t("doctorMessages.sendFailed", { reason: t(describeDataError(err)) }));
-    }
-  };
-
   const label = {
     you: t("common.you"),
     patient: conversation.patientName,
@@ -142,11 +193,11 @@ function Thread({ conversation }: { conversation: DoctorConversation }) {
   };
   return (
     <section
-      className="surface-card flex min-h-[420px] flex-col p-4"
+      className="surface-card flex min-h-[420px] min-w-0 flex-col p-4"
       aria-label={conversation.patientName}
     >
       <header className="border-b pb-3">
-        <h2 className="font-semibold" dir="auto">
+        <h2 className="font-semibold [overflow-wrap:anywhere]" dir="auto">
           {conversation.patientName}
         </h2>
         <p className="text-xs text-muted-foreground" dir="auto">
@@ -175,6 +226,11 @@ function Thread({ conversation }: { conversation: DoctorConversation }) {
           </li>
         ))}
       </ol>
+      {error ? (
+        <p role="alert" className="pt-3 text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <form onSubmit={send} className="flex items-end gap-2 border-t pt-3">
         <label htmlFor="doctor-reply" className="sr-only">
           {t("doctorMessages.reply")}

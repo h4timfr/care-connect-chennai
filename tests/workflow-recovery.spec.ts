@@ -153,6 +153,9 @@ test("doctor drafts do not cross patient boundaries and retain scoped RPC reads"
   await input.fill("Private draft for first patient");
   await page.getByRole("button", { name: /Second Patient/ }).click();
   await expect(input).toHaveValue("");
+  await page.getByRole("button", { name: /First Patient/ }).click();
+  await expect(input).toHaveValue("Private draft for first patient");
+  await page.getByRole("button", { name: /Second Patient/ }).click();
   await input.fill("Doctor reply");
   const send = page.getByRole("button", { name: "Send reply" });
   const request = page.waitForRequest(
@@ -197,4 +200,38 @@ test("a failed clinic reply stays with its conversation after switching", async 
   await page.getByRole("button", { name: /Test Patient/ }).click();
   await expect(input).toHaveValue("Unsent reply");
   await expect(page.getByRole("alert")).toBeVisible();
+});
+
+test("doctor sees a delayed failed reply when returning to the conversation", async ({
+  page,
+  backend,
+}) => {
+  const state = defaultState();
+  state.doctors[0]!["user_id"] = ids.user;
+  const mock = await backend({
+    doctors: state.doctors,
+    failMessageInsert: true,
+    delays: { messages: 800 },
+    doctorConversations: ["First Patient", "Second Patient"].map((name, index) => ({
+      id: `doctor-conversation-${index}`,
+      clinic_id: ids.clinicA,
+      clinic_name: "Test Clinic A",
+      patient_name: name,
+      messages: [],
+    })),
+  });
+  await page.goto("/doctor/messages?c=doctor-conversation-0");
+  const input = page.getByRole("textbox");
+  await input.fill("Unsent doctor reply");
+  const response = page.waitForResponse(
+    (r) => r.request().method() === "POST" && r.url().includes("/rest/v1/messages"),
+  );
+  await page.getByRole("button", { name: "Send reply" }).click();
+  await page.getByRole("button", { name: /Second Patient/ }).click();
+  await response;
+  await page.getByRole("button", { name: /First Patient/ }).click();
+  await expect(input).toHaveValue("Unsent doctor reply");
+  await expect(page.getByRole("alert")).toContainText("wasn't sent");
+  expect(mock.callsTo("GET", "/rest/v1/messages")).toHaveLength(0);
+  expect(mock.callsTo("POST", "/rest/v1/rpc/doctor_conversations").length).toBeGreaterThan(0);
 });
