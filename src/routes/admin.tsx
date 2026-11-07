@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "@/lib/toast";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { FormAlert } from "@/components/AuthCard";
@@ -100,6 +100,14 @@ function ClinicPublicationPanel() {
   const { t } = useI18n();
   const clinics = useAdminClinics();
   const update = useSetClinicPublicationState();
+  const inFlight = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   if (clinics.isLoading || clinics.error)
     return <PanelState query={clinics} errorTitle={t("admin.loadError")} />;
   const realClinics = (clinics.data ?? []).filter((c) => !c.isSample);
@@ -113,6 +121,8 @@ function ClinicPublicationPanel() {
       bookingEnabled: boolean;
     }>,
   ) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     const next = {
       verificationState: patch.verificationState ?? clinic.verificationState,
       isPublished: patch.isPublished ?? clinic.isPublished,
@@ -129,9 +139,11 @@ function ClinicPublicationPanel() {
     }
     try {
       await update.mutateAsync({ clinicId: clinic.id, ...next });
-      toast.success(t("admin.publicationSaved"));
+      if (mounted.current) toast.success(t("admin.publicationSaved"));
     } catch (err) {
-      toast.error(t(describeDataError(err)));
+      if (mounted.current) toast.error(t(describeDataError(err)));
+    } finally {
+      inFlight.current = false;
     }
   };
 
@@ -650,7 +662,18 @@ function TeamsPanel() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Membership["role"]>("clinic_staff");
   const [error, setError] = useState<string | null>(null);
+  const adding = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
+  if (clinics.isLoading || clinics.error) {
+    return <PanelState query={clinics} errorTitle={t("admin.loadError")} />;
+  }
   if (memberships.isLoading || memberships.error) {
     return <PanelState query={memberships} errorTitle={t("admin.loadError")} />;
   }
@@ -658,21 +681,28 @@ function TeamsPanel() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (adding.current) return;
     if (!clinicId || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
       setError(t("admin.memberInvalid"));
       return;
     }
     setError(null);
+    adding.current = true;
     try {
       await add.mutateAsync({ clinicId, email, role });
-      toast.success(t("admin.memberAdded"));
-      setEmail("");
+      if (mounted.current) {
+        toast.success(t("admin.memberAdded"));
+        setEmail("");
+      }
     } catch (err) {
-      setError(
-        /no CareConnect account/i.test(messageOf(err))
-          ? t("admin.noAccount")
-          : t(describeDataError(err)),
-      );
+      if (mounted.current)
+        setError(
+          /no CareConnect account/i.test(messageOf(err))
+            ? t("admin.noAccount")
+            : t(describeDataError(err)),
+        );
+    } finally {
+      adding.current = false;
     }
   };
 
@@ -686,6 +716,7 @@ function TeamsPanel() {
             <Label htmlFor="member-clinic">{t("common.clinic")}</Label>
             <NativeSelect
               id="member-clinic"
+              disabled={add.isPending}
               value={clinicId}
               onChange={(e) => setClinicId(e.target.value)}
             >
@@ -701,6 +732,7 @@ function TeamsPanel() {
             <Label htmlFor="member-email">{t("auth.email")}</Label>
             <Input
               id="member-email"
+              disabled={add.isPending}
               type="email"
               dir="ltr"
               autoComplete="off"
@@ -712,6 +744,7 @@ function TeamsPanel() {
             <Label htmlFor="member-role">{t("admin.role")}</Label>
             <NativeSelect
               id="member-role"
+              disabled={add.isPending}
               value={role}
               onChange={(e) =>
                 setRole(e.target.value === "clinic_admin" ? "clinic_admin" : "clinic_staff")

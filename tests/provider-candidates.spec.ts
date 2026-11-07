@@ -189,3 +189,32 @@ test.describe("Provider candidate review", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 });
+
+test("a delayed review save does not report success on a different candidate", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({ platformAdmin: true, ...asState(candidateFixtures()) });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/rest/v1/candidate_facilities?*", async (route) => {
+    if (route.request().method() === "PATCH") await gate;
+    await route.fallback();
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/admin/providers?tab=facilities&id=${candidateIds.facilityA}`);
+  const first = page.getByRole("article", { name: "Test Candidate Facility Adyar" });
+  await first.getByRole("button", { name: "Save review" }).click();
+  await expect(first.getByRole("button", { name: "Save review" })).toBeDisabled();
+  await page.getByRole("button", { name: /Test Candidate Facility Guindy/ }).click();
+  await expect(page.getByRole("article", { name: "Test Candidate Facility Guindy" })).toBeVisible();
+  const refreshed = page.waitForResponse(
+    (r) => r.request().method() === "GET" && r.url().includes("/rest/v1/candidate_facilities"),
+  );
+  release();
+  await refreshed;
+  await expect.poll(() => mock.callsTo("PATCH", "/rest/v1/candidate_facilities").length).toBe(1);
+  await expect(page.getByText("Review saved")).toHaveCount(0);
+});

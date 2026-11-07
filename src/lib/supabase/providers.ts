@@ -316,13 +316,14 @@ export function useSetClinicPublicationState() {
       });
       if (error) throw error;
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["clinics"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "clinics"] });
-      queryClient.invalidateQueries({ queryKey: ["doctors"] });
-      queryClient.invalidateQueries({ queryKey: ["doctor-search"] });
-      queryClient.invalidateQueries({ queryKey: ["clinic-search"] });
-    },
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["clinics"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin", "clinics"] }),
+        queryClient.invalidateQueries({ queryKey: ["doctors"] }),
+        queryClient.invalidateQueries({ queryKey: ["doctor-search"] }),
+        queryClient.invalidateQueries({ queryKey: ["clinic-search"] }),
+      ]),
   });
 }
 

@@ -239,3 +239,135 @@ test.describe("Portal skip links", () => {
     });
   }
 });
+
+test("clinic teams reports clinic-list failure and retries", async ({ page, backend }) => {
+  const mock = await backend({ platformAdmin: true });
+  mock.state.clinics[0]!["is_demo"] = false;
+  let failed = false;
+  await page.route("**/rest/v1/rpc/admin_list_clinics", async (route) => {
+    if (!failed) {
+      failed = true;
+      await route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({ code: "42501", message: "Denied" }),
+      });
+    } else await route.fallback();
+  });
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Clinic teams" }).click();
+  const retry = page.getByRole("button", { name: "Try again" });
+  await expect(retry).toBeVisible();
+  await expect(page.getByLabel("Clinic", { exact: true })).toHaveCount(0);
+  await retry.click();
+  await expect(page.getByLabel("Clinic", { exact: true })).toBeVisible();
+});
+
+test("failed publication does not claim success or change the displayed state", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({ platformAdmin: true });
+  mock.state.clinics[0]!["is_demo"] = false;
+  let attempts = 0;
+  await page.route("**/rest/v1/rpc/admin_set_clinic_publication_state", async (route) => {
+    attempts++;
+    await route.fulfill({
+      status: 403,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "42501", message: "Denied" }),
+    });
+  });
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Provider publishing" }).click();
+  const row = page.locator("li").filter({ hasText: "Test Clinic A" });
+  await row.getByRole("button", { name: "Verify clinic" }).click();
+  await expect(row.getByRole("button", { name: "Verify clinic" })).toBeEnabled();
+  await expect(row).toContainText("Pending");
+  await expect(page.getByText("Provider state updated.")).toHaveCount(0);
+  expect(attempts).toBe(1);
+});
+
+test("adding a clinic member locks the fields and ignores repeated submission while pending", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({ platformAdmin: true });
+  mock.state.clinics[0]!["is_demo"] = false;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let attempts = 0;
+  await page.route("**/rest/v1/rpc/admin_add_clinic_member", async (route) => {
+    attempts++;
+    await gate;
+    await route.fallback();
+  });
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Clinic teams" }).click();
+  await page.getByLabel("Clinic", { exact: true }).selectOption(ids.clinicA);
+  const email = page.getByLabel("Email", { exact: true });
+  await email.fill("staff@test.invalid");
+  const submit = page.getByRole("button", { name: "Add clinic member" });
+  await submit.click();
+  await expect(email).toBeDisabled();
+  await expect(submit).toBeDisabled();
+  expect(attempts).toBe(1);
+  release();
+  await expect(email).toBeEnabled();
+  await expect(email).toHaveValue("");
+  expect(mock.callsTo("POST", "/rpc/admin_add_clinic_member")).toHaveLength(1);
+});
+
+test("publication controls stay locked until refreshed clinic state arrives", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({ platformAdmin: true });
+  mock.state.clinics[0]!["is_demo"] = false;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let listCalls = 0;
+  await page.route("**/rest/v1/rpc/admin_list_clinics", async (route) => {
+    listCalls++;
+    if (listCalls > 1) await gate;
+    await route.fallback();
+  });
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Provider publishing" }).click();
+  const row = page.locator("li").filter({ hasText: "Test Clinic A" });
+  const verify = row.getByRole("button", { name: "Verify clinic" });
+  await verify.click();
+  await expect.poll(() => listCalls).toBeGreaterThan(1);
+  await expect(verify).toBeDisabled();
+  expect(mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state")).toHaveLength(1);
+  release();
+  await expect(row.getByRole("button", { name: "Publish listing" })).toBeEnabled();
+});
+
+test("publication cards with long clinic names fit and support keyboard actions", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({ platformAdmin: true });
+  mock.state.clinics[0]!["is_demo"] = false;
+  const name = "SyntheticClinic".repeat(10);
+  mock.state.clinics[0]!["name"] = name;
+  for (const width of [320, 375, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/admin");
+    const tab = page.getByRole("tab", { name: "Provider publishing" });
+    await tab.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("heading", { name })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Verify clinic" })).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+  }
+});

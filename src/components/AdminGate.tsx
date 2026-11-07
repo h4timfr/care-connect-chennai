@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { ErrorState, InfoNotice, PageLoader } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
@@ -49,5 +49,5 @@ export function AdminGate({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  return <>{children}</>;
+  return <Fragment key={user.id}>{children}</Fragment>;
 }

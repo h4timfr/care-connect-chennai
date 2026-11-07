@@ -12,7 +12,7 @@ import {
   ShieldAlert,
   Stethoscope,
 } from "lucide-react";
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "@/lib/toast";
 import { AdminGate } from "@/components/AdminGate";
 import { FormAlert } from "@/components/AuthCard";
@@ -364,7 +364,7 @@ function Review() {
                 {t("candidates.backToList")}
               </Button>
               <Detail
-                key={search.id}
+                key={`${tab}:${search.id}`}
                 kind={tab === "facilities" ? "facility" : "doctor"}
                 id={search.id}
                 data={data}
@@ -898,11 +898,21 @@ function ReviewForm({
   const [permission, setPermission] = useState<PermissionStatus>(record.permission_status);
   const [notes, setNotes] = useState(record.notes ?? "");
   const [error, setError] = useState<string | null>(null);
+  const saving = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const have = new Set(evidence.map((e) => e.evidence_type));
   const required = REQUIRED_EVIDENCE[kind];
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving.current) return;
+    saving.current = true;
     setError(null);
     try {
       await update.mutateAsync({
@@ -914,9 +924,11 @@ function ReviewForm({
           notes: notes.trim() || null,
         },
       });
-      toast.success(t("candidates.saved"));
+      if (mounted.current) toast.success(t("candidates.saved"));
     } catch (err) {
-      setError(explain(err, t));
+      if (mounted.current) setError(explain(err, t));
+    } finally {
+      saving.current = false;
     }
   };
 
