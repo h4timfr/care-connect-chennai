@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Banknote, CalendarDays, Stethoscope, Users, type LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/supabase/auth";
 import { isoDate } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { describeStatusError } from "@/lib/supabase/appointments";
@@ -20,6 +21,7 @@ const NEEDS_ACTION_LIMIT = 5;
 
 function ClinicDashboard() {
   const { activeClinic, clinicAppointmentsStatus: status } = useApp();
+  const { user } = useAuth();
   const today = isoDate(new Date());
   const { t, fmt } = useI18n();
 
@@ -37,7 +39,9 @@ function ClinicDashboard() {
       />
     );
   } else {
-    body = <Dashboard clinicId={activeClinic.id} today={today} />;
+    body = (
+      <Dashboard key={`${user?.id}:${activeClinic.id}`} clinicId={activeClinic.id} today={today} />
+    );
   }
 
   return (
@@ -54,6 +58,14 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
   const { clinicAppointments, doctorsOfClinic, doctorById, setAppointmentStatus, catalog } =
     useApp();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const updating = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const { t, fmt } = useI18n();
 
   const appointments = clinicAppointments.filter((a) => a.clinicId === clinicId);
@@ -68,21 +80,24 @@ function Dashboard({ clinicId, today }: { clinicId: string; today: string }) {
     .reduce((sum, a) => sum + a.fee, 0);
 
   const update = async (id: string, next: AppointmentStatus) => {
-    if (updatingId) return;
+    if (updating.current) return;
+    updating.current = true;
     setUpdatingId(id);
     try {
       await setAppointmentStatus(id, next);
-      toast.success(
-        t(
-          next === "confirmed"
-            ? "clinicAppointments.done.confirmed"
-            : "clinicAppointments.done.declined",
-        ),
-      );
+      if (mounted.current)
+        toast.success(
+          t(
+            next === "confirmed"
+              ? "clinicAppointments.done.confirmed"
+              : "clinicAppointments.done.declined",
+          ),
+        );
     } catch (err) {
-      toast.error(t(describeStatusError(err)));
+      if (mounted.current) toast.error(t(describeStatusError(err)));
     } finally {
-      setUpdatingId(null);
+      updating.current = false;
+      if (mounted.current) setUpdatingId(null);
     }
   };
 

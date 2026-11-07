@@ -229,8 +229,10 @@ export function useUpdateAppointmentStatus() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+    onSuccess: (data) => {
       // Declining or cancelling frees the slot; confirming changes nothing for others, but the
       // slot grid reflects every active status, so refresh it either way.
       queryClient.invalidateQueries({ queryKey: ["availability", data.doctor_id] });

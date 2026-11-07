@@ -648,3 +648,99 @@ test.describe("Portal status is truthful", () => {
     await expect(page.getByRole("cell", { name: "Card Patient" })).toBeVisible();
   });
 });
+
+test.describe("Clinic appointment recovery", () => {
+  test("upcoming excludes past requests and keeps future India-local times", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({
+      appointments: [
+        appointmentRow({ id: "past", date: "2020-01-01", patients: { full_name: "Past Patient" } }),
+        appointmentRow({
+          id: "future",
+          date: "2099-01-05",
+          time: "19:30:00",
+          patients: { full_name: "Future Patient" },
+        }),
+      ],
+    });
+    mock.state.memberships = [membershipA(mock)];
+    await page.goto("/clinic/appointments");
+    await page.getByRole("button", { name: "Upcoming" }).click();
+    await expect(page.getByText("Past Patient")).toHaveCount(0);
+    await expect(page.getByRole("cell", { name: "Future Patient" })).toBeVisible();
+    await expect(page.getByRole("cell", { name: /7:30 PM/ })).toBeVisible();
+  });
+
+  test("appointment load failure retries and an empty result is explained", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({ failTables: ["appointments"], appointments: [] });
+    mock.state.memberships = [membershipA(mock)];
+    await page.goto("/clinic/appointments");
+    const retry = page.getByRole("button", { name: "Try again" });
+    await expect(retry).toBeVisible();
+    mock.state.failTables = [];
+    await retry.click();
+    await expect(page.getByText("No appointments match this filter.")).toBeVisible();
+  });
+
+  test("a failed rapid status update keeps the old status and refreshes", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({
+      appointments: [appointmentRow()],
+      failStatusUpdate: true,
+      delays: { appointments: 300 },
+    });
+    mock.state.memberships = [membershipA(mock)];
+    await page.goto("/clinic/appointments");
+    const confirm = page.getByRole("button", { name: "Confirm", exact: true });
+    await expect(confirm).toBeVisible();
+    const before = mock.callsTo("GET", "/rest/v1/appointments").length;
+    await confirm.dblclick({ force: true });
+    await expect
+      .poll(() => mock.callsTo("GET", "/rest/v1/appointments").length)
+      .toBeGreaterThan(before);
+    expect(mock.callsTo("PATCH", "/rest/v1/appointments")).toHaveLength(1);
+    await expect(confirm).toBeEnabled();
+    await expect(page.getByText("Awaiting confirmation").first()).toBeVisible();
+  });
+});
+
+test("switching clinics clears the previous clinic's message draft", async ({ page, backend }) => {
+  const mock = await backend({ conversations: [conversationRow([])] });
+  mock.state.memberships = [
+    membershipA(mock),
+    { clinic_id: ids.clinicB, role: "clinic_staff", active: true, clinics: mock.state.clinics[1] },
+  ];
+  await page.goto(`/clinic/messages?c=${ids.conversation}`);
+  await page.getByLabel("Reply to patient").fill("Clinic A draft");
+  await page.locator("#clinic-picker-sidebar").selectOption(ids.clinicB);
+  await expect(page.getByLabel("Reply to patient")).toHaveCount(0);
+  await page.locator("#clinic-picker-sidebar").selectOption(ids.clinicA);
+  await expect(page.getByLabel("Reply to patient")).toHaveValue("");
+});
+
+test("mobile appointment actions remain keyboard accessible when the doctor is unavailable", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({ appointments: [appointmentRow({ doctor_id: "missing-doctor" })] });
+  mock.state.memberships = [membershipA(mock)];
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/clinic/appointments");
+  const confirm = page.getByRole("button", { name: "Confirm", exact: true });
+  await expect(confirm).toBeVisible();
+  await confirm.focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => mock.callsTo("PATCH", "/rest/v1/appointments").length).toBe(1);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    ),
+  ).toBeLessThanOrEqual(1);
+});

@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Loader2, MessageSquare, Send } from "lucide-react";
-import { useEffect, useRef, type FormEvent } from "react";
-import { useMessageDraft } from "@/hooks/useMessageDraft";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
@@ -50,12 +49,7 @@ function ClinicMessages() {
     const mine = conversations
       .filter((c) => c.clinicId === activeClinic.id)
       .sort((a, b) => lastSentAt(b).localeCompare(lastSentAt(a)));
-    body = (
-      <ClinicInbox
-        key={`${user?.id}:${activeClinic.id}:${requestedId ?? ""}`}
-        conversations={mine}
-      />
-    );
+    body = <ClinicInbox key={`${user?.id}:${activeClinic.id}`} conversations={mine} />;
   }
 
   return (
@@ -69,7 +63,19 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
   const { sendMessage, doctorById } = useApp();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/clinic/messages" });
-  const { text, setText, sending, send } = useMessageDraft();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+  const [sendErrors, setSendErrors] = useState<Record<string, string>>({});
+  const revisions = useRef<Record<string, number>>({});
+  const inFlight = useRef(new Set<string>());
+  const mounted = useRef(true);
+  const currentId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const endRef = useRef<HTMLDivElement>(null);
   const { t, fmt } = useI18n();
   const sentLabel = (iso: string) =>
@@ -77,6 +83,14 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
 
   const active = search.c ? conversations.find((c) => c.id === search.c) : undefined;
   const activeId = active?.id;
+  currentId.current = activeId;
+  const text = activeId ? (drafts[activeId] ?? "") : "";
+  const sending = activeId ? !!pending[activeId] : false;
+  const setText = (value: string) => {
+    if (!activeId) return;
+    revisions.current[activeId] = (revisions.current[activeId] ?? 0) + 1;
+    setDrafts((previous) => ({ ...previous, [activeId]: value }));
+  };
   const activeMessageCount = active?.messages.length ?? 0;
 
   useEffect(() => {
@@ -96,11 +110,26 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
   const handleSend = async (e?: FormEvent) => {
     e?.preventDefault();
     const body = text.trim();
-    if (!body || !active || sending) return;
+    if (!body || !active || inFlight.current.has(active.id)) return;
+    const id = active.id;
+    const revision = revisions.current[id] ?? 0;
+    inFlight.current.add(id);
+    setPending((previous) => ({ ...previous, [id]: true }));
+    setSendErrors((previous) => ({ ...previous, [id]: "" }));
     try {
-      await send((body) => sendMessage(active.id, body));
+      await sendMessage(id, body);
+      if (mounted.current && (revisions.current[id] ?? 0) === revision) {
+        setDrafts((previous) => ({ ...previous, [id]: "" }));
+      }
     } catch (err) {
-      toast.error(t("messages.notSent", { reason: t(describeDataError(err)) }));
+      if (mounted.current) {
+        const message = t("messages.notSent", { reason: t(describeDataError(err)) });
+        setSendErrors((previous) => ({ ...previous, [id]: message }));
+        if (currentId.current === id) toast.error(message);
+      }
+    } finally {
+      inFlight.current.delete(id);
+      if (mounted.current) setPending((previous) => ({ ...previous, [id]: false }));
     }
   };
 
@@ -235,6 +264,11 @@ function ClinicInbox({ conversations }: { conversations: Conversation[] }) {
             </div>
 
             <form onSubmit={handleSend} className="border-t bg-card p-3">
+              {activeId && sendErrors[activeId] ? (
+                <p role="alert" className="mb-2 text-sm text-destructive">
+                  {sendErrors[activeId]}
+                </p>
+              ) : null}
               <div className="flex items-end gap-2 rounded-xl border bg-muted/50 p-1 transition-all focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20">
                 <label htmlFor="clinic-message-input" className="sr-only">
                   {t("clinicMessages.replyLabel")}

@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
 import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/supabase/auth";
 import { useI18n, type MessageKey } from "@/lib/i18n";
-import { describeStatusError } from "@/lib/supabase/appointments";
+import { describeStatusError, isPastAppointment } from "@/lib/supabase/appointments";
 import { cn } from "@/lib/utils";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 
@@ -66,6 +67,7 @@ const ACTIONS: Partial<
 
 function ClinicAppointments() {
   const { clinicAppointments, clinicAppointmentsStatus: status, activeClinic } = useApp();
+  const { user } = useAuth();
   const [filter, setFilter] = useState<Filter>("all");
   const { t } = useI18n();
 
@@ -86,7 +88,8 @@ function ClinicAppointments() {
     const rows = clinicAppointments
       .filter((a) => a.clinicId === activeClinic.id)
       .filter((a) => {
-        if (filter === "upcoming") return a.status === "confirmed" || a.status === "pending";
+        if (filter === "upcoming")
+          return (a.status === "confirmed" || a.status === "pending") && !isPastAppointment(a);
         if (filter === "pending") return a.status === "pending";
         return true;
       })
@@ -111,7 +114,7 @@ function ClinicAppointments() {
             </Button>
           ))}
         </div>
-        <AppointmentTable rows={rows} />
+        <AppointmentTable key={`${user?.id}:${activeClinic.id}`} rows={rows} />
       </div>
     );
   }
@@ -129,18 +132,28 @@ function ClinicAppointments() {
 function AppointmentTable({ rows }: { rows: Appointment[] }) {
   const { setAppointmentStatus, doctorById } = useApp();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const updating = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const { t, fmt } = useI18n();
 
   const update = async (id: string, next: AppointmentStatus, done: MessageKey) => {
-    if (updatingId) return;
+    if (updating.current) return;
+    updating.current = true;
     setUpdatingId(id);
     try {
       await setAppointmentStatus(id, next);
-      toast.success(t(done));
+      if (mounted.current) toast.success(t(done));
     } catch (err) {
-      toast.error(t(describeStatusError(err)));
+      if (mounted.current) toast.error(t(describeStatusError(err)));
     } finally {
-      setUpdatingId(null);
+      updating.current = false;
+      if (mounted.current) setUpdatingId(null);
     }
   };
 

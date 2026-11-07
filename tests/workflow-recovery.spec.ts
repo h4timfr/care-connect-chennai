@@ -126,6 +126,8 @@ test("clinic drafts do not cross patient boundaries", async ({ page, backend }) 
   await input.fill("Private draft for first patient");
   await page.getByRole("button", { name: /Second Patient/ }).click();
   await expect(input).toHaveValue("");
+  await page.getByRole("button", { name: /Test Patient/ }).click();
+  await expect(input).toHaveValue("Private draft for first patient");
 });
 
 test("doctor drafts do not cross patient boundaries and retain scoped RPC reads", async ({
@@ -163,4 +165,36 @@ test("doctor drafts do not cross patient boundaries and retain scoped RPC reads"
   await expect(input).toHaveValue("Next doctor reply");
   expect(mock.callsTo("POST", "/rest/v1/rpc/doctor_conversations").length).toBeGreaterThan(0);
   expect(mock.callsTo("GET", "/rest/v1/messages")).toHaveLength(0);
+});
+
+test("a failed clinic reply stays with its conversation after switching", async ({
+  page,
+  backend,
+}) => {
+  const state = defaultState();
+  await backend({
+    memberships: [{ clinic_id: ids.clinicA, role: "clinic_staff", clinics: state.clinics[0] }],
+    conversations: [
+      conversationRow([]),
+      {
+        ...conversationRow([]),
+        id: "second-conversation",
+        patients: { full_name: "Second Patient", user_id: "second-patient" },
+      },
+    ],
+    delays: { messages: 800 },
+    failMessageInsert: true,
+  });
+  await page.goto(`/clinic/messages?c=${ids.conversation}`);
+  const input = page.getByLabel("Reply to patient");
+  await input.fill("Unsent reply");
+  const response = page.waitForResponse(
+    (r) => r.request().method() === "POST" && r.url().includes("/rest/v1/messages"),
+  );
+  await page.getByRole("button", { name: "Send reply" }).click();
+  await page.getByRole("button", { name: /Second Patient/ }).click();
+  await response;
+  await page.getByRole("button", { name: /Test Patient/ }).click();
+  await expect(input).toHaveValue("Unsent reply");
+  await expect(page.getByRole("alert")).toBeVisible();
 });
