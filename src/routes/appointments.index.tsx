@@ -70,7 +70,7 @@ function AppointmentsList() {
   } else {
     body = (
       <Tabs defaultValue="upcoming">
-        <TabsList>
+        <TabsList className="h-auto w-full flex-wrap justify-start">
           <TabsTrigger value="upcoming">
             {t("appointments.upcoming", { count: upcoming.length })}
           </TabsTrigger>

@@ -17,12 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { isoDate } from "@/lib/format";
+import { addDays, isoDate } from "@/lib/format";
 import { Trans, useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { SLOT_GONE_ERRORS, describeBookingError } from "@/lib/supabase/appointments";
 import { describeDataError } from "@/lib/supabase/errors";
-import { bookableClinicIds } from "@/lib/supabase/queries";
+import { bookableClinicIds, useDoctorAvailability } from "@/lib/supabase/queries";
 import { cn } from "@/lib/utils";
 
 interface BookSearch {
@@ -198,8 +198,18 @@ function BookingForm({
   const [clinicId, setClinicId] = useState(
     clinics.some((c) => c.id === initial.clinicId) ? initial.clinicId! : clinics[0]!.id,
   );
-  const [date, setDate] = useState(initial.date ?? isoDate(new Date()));
-  const [time, setTime] = useState(initial.time ?? "");
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    const today = isoDate(now);
+    const lastDay = isoDate(addDays(now, 13));
+    return initial.date && initial.date >= today && initial.date <= lastDay ? initial.date : today;
+  });
+  const [time, setTime] = useState(() => {
+    const now = new Date();
+    return initial.date && initial.date >= isoDate(now) && initial.date <= isoDate(addDays(now, 13))
+      ? (initial.time ?? "")
+      : "";
+  });
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -207,6 +217,13 @@ function BookingForm({
   const { t, fmt } = useI18n();
 
   const clinic = clinics.find((c) => c.id === clinicId);
+  const availability = useDoctorAvailability(doctorId, clinicId, date);
+  const selectedAvailable =
+    !availability.isFetching &&
+    !availability.isError &&
+    availability.data?.some(
+      (slot) => slot.available && slot.slot_time === (time.length === 5 ? `${time}:00` : time),
+    ) === true;
 
   const selectClinic = (id: string) => {
     setClinicId(id);
@@ -220,7 +237,7 @@ function BookingForm({
   };
 
   const confirm = async () => {
-    if (inFlight.current || !time) return;
+    if (inFlight.current || !selectedAvailable) return;
     inFlight.current = true;
     setSubmitting(true);
     setError(null);
@@ -243,7 +260,10 @@ function BookingForm({
     } catch (err) {
       const key = describeBookingError(err);
       setError(t(key));
-      if (SLOT_GONE_ERRORS.includes(key)) setTime("");
+      if (SLOT_GONE_ERRORS.includes(key)) {
+        setTime("");
+        void availability.refetch();
+      }
     } finally {
       inFlight.current = false;
       setSubmitting(false);
@@ -350,7 +370,12 @@ function BookingForm({
           </div>
         ) : null}
 
-        <Button size="lg" className="w-full" disabled={!time || submitting} onClick={confirm}>
+        <Button
+          size="lg"
+          className="w-full"
+          disabled={!selectedAvailable || submitting}
+          onClick={confirm}
+        >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
           {submitting ? t("book.requesting") : t("book.request")}
         </Button>

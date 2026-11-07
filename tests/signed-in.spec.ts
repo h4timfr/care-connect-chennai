@@ -538,6 +538,39 @@ test.describe("Appointments", () => {
 });
 
 test.describe("Booking", () => {
+  test("a link to a taken slot cannot submit until an available time is chosen", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    enablePatientContact(mock.state, ids.clinicA, true);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+    await page.goto(
+      `/book/${ids.doctorVerified}?date=${today}&time=09%3A00&clinicId=${ids.clinicA}`,
+    );
+    await expect(page.getByRole("button", { name: "9:00 AM, unavailable" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Request appointment" })).toBeDisabled();
+    expect(mock.callsTo("POST", "/rest/v1/rpc/book_appointment")).toHaveLength(0);
+    await page.getByRole("button", { name: "9:30 AM" }).click();
+    await expect(page.getByRole("button", { name: "Request appointment" })).toBeEnabled();
+  });
+
+  test("an expired date link returns to today without retaining its time", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    enablePatientContact(mock.state, ids.clinicA, true);
+    await page.goto(
+      `/book/${ids.doctorVerified}?date=2020-01-01&time=09%3A30&clinicId=${ids.clinicA}`,
+    );
+    await expect(page.getByRole("button", { name: "9:30 AM" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Request appointment" })).toBeDisabled();
+    await expect(
+      page.getByRole("group", { name: "Choose a date" }).locator('[aria-pressed="true"]'),
+    ).toHaveCount(1);
+  });
+
   test("books through the RPC exactly once and shows the pending request", async ({
     page,
     backend,
