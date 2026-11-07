@@ -519,10 +519,11 @@ export function useSaveSchedule() {
         .single();
       if (error) throw error;
     },
-    onSettled: (_d, _e, s) => {
-      queryClient.invalidateQueries({ queryKey: ["doctor_schedules", s.clinicId] });
-      queryClient.invalidateQueries({ queryKey: ["availability", s.doctorId] });
-    },
+    onSettled: (_d, _e, s) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["doctor_schedules", s.clinicId] }),
+        queryClient.invalidateQueries({ queryKey: ["availability", s.doctorId] }),
+      ]),
   });
 }
 

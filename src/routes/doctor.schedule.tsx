@@ -4,6 +4,7 @@ import { DoctorShell } from "@/components/layout/DoctorShell";
 import { EmptyState, InfoNotice } from "@/components/common";
 import { LinkStatus } from "@/components/ProviderStatus";
 import type { VerificationState } from "@/lib/supabase/providers";
+import { Button } from "@/components/ui/button";
 import { ScheduleForm, ScheduleRow } from "@/components/ScheduleEditor";
 import { useI18n } from "@/lib/i18n";
 import type { MyDoctor } from "@/lib/supabase/doctor";
@@ -35,7 +36,7 @@ function Schedules({ me }: { me: MyDoctor }) {
       <ul className="grid gap-4 lg:grid-cols-2">
         {me.links.map((link) => (
           <ClinicHours
-            key={link.clinicId}
+            key={`${me.id}:${link.clinicId}`}
             doctorId={me.id}
             clinicId={link.clinicId}
             clinicName={link.clinicName}
@@ -86,8 +87,23 @@ function ClinicHours({
         </p>
       ) : (
         <>
-          {schedules.error ? (
-            <p className="mt-3 text-sm text-destructive">{t(describeDataError(schedules.error))}</p>
+          {schedules.isLoading ? (
+            <p role="status" className="mt-3 text-sm text-muted-foreground">
+              {t("common.loading")}
+            </p>
+          ) : schedules.error ? (
+            <div className="mt-3" role="alert">
+              <p className="text-sm text-destructive">{t(describeDataError(schedules.error))}</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => void schedules.refetch()}
+              >
+                {t("common.tryAgain")}
+              </Button>
+            </div>
           ) : mine.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">{t("schedule.none")}</p>
           ) : (
@@ -97,7 +113,14 @@ function ClinicHours({
               ))}
             </ul>
           )}
-          <ScheduleForm clinicId={clinicId} doctorId={doctorId} existing={mine} />
+          <div hidden={schedules.isLoading || !!schedules.error}>
+            <ScheduleForm
+              clinicId={clinicId}
+              doctorId={doctorId}
+              existing={mine}
+              disabled={schedules.isLoading || !!schedules.error}
+            />
+          </div>
         </>
       )}
     </li>

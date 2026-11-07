@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/supabase/auth";
 import { SPECIALTIES } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { codeOf, describeDataError, isNotDeployed, messageOf } from "@/lib/supabase/errors";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/clinic/doctors")({
 
 function ClinicDoctors() {
   const { doctors, activeClinic } = useApp();
+  const { user } = useAuth();
   const { t } = useI18n();
   const title = t("clinicDoctors.title");
   const subtitle = t("clinicDoctors.subtitle");
@@ -67,12 +69,20 @@ function ClinicDoctors() {
           <ul className="grid gap-4 lg:grid-cols-2">
             {list.map((link) => (
               <DoctorLinkCard
-                key={link.doctorId}
+                key={`${user?.id}:${activeClinic.id}:${link.doctorId}`}
                 link={link}
                 fee={doctors.find((d) => d.id === link.doctorId)?.consultationFee}
                 clinicId={activeClinic.id}
                 schedules={(schedules.data ?? []).filter((s) => s.doctorId === link.doctorId)}
                 schedulesError={schedules.error}
+                schedulesLoading={schedules.isLoading}
+                retrySchedules={() => void schedules.refetch()}
+                clinicBookingEnabled={
+                  !activeClinic.isSample &&
+                  activeClinic.verificationState === "verified" &&
+                  activeClinic.isPublished &&
+                  activeClinic.bookingEnabled
+                }
               />
             ))}
           </ul>
@@ -106,16 +116,23 @@ function DoctorLinkCard({
   clinicId,
   schedules,
   schedulesError,
+  schedulesLoading,
+  retrySchedules,
+  clinicBookingEnabled,
 }: {
   link: DoctorLink;
   fee: number | undefined;
   clinicId: string;
   schedules: Schedule[];
   schedulesError: unknown;
+  schedulesLoading: boolean;
+  retrySchedules: () => void;
+  clinicBookingEnabled: boolean;
 }) {
   const { t, fmt } = useI18n();
   const [editingHours, setEditingHours] = useState(false);
-  const bookable = link.active && link.state === "verified";
+  const canEditHours = link.active && link.state === "verified";
+  const onlineBooking = canEditHours && clinicBookingEnabled && !link.isSample;
 
   return (
     <li className="surface-card p-5">
@@ -139,14 +156,16 @@ function DoctorLinkCard({
 
       <p className="mt-3 text-sm">
         <span className="font-semibold">{t("clinicDoctors.onlineBooking")}: </span>
-        {bookable
+        {onlineBooking
           ? t("clinicDoctors.enabled")
           : link.state === "rejected"
             ? t("clinicDoctors.rejectedNote")
-            : t("clinicDoctors.pending")}
+            : link.state !== "verified"
+              ? t("clinicDoctors.pending")
+              : t("doctor.bookingUnavailable")}
       </p>
 
-      {bookable ? (
+      {canEditHours ? (
         <div className="mt-4 border-t pt-4">
           <div className="flex items-center justify-between gap-2">
             <h4 className="flex items-center gap-1.5 text-sm font-semibold">
@@ -158,12 +177,28 @@ function DoctorLinkCard({
               variant="outline"
               onClick={() => setEditingHours((v) => !v)}
               aria-expanded={editingHours}
+              disabled={schedulesLoading || !!schedulesError}
             >
               {editingHours ? t("schedule.done") : t("schedule.edit")}
             </Button>
           </div>
-          {schedulesError ? (
-            <p className="mt-2 text-sm text-destructive">{t(describeDataError(schedulesError))}</p>
+          {schedulesLoading ? (
+            <p role="status" className="mt-2 text-sm text-muted-foreground">
+              {t("common.loading")}
+            </p>
+          ) : schedulesError ? (
+            <div className="mt-2" role="alert">
+              <p className="text-sm text-destructive">{t(describeDataError(schedulesError))}</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={retrySchedules}
+              >
+                {t("common.tryAgain")}
+              </Button>
+            </div>
           ) : schedules.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">{t("schedule.none")}</p>
           ) : (
@@ -174,7 +209,14 @@ function DoctorLinkCard({
             </ul>
           )}
           {editingHours ? (
-            <ScheduleForm clinicId={clinicId} doctorId={link.doctorId} existing={schedules} />
+            <div hidden={schedulesLoading || !!schedulesError}>
+              <ScheduleForm
+                clinicId={clinicId}
+                doctorId={link.doctorId}
+                existing={schedules}
+                disabled={schedulesLoading || !!schedulesError}
+              />
+            </div>
           ) : null}
         </div>
       ) : null}

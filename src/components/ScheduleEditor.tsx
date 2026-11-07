@@ -1,5 +1,5 @@
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "@/lib/toast";
 import { FormAlert } from "@/components/AuthCard";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,14 @@ export function ScheduleRow({
 }) {
   const { t, fmt } = useI18n();
   const remove = useDeleteSchedule();
+  const inFlight = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2">
       <span>
@@ -45,11 +53,15 @@ export function ScheduleRow({
           aria-label={t("schedule.remove", { day: fmt.weekday(s.dayOfWeek) })}
           disabled={remove.isPending}
           onClick={async () => {
+            if (inFlight.current) return;
+            inFlight.current = true;
             try {
               await remove.mutateAsync({ id: s.id, clinicId, doctorId: s.doctorId });
-              toast.success(t("schedule.removed"));
+              if (mounted.current) toast.success(t("schedule.removed"));
             } catch (err) {
-              toast.error(t(describeDataError(err)));
+              if (mounted.current) toast.error(t(describeDataError(err)));
+            } finally {
+              inFlight.current = false;
             }
           }}
         >
@@ -66,10 +78,12 @@ export function ScheduleForm({
   clinicId,
   doctorId,
   existing,
+  disabled = false,
 }: {
   clinicId: string;
   doctorId: string;
   existing: Schedule[];
+  disabled?: boolean;
 }) {
   const { t, fmt } = useI18n();
   const save = useSaveSchedule();
@@ -79,14 +93,24 @@ export function ScheduleForm({
   const [end, setEnd] = useState("13:00");
   const [slot, setSlot] = useState(30);
   const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (disabled || inFlight.current) return;
     if (!start || !end || start >= end) {
       setError(t("schedule.invalidWindow"));
       return;
     }
     setError(null);
+    inFlight.current = true;
     try {
       await save.mutateAsync({
         clinicId,
@@ -96,9 +120,12 @@ export function ScheduleForm({
         endTime: end,
         slotMinutes: slot,
       });
-      toast.success(t("schedule.saved", { day: fmt.weekday(day) }));
+      if (mounted.current) toast.success(t("schedule.saved", { day: fmt.weekday(day) }));
     } catch (err) {
-      setError(codeOf(err) === "42501" ? t("schedule.notAllowed") : t(describeDataError(err)));
+      if (mounted.current)
+        setError(codeOf(err) === "42501" ? t("schedule.notAllowed") : t(describeDataError(err)));
+    } finally {
+      inFlight.current = false;
     }
   };
 
@@ -166,7 +193,7 @@ export function ScheduleForm({
         </p>
       ) : null}
       {error ? <FormAlert>{error}</FormAlert> : null}
-      <Button type="submit" size="sm" disabled={save.isPending}>
+      <Button type="submit" size="sm" disabled={disabled || save.isPending}>
         {save.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Plus aria-hidden />}
         {t("schedule.save")}
       </Button>

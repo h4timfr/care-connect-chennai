@@ -6,6 +6,7 @@ import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/supabase/auth";
 import { addDays, isoDate } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { describeStatusError } from "@/lib/supabase/appointments";
@@ -20,6 +21,7 @@ const DEFAULT_LAST_HOUR = 20;
 
 function ClinicCalendar() {
   const { activeClinic, clinicAppointmentsStatus: status } = useApp();
+  const { user } = useAuth();
   const [dayOffset, setDayOffset] = useState(0);
   const date = isoDate(addDays(new Date(), dayOffset));
   const { t, fmt } = useI18n();
@@ -38,7 +40,9 @@ function ClinicCalendar() {
       />
     );
   } else {
-    body = <DaySchedule clinicId={activeClinic.id} date={date} />;
+    body = (
+      <DaySchedule key={`${user?.id}:${activeClinic.id}`} clinicId={activeClinic.id} date={date} />
+    );
   }
 
   return (
@@ -137,7 +141,7 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
       ) : null}
 
       <div className="surface-card overflow-hidden">
-        <div className="grid grid-cols-[64px_1fr] border-b bg-muted/50 text-xs font-medium text-muted-foreground">
+        <div className="grid grid-cols-[64px_minmax(0,1fr)] border-b bg-muted/50 text-xs font-medium text-muted-foreground">
           <div className="border-e p-3 text-center">{t("clinicCalendar.timeIst")}</div>
           <div className="p-3">{t.plural("clinicCalendar.count", appointments.length)}</div>
         </div>
@@ -147,7 +151,7 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
               .filter((a) => hourOf(a.time) === h)
               .sort((a, b) => a.time.localeCompare(b.time));
             return (
-              <li key={h} className="grid min-h-16 grid-cols-[64px_1fr]">
+              <li key={h} className="grid min-h-16 grid-cols-[64px_minmax(0,1fr)]">
                 <div className="border-e bg-muted/10 p-3 text-end text-xs text-muted-foreground">
                   {fmt.hour(h)}
                 </div>
@@ -158,12 +162,12 @@ function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
                       className="flex w-full flex-col gap-1 rounded-lg border bg-background p-2 text-sm shadow-sm sm:w-[260px]"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="truncate font-medium">
+                        <span className="min-w-0 font-medium [overflow-wrap:anywhere]">
                           {a.patientName || t("common.unknownPatient")}
                         </span>
                         <StatusBadge status={a.status} />
                       </div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere]">
                         {fmt.time(a.time)}
                         {doctors.find((d) => d.id === a.doctorId)
                           ? ` · ${doctors.find((d) => d.id === a.doctorId)?.name}`
