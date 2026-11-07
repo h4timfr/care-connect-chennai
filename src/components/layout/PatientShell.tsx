@@ -47,16 +47,18 @@ const NAV: {
 export function PatientShell({ children }: { children: ReactNode }) {
   const mainRef = useRef<HTMLElement>(null);
   useFocusMainOnNavigate(mainRef);
-  const { patient, activeClinic } = useApp();
+  const { patient, activeClinic, isLoadingClinicAccess, clinicAccessError } = useApp();
   const { user, loading } = useAuth();
   const { t } = useI18n();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const isActive = (to: string, exact: boolean) =>
-    exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
+    (to === "/discover" &&
+      ["/doctors/", "/clinics/", "/book/"].some((prefix) => pathname.startsWith(prefix))) ||
+    (exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`));
 
   return (
-    <div className="flex min-h-screen flex-col bg-background pb-20 lg:pb-0">
+    <div className="flex min-h-screen flex-col bg-background pb-32 lg:pb-0">
       <SkipToContent />
       <header className="sticky top-0 z-40 border-b bg-card/85 shadow-xs backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
@@ -94,7 +96,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Shown only to accounts with an active clinic membership (RLS-checked list). */}
-            {activeClinic ? (
+            {!loading && user && !isLoadingClinicAccess && !clinicAccessError && activeClinic ? (
               <>
                 <Button asChild variant="outline" size="sm" className="hidden md:inline-flex">
                   <Link to="/clinic">{t("nav.clinicPortal")}</Link>
@@ -169,12 +171,14 @@ export function PatientShell({ children }: { children: ReactNode }) {
                   to={item.to}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-0.5 py-2.5 text-[11px] font-medium leading-tight transition-colors",
+                    "flex flex-col items-center gap-1 rounded-md px-0.5 py-2.5 text-[11px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                     active ? "text-highlight" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <item.icon className="h-5 w-5 shrink-0" aria-hidden />
-                  <span className="max-w-full truncate">{t(item.mobileLabel)}</span>
+                  <span className="max-w-full text-center [overflow-wrap:anywhere]">
+                    {t(item.mobileLabel)}
+                  </span>
                 </Link>
               </li>
             );
