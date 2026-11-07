@@ -83,7 +83,8 @@ for (const role of ["patient", "clinic", "doctor"] as const) {
                 : /First Recipient/,
         })
         .click();
-      await expect(input).toHaveValue("");
+      await expect(input).toHaveValue(role === "patient" ? "" : "First recipient draft");
+      if (role !== "patient") await expect(page.getByRole("alert")).toBeVisible();
     } finally {
       release();
     }

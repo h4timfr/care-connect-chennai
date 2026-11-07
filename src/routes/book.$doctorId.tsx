@@ -206,7 +206,8 @@ function BookingForm({
   });
   const [time, setTime] = useState(() => {
     const now = new Date();
-    return initial.date && initial.date >= isoDate(now) && initial.date <= isoDate(addDays(now, 13))
+    return !initial.date ||
+      (initial.date >= isoDate(now) && initial.date <= isoDate(addDays(now, 13)))
       ? (initial.time ?? "")
       : "";
   });
