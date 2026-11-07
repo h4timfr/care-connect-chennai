@@ -35,7 +35,7 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
         <Initials name={doctor.name} className="h-12 w-12 text-base" />
         <div className="min-w-0">
-          <h3 className="truncate font-display text-base font-semibold">
+          <h3 className="font-display text-base font-semibold [overflow-wrap:anywhere]">
             <Link
               to="/doctors/$doctorId"
               params={{ doctorId: doctor.id }}
@@ -44,11 +44,15 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
               {doctor.name}
             </Link>
           </h3>
-          <p className="truncate text-sm text-primary">{fmt.specialty(doctor.specialtyId)}</p>
+          {doctor.specialtyId ? (
+            <p className="text-sm text-primary [overflow-wrap:anywhere]">
+              {fmt.specialty(doctor.specialtyId)}
+            </p>
+          ) : null}
           {clinic ? (
-            <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
+            <p className="flex min-w-0 items-start gap-1 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="truncate">
+              <span className="min-w-0 [overflow-wrap:anywhere]">
                 {clinic.name}
                 {clinic.area ? ` · ${clinic.area}` : ""}
               </span>

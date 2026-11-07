@@ -483,6 +483,21 @@ export async function mockBackend(
       if (wantsObject) {
         return rows.length ? json(route, 200, rows[0]) : json(route, 406, { code: "PGRST116" });
       }
+      if (request.headers()["prefer"]?.includes("count=exact")) {
+        const offset = Number(url.searchParams.get("offset") ?? 0);
+        const limit = Number(url.searchParams.get("limit") ?? rows.length);
+        const pageRows = rows.slice(offset, offset + limit);
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          headers: {
+            "access-control-allow-origin": "*",
+            "access-control-expose-headers": "content-range",
+            "content-range": `${offset}-${offset + pageRows.length - 1}/${rows.length}`,
+          },
+          body: JSON.stringify(pageRows),
+        });
+      }
       return json(route, 200, rows);
     };
 
@@ -768,7 +783,7 @@ export async function mockBackend(
           return respond([{ id: row["id"] }]);
         }
         const filtered = [...url.searchParams.keys()].some(
-          (k) => !["select", "order", "limit"].includes(k),
+          (k) => !["select", "order", "limit", "offset"].includes(k),
         );
         if (filtered && state.doctorSearch) {
           if (state.doctorSearchDelayMs) {

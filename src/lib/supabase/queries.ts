@@ -20,10 +20,10 @@ const CLINIC_COLUMNS =
 const DOCTOR_SELECT =
   "id, name, gender, experience_years, consultation_fee, about, specialty_id, qualifications, languages, services, rating, review_count, registration_note, is_demo, clinic_doctors!inner(clinic_id, active, verification_state, clinics!inner(clinic_verification_state, is_published, patient_contact_permission, booking_enabled))";
 
-function publicDoctorQuery() {
+function publicDoctorQuery(withCount = false) {
   return supabase
     .from("doctors")
-    .select(DOCTOR_SELECT)
+    .select(DOCTOR_SELECT, withCount ? { count: "exact" } : undefined)
     .eq("is_demo", false)
     .eq("clinic_doctors.active", true)
     .eq("clinic_doctors.verification_state", "verified")
@@ -203,20 +203,53 @@ export function doctorCanPatientContact(doctor: Doctor, clinicId?: string) {
   );
 }
 
+/** Collect a complete public catalog even when PostgREST caps individual responses. */
+async function collectCatalog<T extends { id: string }>(
+  fetchPage: (
+    offset: number,
+  ) => PromiseLike<{ data: T[] | null; error: unknown; count: number | null }>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  const ids = new Set<string>();
+  let expected: number | null = null;
+  for (;;) {
+    const { data, error, count } = await fetchPage(rows.length);
+    if (error) throw error;
+    if (count === null || (expected !== null && count !== expected) || !data) {
+      throw new Error("Public catalog completeness could not be verified.");
+    }
+    expected = count;
+    for (const row of data) {
+      if (ids.has(row.id)) throw new Error("Public catalog changed during pagination.");
+      ids.add(row.id);
+      rows.push(row);
+    }
+    if (rows.length === expected) return rows;
+    if (data.length === 0 || rows.length > expected) {
+      throw new Error("Public catalog completeness could not be verified.");
+    }
+  }
+}
+
+const CATALOG_PAGE_SIZE = 500;
+
 export function useClinics(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["clinics"],
     enabled: options?.enabled ?? true,
     staleTime: CATALOG_STALE_TIME,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clinics")
-        .select(CLINIC_COLUMNS)
-        .eq("clinic_verification_state", "verified")
-        .eq("is_published", true)
-        .eq("is_demo", false)
-        .order("name");
-      if (error) throw error;
+      const data = await collectCatalog((offset) =>
+        supabase
+          .from("clinics")
+          .select(CLINIC_COLUMNS, { count: "exact" })
+          .eq("clinic_verification_state", "verified")
+          .eq("is_published", true)
+          .eq("is_demo", false)
+          .order("name")
+          .order("id")
+          .range(offset, offset + CATALOG_PAGE_SIZE - 1),
+      );
       return data.map((clinic) => mapClinic(clinic));
     },
   });
@@ -242,8 +275,12 @@ export function useDoctors(options?: { enabled?: boolean }) {
     enabled: options?.enabled ?? true,
     staleTime: CATALOG_STALE_TIME,
     queryFn: async () => {
-      const { data, error } = await publicDoctorQuery().order("name");
-      if (error) throw error;
+      const data = await collectCatalog((offset) =>
+        publicDoctorQuery(true)
+          .order("name")
+          .order("id")
+          .range(offset, offset + CATALOG_PAGE_SIZE - 1),
+      );
       return data.map(mapDoctor);
     },
   });

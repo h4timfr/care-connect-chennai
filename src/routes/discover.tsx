@@ -498,12 +498,12 @@ function Discover() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <TabsList>
                   <TabsTrigger value="doctors">
-                    {doctors
+                    {doctors && doctors.length < SEARCH_RESULT_LIMIT
                       ? t("discover.doctorsTabCount", { count: fmt.number(doctors.length) })
                       : t("discover.doctorsTab")}
                   </TabsTrigger>
                   <TabsTrigger value="clinics">
-                    {clinics
+                    {clinics && clinics.length < SEARCH_RESULT_LIMIT
                       ? t("discover.clinicsTabCount", { count: fmt.number(clinics.length) })
                       : t("discover.clinicsTab")}
                   </TabsTrigger>
@@ -591,11 +591,18 @@ function Discover() {
                   onClear={debouncedText || specialtyId ? clearEverything : undefined}
                 >
                   {(list) => (
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {list.map((c) => (
-                        <ClinicCard key={c.id} clinic={c} />
-                      ))}
-                    </div>
+                    <>
+                      {list.length >= SEARCH_RESULT_LIMIT ? (
+                        <p className="mb-3 text-sm text-muted-foreground">
+                          {t("discover.limitNote", { limit: fmt.number(SEARCH_RESULT_LIMIT) })}
+                        </p>
+                      ) : null}
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {list.map((c) => (
+                          <ClinicCard key={c.id} clinic={c} />
+                        ))}
+                      </div>
+                    </>
                   )}
                 </ResultsState>
               </TabsContent>

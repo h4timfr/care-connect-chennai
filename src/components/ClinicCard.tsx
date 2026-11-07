@@ -21,7 +21,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
       <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">
-            <h3 className="truncate font-display text-base font-semibold">
+            <h3 className="font-display text-base font-semibold [overflow-wrap:anywhere]">
               <Link
                 to="/clinics/$clinicId"
                 params={{ clinicId: clinic.id }}
@@ -45,7 +45,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
             {clinic.specialtyIds.map((id) => (
               <li
                 key={id}
-                className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
+                className="max-w-full rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground [overflow-wrap:anywhere]"
               >
                 {fmt.specialty(id)}
               </li>
@@ -54,7 +54,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
         ) : null}
 
         <dl className="grid gap-1.5 text-sm text-muted-foreground">
-          {clinicCanPatientContact(clinic, clinicDoctors) ? (
+          {clinic.phone && clinicCanPatientContact(clinic, clinicDoctors) ? (
             <div>
               <dt className="sr-only">{t("common.phone")}</dt>
               <dd className="flex items-center gap-1.5">
@@ -76,7 +76,7 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
           </div>
         </dl>
 
-        <p className="truncate text-sm text-muted-foreground">{clinic.address}</p>
+        <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{clinic.address}</p>
         <ListingStatus
           isSample={clinic.isSample}
           contactable={clinicCanPatientContact(clinic, clinicDoctors)}

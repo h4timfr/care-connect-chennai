@@ -81,8 +81,14 @@ function DoctorProfile() {
             <Initials name={doctor.name} className="h-20 w-20 shrink-0 text-2xl" />
             <div className="min-w-0 flex-1 space-y-3">
               <div>
-                <h1 className="font-display text-2xl font-bold">{doctor.name}</h1>
-                <p className="text-lg text-primary">{fmt.specialty(doctor.specialtyId)}</p>
+                <h1 className="font-display text-2xl font-bold [overflow-wrap:anywhere]">
+                  {doctor.name}
+                </h1>
+                {doctor.specialtyId ? (
+                  <p className="text-lg text-primary [overflow-wrap:anywhere]">
+                    {fmt.specialty(doctor.specialtyId)}
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -139,7 +145,10 @@ function DoctorProfile() {
                 {t("doctor.about")}
               </h2>
               {doctor.about ? (
-                <p className="text-sm leading-relaxed text-muted-foreground" dir="auto">
+                <p
+                  className="text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]"
+                  dir="auto"
+                >
                   {doctor.about}
                 </p>
               ) : (
@@ -148,7 +157,7 @@ function DoctorProfile() {
               {doctor.qualifications.length ? (
                 <div>
                   <h3 className="mb-1 text-sm font-medium">{t("doctor.qualifications")}</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
                     {doctor.qualifications.join(", ")}
                   </p>
                 </div>
@@ -187,7 +196,7 @@ function DoctorProfile() {
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="font-medium">
+                          <h3 className="font-medium [overflow-wrap:anywhere]">
                             <Link
                               to="/clinics/$clinicId"
                               params={{ clinicId: clinic.id }}
@@ -196,7 +205,7 @@ function DoctorProfile() {
                               {clinic.name}
                             </Link>
                           </h3>
-                          <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
+                          <p className="mt-1 flex min-w-0 items-start gap-1.5 text-sm text-muted-foreground [overflow-wrap:anywhere]">
                             <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                             {clinic.address}
                           </p>
