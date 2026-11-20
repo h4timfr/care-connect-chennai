@@ -28,6 +28,10 @@ remove_owned_containers() {
 
 case "$1" in
   prepare)
+    if [[ "${2:-real-service}" == reconciliation ]]; then
+      node scripts/verify-disposable-docker-bindings.mjs create "$network" "$run_label" test-artifacts/docker-network-summary.json "$record"
+      exit
+    fi
     test ! -e supabase/config.toml
     test ! -e supabase/.temp/linked-project.json
     test ! -e supabase/.temp/project-ref
@@ -43,6 +47,16 @@ case "$1" in
     node scripts/service-execution-boundary.mjs
     cat "$CARECONNECT_ISOLATION_ROOT/pre-start-proof.json" > test-artifacts/docker-pre-start-proof.json
     outcome=success
+    if [[ "${2:-real-service}" == reconciliation ]]; then
+      code=0
+      node scripts/staging-reconciliation-rehearsal.mjs --start || code=$?
+      if (( code == 0 )); then
+        node scripts/verify-disposable-docker-bindings.mjs verify "$network" \
+          "$RUNNER_TEMP/careconnect-staging-rehearsal/repo/supabase/config.toml" \
+          test-artifacts/docker-network-summary.json "$run_label" success
+      fi
+      exit "$code"
+    fi
     if timeout --signal=TERM --kill-after=15s 25m node scripts/startup-observer.mjs run "$network" "$network"; then
       code=0
     else
@@ -63,6 +77,9 @@ case "$1" in
     ;;
   test)
     node scripts/service-execution-boundary.mjs
+    if [[ "${2:-real-service}" == reconciliation ]]; then
+      exec timeout --signal=TERM --kill-after=15s 35m node scripts/staging-reconciliation-rehearsal.mjs --execute
+    fi
     node scripts/real-service-integration.mjs verify-migrations
     node scripts/run-sql-ci-step.mjs ledger
     node scripts/run-sql-ci-step.mjs pgtap

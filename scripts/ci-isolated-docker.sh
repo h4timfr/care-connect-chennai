@@ -8,8 +8,10 @@ unset DOCKER_HOST DOCKER_CONTEXT DOCKER_CONFIG DOCKER_TLS_VERIFY DOCKER_CERT_PAT
 
 blocked() { printf 'Service isolation BLOCKED (%s).\n' "$stage" >&2; exit 78; }
 stage=runner-identity
-[[ $# == 7 && "$(id -u)" == 0 && "$1" =~ ^[0-9]{1,20}-[0-9]{1,6}$ ]] || blocked
+[[ ( $# == 7 || $# == 8 ) && "$(id -u)" == 0 && "$1" =~ ^[0-9]{1,20}-[0-9]{1,6}$ ]] || blocked
 run=$1 uid=$2 gid=$3 workspace=$4 node=$5 supabase=$6 browser_cache=$7
+mode=${8:-real-service}
+[[ "$mode" == real-service || "$mode" == reconciliation ]] || blocked
 [[ "$uid" =~ ^[0-9]+$ && "$gid" =~ ^[0-9]+$ && "$uid" != 0 && "${SUDO_UID:-}" == "$uid" && "${SUDO_GID:-}" == "$gid" ]] || blocked
 [[ "$workspace" == "$(realpath -- "$workspace")" && "$(stat -c %u -- "$workspace")" == "$uid" ]] || blocked
 for bin in "$node" "$supabase"; do
@@ -213,7 +215,7 @@ user_phase() {
     CI=true GITHUB_ACTIONS=true "GITHUB_RUN_ID=${run%-*}" "GITHUB_RUN_ATTEMPT=${run##*-}" \
     "DOCKER_HOST=$socket" "DOCKER_CONFIG=$root/docker-cli" "CARECONNECT_ISOLATION_ROOT=$root" \
     "CARECONNECT_DOCKER_NETWORK=$project" "CARECONNECT_DOCKER_RUN_LABEL=$run" \
-    /bin/bash "$workspace/scripts/ci-real-service-phase.sh" "$1"
+    /bin/bash "$workspace/scripts/ci-real-service-phase.sh" "$1" "$mode"
 }
 printf '{"project":"%s","namespace":"%s","engine":"%s","policy":"careconnect-ci-admission"}\n' \
   "$project" "$net_inode" "$engine_id" >"$root/provisioned.json"

@@ -184,7 +184,7 @@ test("CI captures evidence before binding verification and preserves cleanup ord
   const before = phase.indexOf("startup-evidence.mjs before");
   const start = phase.indexOf("startup-observer.mjs run");
   const after = phase.indexOf("startup-evidence.mjs after");
-  const binding = phase.indexOf("docker-bindings.mjs verify");
+  const binding = phase.indexOf("docker-bindings.mjs verify", after);
   const cleanup = phase.indexOf("startup-observer.mjs reap");
   assert.ok(
     configure >= 0 &&

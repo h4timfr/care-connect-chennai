@@ -5,7 +5,6 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   openSync,
   readFileSync,
   readdirSync,
@@ -26,6 +25,7 @@ import {
   requireServicePreExposureIsolation,
   reportServiceExecutionBlock,
 } from "./service-execution-boundary.mjs";
+import { rewriteProjectId } from "./startup-evidence.mjs";
 
 export const targetVersions = [
   ...Array.from({ length: 23 }, (_, i) => String(i + 1).padStart(5, "0")),
@@ -174,9 +174,10 @@ export function assertCliArguments(args) {
 }
 
 async function main() {
-  requireServicePreExposureIsolation();
-  check(process.platform === "linux" && process.argv.slice(2).join(" ") === "--execute");
-  check(process.env.RUNNER_TEMP && path.isAbsolute(process.env.RUNNER_TEMP));
+  const { project: projectId } = requireServicePreExposureIsolation();
+  const mode = process.argv.slice(2).join(" ");
+  check(process.platform === "linux" && ["--start", "--execute"].includes(mode));
+  check(process.env.RUNNER_TEMP === path.join(process.env.CARECONNECT_ISOLATION_ROOT, "state"));
   assertNoRemoteEnvironment(process.env);
   assertOutsideCheckout(root, process.env.RUNNER_TEMP);
   check(!readdirSync(root).some((f) => /^\.env(?:\.|$)/.test(f) && f !== ".env.example"));
@@ -184,17 +185,21 @@ async function main() {
   check(!existsSync(path.join(root, "supabase/.temp/linked-project.json")));
   const files = validateInventory(readdirSync(path.join(root, "supabase/migrations")));
   const testFiles = validateTestInventory(readdirSync(path.join(root, "supabase/tests")));
-  const privateRoot = mkdtempSync(
-    path.join(process.env.RUNNER_TEMP, "careconnect-staging-rehearsal-"),
-  );
+  const privateRoot = path.join(process.env.RUNNER_TEMP, "careconnect-staging-rehearsal");
   const work = path.join(privateRoot, "repo");
   const artifacts = path.join(root, "test-artifacts");
   mkdirSync(artifacts, { recursive: true });
-  mkdirSync(work);
-  cpSync(path.join(root, "scripts"), path.join(work, "scripts"), { recursive: true });
-  cpSync(path.join(root, "supabase/tests"), path.join(work, "supabase/tests"), { recursive: true });
   const migrations = path.join(work, "supabase/migrations");
-  mkdirSync(migrations);
+  if (mode === "--start") {
+    mkdirSync(privateRoot, { mode: 0o700 });
+    mkdirSync(work);
+    cpSync(path.join(root, "scripts"), path.join(work, "scripts"), { recursive: true });
+    cpSync(path.join(root, "supabase/tests"), path.join(work, "supabase/tests"), {
+      recursive: true,
+    });
+    mkdirSync(migrations);
+  }
+  check(realpathSync(privateRoot) === privateRoot && realpathSync(work) === work);
   const originals = new Map(
     files.map((f) => [f, readFileSync(path.join(root, "supabase/migrations", f), "utf8")]),
   );
@@ -202,27 +207,26 @@ async function main() {
     originals,
     JSON.parse(readFileSync(path.join(root, "scripts/migration-integrity.json"), "utf8")),
   );
-  const projectId = `careconnect-rehearsal-${randomUUID().slice(0, 8)}`;
   const container = `supabase_db_${projectId}`;
   const restoreDatabase = `cc_restore_${randomUUID().replaceAll("-", "")}`;
   let databaseUrl;
   let stage = "preflight";
   let firstFailureStage;
   let rawIndex = 0;
-  let startAttempted = false;
-  let success = false;
-  const progress = [];
+  const progressPath = path.join(artifacts, "staging-reconciliation.log");
+  const progress =
+    mode === "--execute" ? readFileSync(progressPath, "utf8").trimEnd().split("\n") : [];
   function report(line) {
     // Callers supply fixed labels, counts, or known repository filenames only.
     progress.push(line);
-    writeFileSync(path.join(artifacts, "staging-reconciliation.log"), `${progress.join("\n")}\n`, {
+    writeFileSync(progressPath, `${progress.join("\n")}\n`, {
       mode: 0o600,
     });
     process.stdout.write(`${line}\n`);
   }
   function capture(command, args, label, env = localSqlEnvironment(), mayFail = false) {
     stage = label;
-    const rawPath = path.join(privateRoot, `${++rawIndex}.raw.log`);
+    const rawPath = path.join(privateRoot, `${mode.slice(2)}-${++rawIndex}.raw.log`);
     const fd = openSync(rawPath, "wx", 0o600);
     let result;
     try {
@@ -278,7 +282,13 @@ async function main() {
     if (args[0] === "db" || args[0] === "migration") {
       if (!args.includes("--help")) assertDatabase();
     }
-    return capture("supabase", args, label, localSqlEnvironment(), mayFail);
+    return capture(
+      "supabase",
+      ["--network-id", projectId, ...args],
+      label,
+      localSqlEnvironment(),
+      mayFail,
+    );
   }
   function sql(statement, label = "catalog-check", database = "postgres") {
     assertDatabase();
@@ -820,36 +830,34 @@ async function main() {
     report(`Migration checkpoint PASS: ${files.find((f) => f.startsWith(`${version}_`))}.`);
   }
   try {
-    verifyPinnedCliVersion(cli(["--version"], "cli-version").raw);
-    report(
-      `Migration integrity PASS: all ${targetVersions.length} filenames and LF-normalized source hashes match the reviewed manifest.`,
-    );
-    for (const args of [
-      ["db", "push", "--help"],
-      ["db", "reset", "--help"],
-      ["migration", "repair", "--help"],
-    ]) {
-      check(cli(args, "cli-supported-flags").raw.includes("--local"));
+    if (mode === "--start") {
+      verifyPinnedCliVersion(cli(["--version"], "cli-version").raw);
+      report(
+        `Migration integrity PASS: all ${targetVersions.length} filenames and LF-normalized source hashes match the reviewed manifest.`,
+      );
+      for (const args of [
+        ["db", "push", "--help"],
+        ["db", "reset", "--help"],
+        ["migration", "repair", "--help"],
+      ]) {
+        check(cli(args, "cli-supported-flags").raw.includes("--local"));
+      }
+      check(
+        capture(
+          "docker",
+          ["ps", "--filter", "name=supabase_", "--format", "{{.Names}}"],
+          "existing-container-check",
+        ).raw.trim() === "",
+      );
+      cli(["init", "--yes"], "local-init");
+      const configPath = path.join(work, "supabase/config.toml");
+      writeFileSync(configPath, rewriteProjectId(readFileSync(configPath, "utf8"), projectId));
+      selectFiles([aliasFile]);
+      cli(["start", "--exclude", "vector,edge-runtime,imgproxy,studio"], "local-start");
+      statusUrl();
+      report("Owned disposable stack startup PASS.");
+      return;
     }
-    check(
-      capture(
-        "docker",
-        ["ps", "--filter", "name=supabase_", "--format", "{{.Names}}"],
-        "existing-container-check",
-      ).raw.trim() === "",
-    );
-    cli(["init", "--yes"], "local-init");
-    const configPath = path.join(work, "supabase/config.toml");
-    writeFileSync(
-      configPath,
-      readFileSync(configPath, "utf8").replace(
-        /^project_id\s*=\s*"[^"]+"/m,
-        `project_id = "${projectId}"`,
-      ),
-    );
-    selectFiles([aliasFile]);
-    startAttempted = true;
-    cli(["start"], "local-start");
     statusUrl();
     baseline();
     restoreBaseline();
@@ -925,7 +933,6 @@ async function main() {
     checkpoint("00008");
     checkpoint("00009");
     checkpoint("00059");
-    success = true;
     report(
       `Staging-state rehearsal PASS: exact normalization, ${targetVersions.length - 1} pending migrations, all SQL plans, nine concurrency checks, owned fixture cleanup and recovery cases A–J.`,
     );
@@ -934,33 +941,13 @@ async function main() {
       `Staging-state rehearsal FAIL at fixed stage ${firstFailureStage ?? stage}; raw CLI/SQL diagnostics withheld.`,
     );
     process.exitCode = 1;
-  } finally {
-    if (startAttempted) {
-      const stopped = cli(["stop", "--no-backup"], "owned-stack-stop", true);
-      if (stopped.status !== 0) {
-        report("Owned disposable stack cleanup FAIL; runner teardown required.");
-        process.exitCode = 1;
-      } else report("Owned disposable stack cleanup PASS.");
-    }
-    // Resolved target is checked before recursive deletion; no other workspaces.
-    const relative = path.relative(
-      realpathSync(process.env.RUNNER_TEMP),
-      realpathSync(privateRoot),
-    );
-    check(
-      !relative.startsWith("..") &&
-        !path.isAbsolute(relative) &&
-        relative.startsWith("careconnect-staging-rehearsal-"),
-    );
-    rmSync(privateRoot, { recursive: true, force: true });
-    if (!success) process.exitCode = 1;
   }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.slice(2).join(" ") === "--help") {
     process.stdout.write(
-      "Currently BLOCKED: verified pre-exposure service isolation is unavailable; no environment opt-in.\nLinux disposable runner only: node scripts/staging-reconciliation-rehearsal.mjs --execute\nRequires Docker, pinned Supabase CLI 2.117.0, /usr/bin/psql and RUNNER_TEMP outside the checkout. No linked/hosted credentials.\n",
+      "Run through scripts/ci-isolated-docker.sh in reconciliation mode. The start and execute phases require a verified private runtime and reject hosted credentials.\n",
     );
   } else
     main().catch((error) => {

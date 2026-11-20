@@ -210,13 +210,7 @@ test("failure to write boundary evidence stays nonzero and hides filesystem diag
   }
 });
 
-for (const [workflow, job, firstUnsafe] of [
-  [
-    "staging-reconciliation-rehearsal.yml",
-    "rehearsal",
-    "node scripts/staging-reconciliation-rehearsal.mjs --execute",
-  ],
-]) {
+for (const [workflow, job] of [["staging-reconciliation-rehearsal.yml", "rehearsal"]]) {
   test(`${workflow}: push and manual dispatch cannot bypass the required boundary`, () => {
     const source = readFileSync(path.join(root, ".github/workflows", workflow), "utf8").replaceAll(
       "\r\n",
@@ -226,12 +220,28 @@ for (const [workflow, job, firstUnsafe] of [
     assert.match(source, /\n  push:/);
     assert.match(source, /scripts\/service-execution-boundary\*\.mjs/);
     const body = source.slice(source.indexOf(`\n  ${job}:`) + 1).split(/\n  [\w-]+:\n/)[0];
-    const boundary = body.indexOf("      - name: Require pre-exposure service isolation");
+    const boundary = body.indexOf(
+      "      - name: Require the reviewed branch and a GitHub-hosted Linux runner",
+    );
     assert.doesNotMatch(body, /^ {4}(?:if|continue-on-error):/m);
-    assert.ok(boundary >= 0 && boundary < body.indexOf(firstUnsafe));
-    const step = body.slice(boundary).split(/\n      - /)[0];
-    assert.match(step, /\n        run: node scripts\/service-execution-boundary.mjs\n/);
-    assert.doesNotMatch(step, /continue-on-error|\n\s+if:|\|\|\s*true|exit 0/);
+    assert.ok(boundary >= 0 && boundary < body.indexOf("actions/checkout"));
+    assert.match(
+      body,
+      /sudo -n \/bin\/bash scripts\/ci-isolated-docker\.sh[\s\S]*?"\$empty_browser_cache" reconciliation/,
+    );
+    assert.match(body, /exit "\$status"/);
+    assert.doesNotMatch(
+      body,
+      /continue-on-error|\|\|\s*true|exit 0|staging-reconciliation-rehearsal\.mjs --execute/,
+    );
+    const phase = readFileSync(path.join(root, "scripts/ci-real-service-phase.sh"), "utf8");
+    assert.match(phase, /start\)\s+node scripts\/service-execution-boundary\.mjs/);
+    assert.match(phase, /test\)\s+node scripts\/service-execution-boundary\.mjs/);
+    assert.ok(
+      phase.indexOf("staging-reconciliation-rehearsal.mjs --start") >
+        phase.indexOf("docker-pre-start-proof.json"),
+    );
+    assert.match(phase, /staging-reconciliation-rehearsal\.mjs --execute/);
     assert.match(body, /test-artifacts\/service-execution-boundary.json/);
     assert.doesNotMatch(
       body.slice(body.indexOf("uses: actions/upload-artifact")),
@@ -285,9 +295,11 @@ test("direct service entry points require prevention before preflight, spawn or 
     ["real-service-integration.mjs", "runIntegration()"],
   ]) {
     const source = readFileSync(path.join(root, "scripts", file), "utf8").replaceAll("\r\n", "\n");
-    assert.ok(
-      source.includes(`async function ${functionName} {\n  requireServicePreExposureIsolation();`),
-    );
+    const guard =
+      file === "staging-reconciliation-rehearsal.mjs"
+        ? "const { project: projectId } = requireServicePreExposureIsolation();"
+        : "requireServicePreExposureIsolation();";
+    assert.ok(source.includes(`async function ${functionName} {\n  ${guard}`));
     assert.match(source, /reportServiceExecutionBlock\(error\)/);
   }
   const source = readFileSync(path.join(root, "scripts/run-sql-ci-step.mjs"), "utf8");

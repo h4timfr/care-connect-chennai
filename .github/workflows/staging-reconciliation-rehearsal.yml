@@ -7,6 +7,9 @@ on:
     paths:
       - ".github/workflows/staging-reconciliation-rehearsal.yml"
       - "scripts/staging-reconciliation-rehearsal*.mjs"
+      - "scripts/ci-isolated-docker.sh"
+      - "scripts/ci-real-service-phase.sh"
+      - "scripts/ci-docker-admission*.mjs"
       - "scripts/service-execution-boundary*.mjs"
       - "scripts/compare-staging-baseline*.mjs"
       - "scripts/migration-integrity.json"
@@ -36,8 +39,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
+      - name: Require the reviewed branch and a GitHub-hosted Linux runner
+        shell: bash
+        run: |
+          [[ "$RUNNER_ENVIRONMENT" == github-hosted && "$RUNNER_OS" == Linux ]] || exit 78
+          [[ "$GITHUB_REF" == refs/heads/claude/careconnect-frontend-repair ]] || exit 78
+          [[ "$GITHUB_EVENT_NAME" == push || "$GITHUB_EVENT_NAME" == workflow_dispatch ]] || exit 78
+
       - name: Check out the selected branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -54,26 +66,25 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+          sudo apt-get install --yes slirp4netns postgresql-client
           test -x /usr/bin/psql
 
       - name: Run rehearsal guard/unit tests
-        run: node --test scripts/compare-staging-baseline.test.mjs scripts/staging-reconciliation-rehearsal.test.mjs scripts/local-sql-test-target.test.mjs scripts/run-sql-ci-step.test.mjs scripts/service-execution-boundary.test.mjs
-
-      - name: Require pre-exposure service isolation
-        # Reconciliation starts its own project from a partial migration ledger.
-        # The fresh-stack supervisor owns a different project and cannot admit it.
-        # Keep this gate closed until a dedicated Linux runner can provision a
-        # private supervisor for the reconciliation project before CLI startup.
-        # Required failure, not a skipped or optional rehearsal, until prevention is supported.
-        run: node scripts/service-execution-boundary.mjs
+        run: node --test scripts/compare-staging-baseline.test.mjs scripts/staging-reconciliation-rehearsal.test.mjs scripts/local-sql-test-target.test.mjs scripts/run-sql-ci-step.test.mjs scripts/service-execution-boundary.test.mjs scripts/ci-docker-admission.test.mjs
 
       - name: Rehearse staging timestamp-ledger normalization and all migrations
         shell: bash
         run: |
           set -euo pipefail
-          umask 077
-          node scripts/staging-reconciliation-rehearsal.mjs --execute
+          empty_browser_cache=$(mktemp -d "$RUNNER_TEMP/rehearsal-browser-cache.XXXXXXXX")
+          status=0
+          sudo -n /bin/bash scripts/ci-isolated-docker.sh \
+            "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "$(id -u)" "$(id -g)" \
+            "$(pwd -P)" "$(command -v node)" "$(command -v supabase)" "$empty_browser_cache" reconciliation || status=$?
+          if [[ ! -f test-artifacts/service-execution-boundary.json && "$status" == 78 ]]; then
+            node scripts/service-execution-boundary.mjs
+          fi
+          exit "$status"
 
       - name: Preserve only sanitized summaries
         if: always()
@@ -82,6 +93,10 @@ jobs:
           name: careconnect-staging-state-rehearsal-${{ github.run_id }}
           path: |
             test-artifacts/service-execution-boundary.json
+            test-artifacts/docker-pre-start-proof.json
+            test-artifacts/docker-network-summary.json
+            test-artifacts/docker-stop-summary.json
+            test-artifacts/docker-network-cleanup-summary.json
             test-artifacts/staging-reconciliation.log
             test-artifacts/rehearsal-failure.log
             test-artifacts/ledger.log
