@@ -16,7 +16,6 @@ import {
   useMyDoctorApplications,
   useSubmitDoctorApplication,
 } from "@/lib/supabase/doctor";
-import { isNotDeployed } from "@/lib/supabase/errors";
 import { useClinics } from "@/lib/supabase/queries";
 
 export const Route = createFileRoute("/doctor/signup")({
@@ -132,8 +131,6 @@ function DoctorSignup() {
         <Link to="/doctor">{t("signup.doctor.openPortal")}</Link>
       </Button>
     </div>
-  ) : mine.error && isNotDeployed(mine.error) ? (
-    <InfoNotice>{t("signup.notOpen")}</InfoNotice>
   ) : list.filter((a) => a.status === "submitted").length >= 2 ? (
     <InfoNotice>{t("signup.limit")}</InfoNotice>
   ) : undefined;
@@ -152,6 +149,7 @@ function DoctorSignup() {
         contactEmail: f.contactEmail || account.email,
       })}
       signedInExtras={extras}
+      eligibilityChecks={[doctor, mine]}
       blocked={blocked}
       submit={async (f) => {
         await submitApplication.mutateAsync({

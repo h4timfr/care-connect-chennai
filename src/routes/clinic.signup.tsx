@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";
-import { isNotDeployed } from "@/lib/supabase/errors";
 import {
   CONTACT_ROLES,
   CONTACT_ROLE_LABEL,
@@ -59,7 +58,8 @@ function validate(f: ClinicForm): MessageKey | null {
   if (len(f.address) < 5 || len(f.address) > 300) return "apply.error.address";
   if (len(f.registrationDetails) < 5 || len(f.registrationDetails) > 500)
     return "apply.error.registration";
-  if (f.doctorCount && !(Number(f.doctorCount) >= 1 && Number(f.doctorCount) <= 500))
+  const doctorCount = Number(f.doctorCount);
+  if (f.doctorCount && (!Number.isInteger(doctorCount) || doctorCount < 1 || doctorCount > 500))
     return "apply.error.doctorCount";
   if (len(f.contactName) < 2 || len(f.contactName) > 120) return "apply.error.contactName";
   if (!/^[0-9+() -]{6,30}$/.test(f.contactPhone.trim())) return "apply.error.phone";
@@ -142,10 +142,9 @@ function ClinicSignup() {
         contactEmail: f.contactEmail || account.email,
       })}
       signedInExtras={extras}
+      eligibilityChecks={[mine]}
       blocked={
-        mine.error && isNotDeployed(mine.error) ? (
-          <InfoNotice>{t("signup.notOpen")}</InfoNotice>
-        ) : list.filter((a) => a.status === "submitted").length >= MAX_OPEN ? (
+        list.filter((a) => a.status === "submitted").length >= MAX_OPEN ? (
           <InfoNotice>{t("apply.limitReached", { count: MAX_OPEN })}</InfoNotice>
         ) : undefined
       }
@@ -205,6 +204,7 @@ function ClinicSignup() {
                 inputMode="numeric"
                 min={1}
                 max={500}
+                step={1}
                 value={f.doctorCount}
                 onChange={(e) => set("doctorCount", e.target.value)}
               />
