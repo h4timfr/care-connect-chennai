@@ -19,7 +19,7 @@ done
 stage=platform-prerequisites
 [[ $(uname -s) == Linux ]] || { stage=platform-os; blocked; }
 [[ $(ps -p 1 -o comm=) == systemd ]] || { stage=platform-pid1; blocked; }
-for tool in docker dockerd ip ss slirp4netns systemd-run systemctl setpriv timeout curl unshare mount; do
+for tool in docker dockerd containerd ip ss slirp4netns systemd-run systemctl setpriv timeout curl unshare mount; do
   command -v "$tool" >/dev/null || { stage="platform-command-$tool"; blocked; }
 done
 cli_version=$(PATH="$(dirname "$node"):$PATH" "$supabase" --version 2>/dev/null) ||
@@ -145,10 +145,30 @@ fi
 
 stage=private-engine
 systemd-run --quiet --collect --unit="$daemon_unit" -p RuntimeMaxSec=75m -p TimeoutStopSec=45s \
+  -p KillMode=control-group \
   -p "NetworkNamespacePath=/run/netns/$ns" \
   -p "TemporaryFileSystem=/run/docker" \
   -p "BindReadOnlyPaths=$plugin_dir:/run/docker/plugins $root/resolv.conf:/etc/resolv.conf" \
-  dockerd --config-file="$root/daemon.json" --host="$socket" --group="$group" \
+  /bin/bash -ec '
+    root=$1
+    shift
+    containerd_socket="$root/exec/containerd/containerd.sock"
+    mkdir -m 0700 "$root/containerd-data" "$root/containerd-state"
+    mkdir -p -m 0700 "$root/exec/containerd"
+    printf "version = 2\n" >"$root/containerd.toml"
+    containerd --config "$root/containerd.toml" --address "$containerd_socket" \
+      --root "$root/containerd-data" --state "$root/containerd-state" &
+    containerd_pid=$!
+    printf "%s\n" "$containerd_pid" >"$root/containerd.pid"
+    for _ in {1..40}; do
+      kill -0 "$containerd_pid"
+      if [[ -S "$containerd_socket" ]]; then
+        exec dockerd --containerd="$containerd_socket" "$@"
+      fi
+      sleep 0.25
+    done
+    exit 78
+  ' careconnect "$root" --config-file="$root/daemon.json" --host="$socket" --group="$group" \
   --data-root="$root/data" --exec-root="$root/exec" --pidfile="$root/dockerd.pid" \
   --bridge=none --ip=127.0.0.1 --host-gateway-ip=172.30.0.1 --authorization-plugin=careconnect-ci-admission \
   >/dev/null 2>&1 || blocked
@@ -159,6 +179,15 @@ for _ in {1..60}; do
 done
 engine_pid=$(systemctl show --property=MainPID --value "$daemon_unit")
 [[ "$engine_pid" =~ ^[1-9][0-9]*$ && "$(readlink "/proc/$engine_pid/ns/net")" == "$net_inode" ]] || blocked
+containerd_pid=$(cat "$root/containerd.pid") || blocked
+containerd_socket="$root/exec/containerd/containerd.sock"
+[[ "$containerd_pid" =~ ^[1-9][0-9]*$ && "$(cat "/proc/$containerd_pid/comm")" == containerd ]] || blocked
+[[ "$(readlink -f "/proc/$containerd_pid/exe")" == "$(readlink -f "$(command -v containerd)")" ]] || blocked
+[[ "$(readlink "/proc/$containerd_pid/ns/net")" == "$net_inode" &&
+   "$(readlink "/proc/$containerd_pid/ns/mnt")" == "$(readlink "/proc/$engine_pid/ns/mnt")" ]] || blocked
+cmp -s "/proc/$containerd_pid/cgroup" "/proc/$engine_pid/cgroup" || blocked
+[[ -S "$containerd_socket" && ! -L "$containerd_socket" && "$(stat -c %u "$containerd_socket")" == 0 ]] || blocked
+tr '\0' '\n' <"/proc/$engine_pid/cmdline" | grep -Fx -- "--containerd=$containerd_socket" >/dev/null || blocked
 [[ -S "$root/engine.sock" && ! -L "$root/engine.sock" && "$(stat -c %u "$root/engine.sock")" == 0 ]] || blocked
 version=$(d version --format '{{.Server.Version}}' 2>/dev/null) || blocked
 [[ "$version" =~ ^([0-9]+)\. && ${BASH_REMATCH[1]} -ge 28 ]] || blocked
@@ -242,11 +271,11 @@ printf 'Canary exported filesystem: bin/busybox present.\n'
 rm -- "$root/canary.tar" "$root/canary-files.raw" || blocked
 stage=live-admission-controls
 merged=$(d inspect --format '{{with index . "GraphDriver"}}{{with index . "Data"}}{{index . "MergedDir"}}{{end}}{{end}}' "$probe") || blocked
-"$node" --input-type=module - "$root" "$engine_pid" "$probe" "$merged" <<'JS' || blocked
+"$node" --input-type=module - "$root" "$engine_pid" "$probe" "$merged" "$driver" <<'JS' || blocked
 import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
 
-const [root, engine, probe, merged] = process.argv.slice(2);
+const [root, engine, probe, merged, driver] = process.argv.slice(2);
 function read(operation, fallback) {
   try { return operation(); } catch { return fallback; }
 }
@@ -256,6 +285,10 @@ const namespace = (pid) => {
 };
 const mergedPath = merged.startsWith(root + "/data/overlay2/") &&
   /^[a-f0-9]+\/merged$/.test(merged.slice((root + "/data/overlay2/").length));
+if (driver === "overlay2" && !mergedPath) {
+  console.error("Canary overlay2 mount path could not be verified.");
+  process.exit(1);
+}
 function rootfs(pid) {
   if (!mergedPath) return "unavailable";
   const mounts = read(() => readFileSync(`/proc/${pid}/mountinfo`, "utf8"), "");
@@ -269,6 +302,7 @@ const socketType = (address) => {
   return address ? "other" : "unavailable";
 };
 const observations = new Map();
+let verifiedShim = false;
 function hostContainerd(pids) {
   const sockets = read(() => readFileSync("/proc/1/net/unix", "utf8"), "").split("\n");
   const listeners = sockets.map((line) => line.trim().split(/\s+/))
@@ -289,7 +323,7 @@ function observe() {
     if (comm !== "containerd" && comm !== "containerd-shim") continue;
     if (comm === "containerd") containerdPids.push(pid);
     const args = read(() => readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0"), []);
-    if (comm === "containerd" && args.includes(root + "/exec/containerd/containerd.toml")) {
+    if (comm === "containerd" && args.includes(root + "/containerd.toml")) {
       containerd = { mount: namespace(pid), canary_rootfs: rootfs(pid) };
       if (socket === "unavailable" && existsSync(`/proc/${pid}/root${root}/exec/containerd/containerd.sock`)) {
         socket = "run_owned_listener";
@@ -305,6 +339,11 @@ function observe() {
     containerd = pid ? { mount: namespace(pid), canary_rootfs: rootfs(pid) }
       : { mount: "unavailable", canary_rootfs: "unavailable" };
   }
+  if (socket === "run_owned" && daemon.mount !== "unavailable" &&
+      daemon.mount === containerd.mount && daemon.mount === shim.mount &&
+      (!mergedPath || [daemon, containerd, shim].every(({ canary_rootfs }) => canary_rootfs === "mounted_and_visible"))) {
+    verifiedShim = true;
+  }
   const row = JSON.stringify({ dockerd: daemon, containerd, shim, containerd_socket: socket });
   if (observations.size < 12) observations.set(row, true);
 }
@@ -317,8 +356,9 @@ const deadline = setTimeout(() => clearInterval(timer), 3000);
 child.on("close", (code) => {
   clearInterval(timer);
   clearTimeout(deadline);
+  observe();
   for (const row of observations.keys()) console.log("Canary mount observation " + row);
-  process.exitCode = code === 0 ? 0 : 1;
+  process.exitCode = code === 0 && verifiedShim ? 0 : 1;
 });
 JS
 [[ "$(d port "$probe" 8080/tcp)" == 127.0.0.1:48480 ]] || blocked

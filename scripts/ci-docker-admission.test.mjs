@@ -233,6 +233,16 @@ test("supervisor requires real refusal, a clean container inventory and a positi
   const start = script.indexOf('"start", probe]');
   assert.ok(create > 0 && snapshot > create && filesystemCheck > snapshot);
   assert.ok(start > filesystemCheck && proof > start);
+  assert.match(
+    script,
+    /containerd --config "\$root\/containerd\.toml" --address "\$containerd_socket"/,
+  );
+  assert.match(script, /exec dockerd --containerd="\$containerd_socket"/);
+  assert.match(
+    script,
+    /cmp -s "\/proc\/\$containerd_pid\/cgroup" "\/proc\/\$engine_pid\/cgroup" \|\| blocked/,
+  );
+  assert.match(script, /code === 0 && verifiedShim \? 0 : 1/);
   assert.ok(proof > script.indexOf("10.0.2.100:48480"));
   assert.ok(proof > script.indexOf("[::]:48480"));
   assert.ok(proof > script.indexOf("0.0.0.0:48480"));
