@@ -35,6 +35,8 @@ function AppointmentDetails() {
     patientAppointments,
     patientAppointmentsStatus: status,
     isLoadingPatient,
+    patientError,
+    refetchPatient,
     doctorById,
     clinicById,
   } = useApp();
@@ -59,13 +61,13 @@ function AppointmentDetails() {
     );
   }
 
-  if (status.error) {
+  if (patientError || status.error) {
     return (
       <PatientShell>
         <ErrorState
           title={t("appointmentDetails.loadError")}
-          message={t(describeDataError(status.error))}
-          onRetry={status.refetch}
+          message={t(describeDataError(patientError ?? status.error))}
+          onRetry={patientError ? refetchPatient : status.refetch}
         />
       </PatientShell>
     );

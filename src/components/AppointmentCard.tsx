@@ -16,7 +16,7 @@ import {
 import { Initials, StatusBadge } from "@/components/common";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
 import { useApp } from "@/lib/store";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type MessageKey } from "@/lib/i18n";
 import { describeCancelError, isCancellable } from "@/lib/supabase/appointments";
 import { doctorCanPatientContact } from "@/lib/supabase/queries";
 import type { Appointment } from "@/lib/types";
@@ -106,24 +106,33 @@ export function CancelAppointmentButton({
   const { cancelAppointment, doctorById } = useApp();
   const [open, setOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [error, setError] = useState<MessageKey>();
   const doctor = doctorById(appointment.doctorId);
   const { t, fmt } = useI18n();
 
   const confirm = async () => {
+    setError(undefined);
     setCancelling(true);
     try {
       await cancelAppointment(appointment.id);
       toast.success(t("appointment.cancelled"));
       setOpen(false);
     } catch (err) {
-      toast.error(t(describeCancelError(err)));
+      setError(describeCancelError(err));
     } finally {
       setCancelling(false);
     }
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={(next) => !cancelling && setOpen(next)}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (cancelling) return;
+        if (next) setError(undefined);
+        setOpen(next);
+      }}
+    >
       {/* A real trigger lets Radix return focus to this button when the dialog closes. */}
       <AlertDialogTrigger asChild>
         <Button
@@ -145,6 +154,11 @@ export function CancelAppointmentButton({
             })}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {t(error)}
+          </p>
+        ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={cancelling}>{t("appointment.keep")}</AlertDialogCancel>
           <Button variant="destructive" onClick={confirm} disabled={cancelling}>
