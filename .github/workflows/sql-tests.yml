@@ -1,0 +1,58 @@
+name: Isolated CareConnect SQL tests
+
+on:
+  push:
+    branches:
+      - claude/careconnect-frontend-repair
+    paths:
+      - ".github/workflows/sql-tests.yml"
+      - "supabase/config.toml"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "scripts/test-booking-concurrency.mjs"
+      - "scripts/run-sql-ci-step*.mjs"
+      - "scripts/service-execution-boundary*.mjs"
+      - "scripts/local-sql-test-target*.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: careconnect-sql-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sql-tests:
+    # The shared supervisor runs ledger, pgTAP and concurrency checks after private Docker admission.
+    uses: ./.github/workflows/real-service-integration.yml
+
+  # Re-run isolated SQL validation after Supabase query optimizations
+  frontend-validation:
+    name: Frontend lint, typecheck, build, and diff check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the branch and history for diff validation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run lint, typecheck, and build
+        # Build-only synthetic values: the reserved .invalid host cannot route to Supabase.
+        env:
+          VITE_SUPABASE_URL: https://careconnect-ci-build.invalid
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
+        run: npm run validate:frontend
+
+      - name: Check whitespace in all changes since the original checkpoint
+        run: git diff --check b2f4f2864c3f866000d3a661d96b560d7d01fb21...HEAD

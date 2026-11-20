@@ -1,146 +1,259 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
-import { ClinicShell } from "@/components/layout/ClinicShell";
-import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { CalendarRange, ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useApp } from "@/lib/store";
+import { pageTitles } from "@/lib/page-titles";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { isoDate, shortDate, to12h } from "@/lib/format";
-import { StatusBadge } from "@/components/common";
-import { cn } from "@/lib/utils";
+import { ClinicShell } from "@/components/layout/ClinicShell";
+import { EmptyState, ErrorState, PageLoader, StatusBadge } from "@/components/common";
+import { Button } from "@/components/ui/button";
+import { useApp } from "@/lib/store";
+import { useAuth } from "@/lib/supabase/auth";
+import { addDays, isoDate } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { describeStatusError } from "@/lib/supabase/appointments";
+import { describeDataError } from "@/lib/supabase/errors";
+import { useClinicDoctorLinks, useClinicSchedules } from "@/lib/supabase/providers";
 
 export const Route = createFileRoute("/clinic/calendar")({
+  head: () => ({ meta: [{ title: pageTitles.clinic }] }),
   component: ClinicCalendar,
 });
 
 function ClinicCalendar() {
-  const { loading, user } = useProtectedRoute();
-  const { clinicAppointments: appointments, activeClinic, doctors } = useApp();
-
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("all");
-
-  if (!activeClinic) return <ClinicShell title="Loading..." children={<div />} />;
-
-  const todayIso = isoDate(currentDate);
-
-  const prevDay = () => {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() - 1);
-    setCurrentDate(d);
-  };
-
-  const nextDay = () => {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() + 1);
-    setCurrentDate(d);
-  };
-
-  const clinicDoctors = doctors.filter((d) => d.clinicIds?.includes(activeClinic.id));
-  const clinicAppointments = appointments.filter(
-    (a) => a.clinicId === activeClinic.id && a.date === todayIso && a.status !== "cancelled",
+  const { activeClinic } = useApp();
+  const { user } = useAuth();
+  const { t } = useI18n();
+  return (
+    <ClinicShell title={t("clinicCalendar.title")} description={t("clinicCalendar.timeIst")}>
+      {activeClinic ? (
+        <DaySchedule key={[user?.id, activeClinic.id].join(":")} clinicId={activeClinic.id} />
+      ) : null}
+    </ClinicShell>
   );
+}
 
-  const filteredAppointments =
-    selectedDoctorId === "all"
-      ? clinicAppointments
-      : clinicAppointments.filter((a) => a.doctorId === selectedDoctorId);
-
-  const hours = Array.from({ length: 11 }, (_, i) => i + 8); // 8 AM to 6 PM
+function DaySchedule({ clinicId }: { clinicId: string }) {
+  const { clinicAppointments, clinicAppointmentsStatus: status, doctorById } = useApp();
+  const { t, fmt } = useI18n();
+  const [dayOffset, setDayOffset] = useState(0);
+  const [doctorId, setDoctorId] = useState("");
+  const date = isoDate(addDays(new Date(), dayOffset));
+  const weekday = new Date(date + "T12:00:00Z").getUTCDay();
+  const roster = useClinicDoctorLinks(clinicId);
+  const weekly = useClinicSchedules(clinicId);
+  const doctors = roster.error ? [] : (roster.data ?? []);
+  const doctorName = (id: string) =>
+    doctors.find((doctor) => doctor.doctorId === id)?.doctorName ??
+    doctorById(id)?.name ??
+    t("clinicWorkspace.doctorUnavailable");
+  const appointments = clinicAppointments
+    .filter(
+      (row) =>
+        row.clinicId === clinicId &&
+        row.date === date &&
+        row.status !== "cancelled" &&
+        (!doctorId || row.doctorId === doctorId),
+    )
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const verified = new Set(
+    doctors.filter((link) => link.active && link.state === "verified").map((link) => link.doctorId),
+  );
+  const windows = (weekly.data ?? [])
+    .filter(
+      (row) =>
+        row.dayOfWeek === weekday &&
+        verified.has(row.doctorId) &&
+        (!doctorId || doctorId === row.doctorId),
+    )
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const hoursError = roster.error ?? weekly.error;
 
   return (
-    <ClinicShell
-      title="Calendar"
-      description="View and manage daily schedules"
-      actions={
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
-            Today
-          </Button>
-          <div className="flex items-center gap-1 border rounded-md">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none" onClick={prevDay}>
-              <ChevronLeft className="h-4 w-4" />
+    <div className="space-y-4">
+      <section className="surface-card space-y-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2
+            className="min-w-0 font-display font-semibold [overflow-wrap:anywhere]"
+            aria-live="polite"
+          >
+            {fmt.longDate(date)}
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-auto min-h-9 whitespace-normal"
+              disabled={dayOffset === 0}
+              onClick={() => setDayOffset(0)}
+            >
+              {t("clinicCalendar.today")}
             </Button>
-            <span className="text-sm font-medium px-2">{shortDate(todayIso)}</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-none" onClick={nextDay}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <div className="flex overflow-hidden rounded-lg border">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-none"
+                onClick={() => setDayOffset((previous) => previous - 1)}
+                aria-label={t("clinicCalendar.previousDay")}
+              >
+                <ChevronLeft aria-hidden className="rtl:rotate-180" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-none"
+                onClick={() => setDayOffset((previous) => previous + 1)}
+                aria-label={t("clinicCalendar.nextDay")}
+              >
+                <ChevronRight aria-hidden className="rtl:rotate-180" />
+              </Button>
+            </div>
           </div>
         </div>
-      }
-    >
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between bg-card p-4 rounded-xl border">
-          <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+        {doctors.length > 1 ? (
+          <div
+            className="flex flex-wrap gap-1.5 border-t pt-3"
+            role="group"
+            aria-label={t("clinicCalendar.filterByDoctor")}
+          >
             <Button
-              variant={selectedDoctorId === "all" ? "default" : "outline"}
               size="sm"
-              onClick={() => setSelectedDoctorId("all")}
+              variant={!doctorId ? "default" : "outline"}
+              aria-pressed={!doctorId}
+              onClick={() => setDoctorId("")}
             >
-              All Doctors
+              {t("clinicCalendar.allDoctors")}
             </Button>
-            {clinicDoctors.map((d) => (
+            {doctors.map((doctor) => (
               <Button
-                key={d.id}
-                variant={selectedDoctorId === d.id ? "default" : "outline"}
+                key={doctor.doctorId}
                 size="sm"
-                onClick={() => setSelectedDoctorId(d.id)}
+                className="h-auto min-h-9 max-w-full whitespace-normal [overflow-wrap:anywhere]"
+                variant={doctorId === doctor.doctorId ? "default" : "outline"}
+                aria-pressed={doctorId === doctor.doctorId}
+                onClick={() => setDoctorId(doctor.doctorId)}
               >
-                {d.name}
+                {doctor.doctorName}
               </Button>
             ))}
           </div>
-          <div className="relative shrink-0">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search patient..." className="pl-8 h-9" />
+        ) : null}
+      </section>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+        <section
+          className="surface-card min-w-0 overflow-hidden"
+          aria-labelledby="clinic-calendar-visits"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b p-4">
+            <h2
+              id="clinic-calendar-visits"
+              className="flex items-center gap-2 font-display font-semibold"
+            >
+              <CalendarDays className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+              {t("clinicAppointments.title")}
+            </h2>
+            {status.isLoading || status.error ? null : (
+              <span className="text-sm text-muted-foreground">
+                {t.plural("clinicCalendar.count", appointments.length)}
+              </span>
+            )}
           </div>
-        </div>
-
-        <div className="surface-card overflow-hidden">
-          <div className="grid grid-cols-[60px_1fr] border-b bg-muted/50">
-            <div className="p-3 text-xs font-medium text-muted-foreground border-r text-center">
-              Time
-            </div>
-            <div className="p-3 text-xs font-medium text-muted-foreground">Appointments</div>
-          </div>
-          <div className="divide-y relative min-h-[500px]">
-            {hours.map((h) => {
-              const hourAppointments = filteredAppointments.filter((a) => {
-                const [aHour] = (a.time || "").split(":");
-                return parseInt(aHour || "0") === h;
-              });
-
-              return (
-                <div key={h} className="grid grid-cols-[60px_1fr] min-h-[80px]">
-                  <div className="p-3 text-xs text-muted-foreground border-r text-right bg-muted/10">
-                    {h > 12 ? `${h - 12} PM` : h === 12 ? "12 PM" : `${h} AM`}
+          {status.isLoading ? (
+            <PageLoader label={t("clinicCalendar.loading")} />
+          ) : status.error ? (
+            <ErrorState
+              title={t("clinicCalendar.loadError")}
+              message={t(describeStatusError(status.error))}
+              onRetry={status.refetch}
+            />
+          ) : !appointments.length ? (
+            <EmptyState icon={CalendarDays} title={t("clinicWorkspace.noDayVisits")} />
+          ) : (
+            <ol className="divide-y">
+              {appointments.map((row) => (
+                <li
+                  key={row.id}
+                  className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 text-sm"
+                >
+                  <time
+                    className="shrink-0 font-semibold text-primary"
+                    dateTime={row.time}
+                    dir="ltr"
+                  >
+                    {fmt.time(row.time)}
+                  </time>
+                  <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                    <p dir="auto" className="font-medium">
+                      {row.patientName || t("common.unknownPatient")}
+                    </p>
+                    <p dir="auto" className="text-muted-foreground">
+                      {doctorName(row.doctorId)}
+                    </p>
                   </div>
-                  <div className="p-2 flex flex-wrap gap-2 items-start relative">
-                    {hourAppointments.map((a) => {
-                      const doc = clinicDoctors.find((d) => d.id === a.doctorId);
-                      return (
-                        <div
-                          key={a.id}
-                          className="bg-background border rounded-lg p-2 text-sm w-full sm:w-[250px] shadow-sm flex flex-col gap-1 cursor-pointer hover:border-primary transition-colors"
-                        >
-                          <div className="flex justify-between items-start">
-                            <span className="font-medium truncate pr-2">{a.patientName}</span>
-                            <StatusBadge status={a.status} />
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {to12h(a.time)} • {doc?.name}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                  <StatusBadge status={row.status} />
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        <section
+          className="surface-card min-w-0 overflow-hidden"
+          aria-labelledby="clinic-calendar-hours"
+        >
+          <div className="border-b p-4">
+            <h2
+              id="clinic-calendar-hours"
+              className="flex items-center gap-2 font-display font-semibold"
+            >
+              <CalendarClock className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+              {t("schedule.title")}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("clinicWorkspace.weeklyHoursNote")}
+            </p>
           </div>
-        </div>
+          {roster.isLoading || weekly.isLoading ? (
+            <PageLoader />
+          ) : hoursError ? (
+            <ErrorState
+              title={t("doctorWorkspace.scheduleLoadError")}
+              message={t(describeDataError(hoursError))}
+              onRetry={() => void (roster.error ? roster.refetch() : weekly.refetch())}
+            />
+          ) : windows.length > 0 ? (
+            <ul className="divide-y">
+              {windows.map((window) => (
+                <li key={window.id} className="px-4 py-3 text-sm [overflow-wrap:anywhere]">
+                  <p dir="auto" className="font-medium">
+                    {doctorName(window.doctorId)}
+                  </p>
+                  <p className="text-muted-foreground">
+                    <bdi>
+                      {fmt.time(window.startTime)} – {fmt.time(window.endTime)}
+                    </bdi>
+                    {" · "}
+                    {t("schedule.slotLength", { minutes: fmt.number(window.slotMinutes) })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="p-4 text-sm text-muted-foreground">{t("clinicWorkspace.noDayHours")}</p>
+          )}
+          <div className="border-t p-4">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-auto min-h-9 whitespace-normal"
+            >
+              <Link to="/clinic/doctors" hash="clinic-consultation-hours">
+                {t("setup.manageHours")}
+              </Link>
+            </Button>
+          </div>
+        </section>
       </div>
-    </ClinicShell>
+    </div>
   );
 }

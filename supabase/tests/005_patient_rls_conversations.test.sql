@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(16);
+SELECT extensions.plan(22);
 
 -- Fixtures (inserted as the test owner; auth triggers create public.users and public.patients rows)
 INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
@@ -7,7 +7,9 @@ INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
 ('00000000-0000-0000-0000-0000000000a2', 'patientB@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000000a3', 'staffX@test.com', now(), now()),
 ('00000000-0000-0000-0000-0000000000a4', 'doctorX@test.com', now(), now()),
-('00000000-0000-0000-0000-0000000000a5', 'patientC@test.com', now(), now());
+('00000000-0000-0000-0000-0000000000a5', 'patientC@test.com', now(), now()),
+('00000000-0000-0000-0000-0000000000a9', 'platform@test.com', now(), now());
+INSERT INTO public.user_roles (user_id, role) VALUES ('00000000-0000-0000-0000-0000000000a9', 'platform_admin');
 
 UPDATE public.patients SET id = '10000000-0000-0000-0000-0000000000a1', full_name = 'Patient A' WHERE user_id = '00000000-0000-0000-0000-0000000000a1';
 UPDATE public.patients SET id = '10000000-0000-0000-0000-0000000000a2', full_name = 'Patient B' WHERE user_id = '00000000-0000-0000-0000-0000000000a2';
@@ -18,6 +20,12 @@ INSERT INTO public.clinics (id, name, address, phone, email) VALUES
 ('20000000-0000-0000-0000-0000000000c2', 'Clinic Y', '2 Test St', '555-0102', 'y@test.com');
 INSERT INTO public.doctors (id, user_id, name, consultation_fee) VALUES
 ('30000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000a4', 'Doctor X', 400);
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000000a9", "role": "authenticated"}';
+INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES
+('20000000-0000-0000-0000-0000000000c1', '30000000-0000-0000-0000-0000000000d1', true, 'verified');
+SELECT public.admin_set_clinic_publication_state(
+  '20000000-0000-0000-0000-0000000000c1', 'verified', true, 'granted', false);
+RESET request.jwt.claims;
 
 -- Staff X is an active member of Clinic X only
 INSERT INTO public.clinic_memberships (user_id, clinic_id, role, active) VALUES
@@ -58,10 +66,51 @@ SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000000a3",
 SET LOCAL role authenticated;
 SELECT extensions.is((SELECT count(*)::int FROM public.patients WHERE full_name IN ('Patient A', 'Patient B')), 2, 'staff see patients linked by appointment and by conversation');
 SELECT extensions.is((SELECT count(*)::int FROM public.patients WHERE full_name = 'Patient C'), 0, 'staff cannot see a patient with no link to their clinic');
+SELECT extensions.is(
+    (SELECT count(*)::int FROM public.users WHERE id IN
+        ('00000000-0000-0000-0000-0000000000a1','00000000-0000-0000-0000-0000000000a2')),
+    0, 'appointments and conversations do not grant clinic staff the users rows with email and phone'
+);
+SELECT set_config('cc.test_conversation', (SELECT id::text FROM public.conversations
+    WHERE patient_id = '10000000-0000-0000-0000-0000000000a2'), true);
+SELECT extensions.lives_ok(
+    $$ INSERT INTO public.messages (id, conversation_id, sender_id, body)
+       VALUES ('40000000-0000-0000-0000-0000000000a3', current_setting('cc.test_conversation')::uuid,
+           '00000000-0000-0000-0000-0000000000a3', 'Test message') $$,
+    'an active staff member can send with a retry-safe ID'
+);
 -- Option B: staff cannot create conversations (otherwise they could link themselves to any patient)
 SELECT extensions.throws_ok(
     $$ INSERT INTO public.conversations (patient_id, clinic_id, kind) VALUES ('10000000-0000-0000-0000-0000000000a5', '20000000-0000-0000-0000-0000000000c1', 'general') $$,
     '42501', NULL, 'staff cannot insert a conversation for an arbitrary patient'
+);
+RESET role;
+UPDATE public.clinic_memberships SET active = false
+WHERE user_id = '00000000-0000-0000-0000-0000000000a3';
+SET LOCAL role authenticated;
+SELECT extensions.is(
+    (SELECT count(*)::int FROM public.messages WHERE conversation_id = current_setting('cc.test_conversation')::uuid),
+    0, 'revoked clinic membership removes direct message visibility'
+);
+SELECT extensions.throws_ok(
+    $$ INSERT INTO public.messages (id, conversation_id, sender_id, body)
+       VALUES ('40000000-0000-0000-0000-0000000000a3', current_setting('cc.test_conversation')::uuid,
+           '00000000-0000-0000-0000-0000000000a3', 'Test message') $$,
+    '42501', NULL, 'revoked clinic membership also denies replay of a previously accepted send'
+);
+
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000000a1", "role": "authenticated"}';
+SELECT extensions.lives_ok(
+    $$ INSERT INTO public.conversations (patient_id, clinic_id, doctor_id, appointment_id, kind)
+       SELECT patient_id, clinic_id, doctor_id, id, 'appointment' FROM public.appointments
+       WHERE patient_id = '10000000-0000-0000-0000-0000000000a1' $$,
+    'the patient can open a thread scoped to their appointment'
+);
+SELECT extensions.throws_ok(
+    $$ INSERT INTO public.conversations (patient_id, clinic_id, doctor_id, appointment_id, kind)
+       SELECT patient_id, clinic_id, doctor_id, id, 'appointment' FROM public.appointments
+       WHERE patient_id = '10000000-0000-0000-0000-0000000000a1' $$,
+    '23505', NULL, 'the database rejects two threads for the same appointment'
 );
 
 -- Patient C: patients keep creating their own conversations; the general-conversation unique index holds

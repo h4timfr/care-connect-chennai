@@ -1,0 +1,187 @@
+import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import {
+  buildSeedSql,
+  EXPECTED_CHENNAI,
+  validateCatalogue,
+  type Catalogue,
+} from "../scripts/candidates/catalogue";
+
+// The research-catalogue validator and SQL generator (no browser). All records below are
+// synthetic test data on example.invalid; they are not providers.
+
+const source = (supports: string) => ({
+  url: "https://example.invalid/source",
+  source_type: "official_facility" as const,
+  supports,
+  researched_on: "2026-10-01",
+  confidence: "medium" as const,
+});
+
+function sample(): Catalogue {
+  return {
+    catalogue: "test",
+    facilities: [
+      {
+        research_id: "CLINIC-001",
+        name: "Test Facility O'Neil",
+        facility_type: "Clinic",
+        address: "1 Test Street",
+        locality: "Adyar",
+        website: "https://example.invalid",
+        specialties: ["General Medicine"],
+        source_confidence: "high",
+        unresolved_issues: [],
+        researched_on: "2026-10-01",
+        sources: [source("Facility identity")],
+      },
+      {
+        research_id: "CLINIC-002",
+        name: "Test Facility Two",
+        facility_type: "Hospital",
+        address: null,
+        locality: "Guindy",
+        website: null,
+        specialties: [],
+        source_confidence: "medium",
+        unresolved_issues: ["Separate branch from CLINIC-001"],
+        researched_on: "2026-10-01",
+        sources: [source("Facility identity")],
+      },
+    ],
+    doctors: [
+      {
+        research_id: "DOCTOR-001",
+        full_name: "Test Doctor One",
+        specialty: "General Medicine",
+        qualifications: "MBBS",
+        registration_info: null,
+        registration_status: "not_verified",
+        source_confidence: "high",
+        unresolved_issues: [],
+        researched_on: "2026-10-01",
+        sources: [source("Doctor profile")],
+      },
+    ],
+    relationships: [
+      {
+        doctor: "DOCTOR-001",
+        facility: "CLINIC-001",
+        research_status: "CONFIRMED_PUBLIC",
+        confidence: "high",
+        unresolved_issues: [],
+        sources: [source("Doctor listed on the facility's page")],
+      },
+      {
+        doctor: "DOCTOR-001",
+        facility: "CLINIC-002",
+        research_status: "POSSIBLE_NEEDS_CONFIRMATION",
+        confidence: "low",
+        unresolved_issues: ["Directory listing only"],
+        sources: [source("Directory listing")],
+      },
+    ],
+  };
+}
+
+test("a well-formed catalogue validates, with counts by research status", () => {
+  const result = validateCatalogue(sample(), null);
+  expect(result.errors).toEqual([]);
+  expect(result.counts).toEqual({
+    facilities: 2,
+    doctors: 1,
+    relationships: 2,
+    confirmedPublic: 1,
+    possibleNeedsConfirmation: 1,
+  });
+});
+
+test("the commissioned totals are enforced by default", () => {
+  const result = validateCatalogue(sample());
+  expect(result.errors).toContain(`expected ${EXPECTED_CHENNAI.facilities} facilities, found 2`);
+  expect(result.errors).toContain(
+    `expected ${EXPECTED_CHENNAI.possibleNeedsConfirmation} possibleNeedsConfirmation, found 1`,
+  );
+});
+
+test("CareConnect decisions and invented operational data are refused", () => {
+  const bad = sample() as unknown as Record<string, Record<string, unknown>[]>;
+  bad["facilities"]![0]!["review_status"] = "verified";
+  bad["facilities"]![0]!["booking_enabled"] = true;
+  bad["doctors"]![0]!["consultation_fee"] = 500;
+  bad["doctors"]![0]!["phone"] = "+91 00000 00000";
+  bad["doctors"]![0]!["availability"] = ["Mon 10:00"];
+  const errors = validateCatalogue(bad, null).errors.join("\n");
+  for (const key of [
+    "review_status",
+    "booking_enabled",
+    "consultation_fee",
+    "phone",
+    "availability",
+  ]) {
+    expect(errors).toContain(`.${key}: not allowed`);
+  }
+});
+
+test("provenance, identifiers, references and URLs are checked", () => {
+  const bad = sample();
+  bad.facilities[1]!.sources = [];
+  bad.facilities[1]!.research_id = "CLINIC-001";
+  bad.doctors[0]!.registration_status = "verified" as never;
+  bad.relationships[0]!.doctor = "DOCTOR-999";
+  bad.relationships[1]!.research_status = "VERIFIED" as never;
+  bad.facilities[0]!.website = "javascript:alert(1)";
+  const errors = validateCatalogue(bad, null).errors.join("\n");
+  expect(errors).toContain("at least one source is required");
+  expect(errors).toContain("duplicate CLINIC-001");
+  expect(errors).toContain("registration_status");
+  expect(errors).toContain("unknown DOCTOR-999");
+  expect(errors).toContain("research_status");
+  expect(errors).toContain("website: http(s) URL or null");
+});
+
+test("the generated SQL only touches candidate tables and never review state or booking", () => {
+  const sql = buildSeedSql(sample(), "test");
+  expect(sql).toMatch(/^-- Generated by/);
+  expect(sql).toContain("INSERT INTO public.candidate_facilities");
+  expect(sql).toContain("INSERT INTO public.candidate_relationships");
+  expect(sql).toContain("INSERT INTO public.candidate_sources");
+  for (const forbidden of [
+    /public\.clinics\b/,
+    /public\.doctors\b/,
+    /public\.clinic_doctors\b/,
+    /public\.doctor_schedules\b/,
+    /public\.appointments\b/,
+    /review_status/,
+    /permission_status/,
+    /booking_enabled/,
+    /careconnect_status/,
+    /candidate_evidence/,
+    /candidate_contacts/,
+  ]) {
+    expect(sql).not.toMatch(forbidden);
+  }
+  // Quotes are escaped, research statuses preserved.
+  expect(sql).toContain("'Test Facility O''Neil'");
+  expect(sql).toContain("'POSSIBLE_NEEDS_CONFIRMATION'");
+  expect(sql.trim().endsWith("COMMIT;")).toBe(true);
+});
+
+test("the generated SQL is deterministic whatever the input order", () => {
+  const a = sample();
+  const b = sample();
+  b.facilities.reverse();
+  b.relationships.reverse();
+  expect(buildSeedSql(a, "x")).toBe(buildSeedSql(b, "x"));
+});
+
+test("the checked-in catalogue is either the empty placeholder or the full commissioned research", () => {
+  const path = fileURLToPath(
+    new URL("../research/chennai-provider-candidates.json", import.meta.url),
+  );
+  const data = JSON.parse(readFileSync(path, "utf8")) as Catalogue;
+  const total = data.facilities.length + data.doctors.length + data.relationships.length;
+  if (total === 0) return; // awaiting the research data; nothing was invented
+  expect(validateCatalogue(data).errors).toEqual([]);
+});

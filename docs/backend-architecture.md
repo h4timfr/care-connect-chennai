@@ -129,4 +129,4 @@ _Actionable UI Refactor:_ Components should stop extracting everything from `use
 
 - **Audit Results:** The repository is clean. No hardcoded API keys, tokens, or Supabase URLs exist in the codebase.
 - **`.gitignore` Check:** `.env`, `*.local`, and `.dev.vars` are correctly ignored.
-- **Next Steps:** We will create `.env.example` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` when the backend phase begins.
+- **Environment:** `.env.example` documents the local/Production Supabase URL and publishable key; Vercel Preview uses separate staging URL and publishable-key variables.

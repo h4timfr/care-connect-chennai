@@ -10,3 +10,7 @@
 > the editor, so keep the branch in a working state.
 
 <!-- LOVABLE:END -->
+
+## Primary development directory
+
+Use C:\Users\admin\Projects\care-connect-chennai as the authoritative CareConnect development directory. Do not create another checkout or Git worktree without the user's explicit authorization. Preserve local configuration and existing evidence; never reset, clean, or remove worktree data as part of routine setup.

@@ -1,147 +1,129 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Documented technical reason: Generic API returns and complex UI component mappings */
-import { useEffect, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
+import { useAuth } from "./auth";
+import { codeOf } from "./errors";
 import type { Conversation } from "@/lib/types";
-import { useAuthorizedClinics } from "./queries";
 
-export function useConversations(patientId?: string, clinicIds: string[] = [], enabled?: boolean) {
+export function useConversations(scope: "patient_id" | "clinic_id", scopeId?: string) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const clinicIdsStr = clinicIds.join(",");
+  const userId = user?.id;
 
   useEffect(() => {
-    if ((!patientId && clinicIdsStr.length === 0) || enabled === false) return;
+    if (!userId || !scopeId) return;
 
-    // Subscribe to new messages
+    let active = true;
+    const refresh = () => {
+      if (active)
+        void queryClient.invalidateQueries(
+          { queryKey: ["conversations", userId, scope, scopeId], exact: true },
+          { cancelRefetch: false },
+        );
+    };
+    // The socket is an invalidation signal. Reads remain scoped and authorized by RLS.
     const channel = supabase
-      .channel("messages_channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["conversations", patientId, clinicIdsStr] });
-        },
-      )
-      .subscribe();
+      .channel(`messages:${crypto.randomUUID()}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, refresh)
+      .subscribe((status) => {
+        // Reconcile messages written between the initial read and a join or reconnect.
+        if (status === "SUBSCRIBED") refresh();
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      active = false;
+      void supabase.removeChannel(channel);
     };
-  }, [patientId, clinicIdsStr, queryClient, enabled]);
+  }, [userId, scope, scopeId, queryClient]);
 
   return useQuery({
-    queryKey: ["conversations", patientId, clinicIdsStr],
-    queryFn: async () => {
-      if (!patientId && clinicIds.length === 0) return [];
-
-      let query = supabase.from("conversations").select(
-        `
-          *,
-          messages(*),
-          clinics(name),
-          patients(full_name, user_id)
-        `,
-      );
-
-      if (clinicIds.length > 0 && patientId) {
-        query = query.or(`patient_id.eq.${patientId},clinic_id.in.(${clinicIds.join(",")})`);
-      } else if (clinicIds.length > 0) {
-        query = query.in("clinic_id", clinicIds);
-      } else if (patientId) {
-        query = query.eq("patient_id", patientId);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
-
+    queryKey: ["conversations", userId, scope, scopeId],
+    enabled: !!userId && !!scopeId,
+    // Recover even when a channel appears joined but delivers no change notifications.
+    refetchInterval: 30_000,
+    queryFn: async ({ signal }): Promise<Conversation[]> => {
+      if (!scopeId) return [];
+      const { data, error } = await supabase
+        .from("conversations")
+        .select(
+          "id, clinic_id, doctor_id, patient_id, kind, appointment_id, created_at, messages(id, conversation_id, sender_id, body, created_at), patients(full_name, user_id), appointments(date)",
+        )
+        .eq(scope, scopeId)
+        .order("created_at", { ascending: false })
+        .abortSignal(signal);
       if (error) throw error;
 
-      return data.map((c: any) => ({
+      return data.map((c) => ({
         id: c.id,
         clinicId: c.clinic_id,
-        doctorId: c.doctor_id,
+        doctorId: c.doctor_id ?? undefined,
         patientId: c.patient_id,
-        patientName: c.patients?.full_name || "Unknown Patient",
+        patientName: c.patients?.full_name ?? "",
         kind: c.kind,
-        appointmentId: c.appointment_id,
-        unreadForPatient: c.unread_for_patient,
-        unreadForClinic: c.unread_for_clinic,
-        messages: (c.messages || [])
-          .map((m: any) => ({
+        appointmentId: c.appointment_id ?? undefined,
+        appointmentDate: c.appointments?.date,
+        messages: (c.messages ?? [])
+          .map((m) => ({
             id: m.id,
             conversationId: m.conversation_id,
-            sender: m.sender_id === c.patients?.user_id ? "patient" : "clinic",
+            sender:
+              m.sender_id === c.patients?.user_id ? ("patient" as const) : ("clinic" as const),
             body: m.body,
             sentAt: m.created_at,
           }))
-          .sort(
-            (a: { sentAt: string }, b: { sentAt: string }) =>
-              new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
-          ),
-      })) as Conversation[];
+          .sort((a, b) => Date.parse(a.sentAt) - Date.parse(b.sentAt) || a.id.localeCompare(b.id)),
+      }));
     },
-    enabled: enabled ?? (!!patientId || clinicIds.length > 0),
   });
+}
+
+export interface MessageWrite {
+  conversationId: string;
+  senderId: string;
+  body: string;
+  messageId: string;
+}
+
+async function confirmParticipantMessage({
+  conversationId,
+  senderId,
+  body,
+  messageId,
+}: MessageWrite) {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("body")
+    .eq("id", messageId)
+    .eq("conversation_id", conversationId)
+    .eq("sender_id", senderId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.body === body;
+}
+
+export async function writeMessage(
+  input: MessageWrite,
+  confirmDuplicate = confirmParticipantMessage,
+) {
+  const { conversationId, senderId, body, messageId } = input;
+  const { error } = await supabase.from("messages").insert({
+    id: messageId,
+    conversation_id: conversationId,
+    sender_id: senderId,
+    body,
+  });
+  if (!error) return;
+  // A retry can encounter a committed primary key if the original response was lost.
+  // Confirm the exact authored message through the caller's existing read scope.
+  if (codeOf(error) === "23505" && (await confirmDuplicate(input))) return;
+  throw error;
 }
 
 export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      conversationId,
-      senderId,
-      body,
-    }: {
-      conversationId: string;
-      senderId: string;
-      body: string;
-    }) => {
-      const { data, error } = await supabase
-        .from("messages")
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          body,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update unread count
-      // We would normally do this in an RPC or trigger, but for now we can do a second update or rely on a DB trigger.
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    },
-  });
-}
-
-export function useMarkRead() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      conversationId,
-      side,
-    }: {
-      conversationId: string;
-      side: "patient" | "clinic";
-    }) => {
-      const column = side === "patient" ? "unread_for_patient" : "unread_for_clinic";
-      const { error } = await supabase
-        .from("conversations")
-        .update(side === "patient" ? { unread_for_patient: 0 } : { unread_for_clinic: 0 })
-        .eq("id", conversationId);
-
-      if (error) throw error;
-    },
+    mutationFn: (input: MessageWrite) => writeMessage(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
@@ -163,19 +145,26 @@ export function useEnsureConversation() {
       appointmentId?: string;
       patientId: string;
     }) => {
-      // Check if exists
-      const { data: existing, error: fetchError } = await supabase
-        .from("conversations")
-        .select("id")
-        .eq("clinic_id", clinicId)
-        .eq("patient_id", patientId)
-        .limit(1)
-        .maybeSingle();
+      const findExisting = async () => {
+        let query = supabase
+          .from("conversations")
+          .select("id")
+          .eq("clinic_id", clinicId)
+          .eq("patient_id", patientId);
+        if (appointmentId) {
+          query = query.eq("kind", "appointment").eq("appointment_id", appointmentId);
+          if (doctorId) query = query.eq("doctor_id", doctorId);
+        } else {
+          query = query.eq("kind", "general");
+        }
+        const { data, error } = await query.order("created_at").order("id").limit(1).maybeSingle();
+        if (error) throw error;
+        return data?.id ?? null;
+      };
 
-      if (fetchError) throw fetchError;
-      if (existing) return existing.id;
+      const existing = await findExisting();
+      if (existing) return existing;
 
-      // Create new
       const { data, error } = await supabase
         .from("conversations")
         .insert({
@@ -185,10 +174,17 @@ export function useEnsureConversation() {
           appointment_id: appointmentId || null,
           kind: appointmentId ? "appointment" : "general",
         })
-        .select()
+        .select("id")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // A concurrent opener won the general or appointment unique key. Reuse only that thread.
+        if (codeOf(error) === "23505") {
+          const created = await findExisting();
+          if (created) return created;
+        }
+        throw error;
+      }
       return data.id;
     },
     onSuccess: () => {

@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(23);
+SELECT extensions.plan(26);
 
 -- Fixtures
 INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
@@ -26,6 +26,8 @@ INSERT INTO public.doctor_schedules (doctor_id, clinic_id, day_of_week, start_ti
 SELECT d, '20000000-0000-0000-0000-0000000000c1', dow, '09:00', '13:00', 30
 FROM unnest(ARRAY['30000000-0000-0000-0000-0000000000d1', '30000000-0000-0000-0000-0000000000d2']::uuid[]) AS d, generate_series(0, 6) AS dow;
 UPDATE public.patients SET id = '10000000-0000-0000-0000-0000000000a1', full_name = 'Patient' WHERE user_id = '00000000-0000-0000-0000-0000000000b1';
+SELECT public.admin_set_clinic_publication_state(
+  '20000000-0000-0000-0000-0000000000c1', 'verified', true, 'not_granted', true);
 
 -- Function contract and ACL
 SELECT extensions.has_function('public', 'get_doctor_slots', ARRAY['uuid', 'uuid', 'date'], 'clinic-aware get_doctor_slots exists');
@@ -43,6 +45,32 @@ SELECT extensions.is((SELECT count(*)::int FROM public.get_doctor_slots('3000000
 SELECT extensions.is((SELECT count(*)::int FROM public.get_doctor_slots('30000000-0000-0000-0000-0000000000d1', '20000000-0000-0000-0000-0000000000c1', CURRENT_DATE - 2)), 0, 'past date returns nothing');
 SELECT extensions.is((SELECT count(*)::int FROM public.get_doctor_slots('30000000-0000-0000-0000-0000000000d1', '20000000-0000-0000-0000-0000000000c1', CURRENT_DATE + 200)), 0, 'date beyond the 90 day horizon returns nothing');
 SELECT extensions.is((SELECT count(*)::int FROM public.get_doctor_slots('30000000-0000-0000-0000-0000000000d1', NULL::uuid, CURRENT_DATE + 5)), 0, 'NULL clinic returns nothing');
+RESET role;
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000000b9", "role": "authenticated"}';
+SELECT public.admin_set_clinic_publication_state(
+  '20000000-0000-0000-0000-0000000000c1', 'verified', false, 'not_granted', false);
+SET LOCAL role anon;
+SELECT extensions.is((SELECT count(*)::int FROM public.get_doctor_slots('30000000-0000-0000-0000-0000000000d1', '20000000-0000-0000-0000-0000000000c1', CURRENT_DATE + 5)), 0, 'unpublished clinic reveals no availability');
+RESET role;
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000000b9", "role": "authenticated"}';
+SELECT public.admin_set_clinic_publication_state(
+  '20000000-0000-0000-0000-0000000000c1', 'verified', true, 'not_granted', false);
+SET LOCAL role anon;
+SELECT extensions.is((SELECT count(*)::int FROM public.get_doctor_slots('30000000-0000-0000-0000-0000000000d1', '20000000-0000-0000-0000-0000000000c1', CURRENT_DATE + 5)), 0, 'booking-disabled clinic reveals no slots');
+RESET role;
+SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-0000000000b9", "role": "authenticated"}';
+SELECT public.admin_set_clinic_publication_state(
+  '20000000-0000-0000-0000-0000000000c1', 'verified', true, 'not_granted', true);
+UPDATE public.clinic_doctors SET active = false
+WHERE clinic_id = '20000000-0000-0000-0000-0000000000c1'
+  AND doctor_id = '30000000-0000-0000-0000-0000000000d1';
+SET LOCAL role anon;
+SELECT extensions.is((SELECT count(*)::int FROM public.get_doctor_slots('30000000-0000-0000-0000-0000000000d1', '20000000-0000-0000-0000-0000000000c1', CURRENT_DATE + 5)), 0, 'inactive verified relationship reveals no availability');
+RESET role;
+UPDATE public.clinic_doctors SET active = true
+WHERE clinic_id = '20000000-0000-0000-0000-0000000000c1'
+  AND doctor_id = '30000000-0000-0000-0000-0000000000d1';
+SET LOCAL role anon;
 SELECT extensions.throws_ok(
     $$ SELECT public.book_appointment('30000000-0000-0000-0000-0000000000d1', '20000000-0000-0000-0000-0000000000c1', CURRENT_DATE + 5, '09:00', 'x') $$,
     '42501', NULL, 'anon cannot call book_appointment'

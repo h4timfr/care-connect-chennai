@@ -1,13 +1,34 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 
+// Opt in before loading any local configuration. Generic test discovery must be harmless.
+if (
+  !process.env["SECURITY_TEST_CONFIRM_HOST"] ||
+  !process.argv.includes("--execute-manual-security") ||
+  process.env["NODE_TEST_CONTEXT"]
+) {
+  console.error("Manual security checks require an explicitly confirmed disposable target.");
+  process.exit(1);
+}
+
 config();
 
-const url = process.env.VITE_SUPABASE_URL;
-const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const url = process.env["VITE_SUPABASE_URL"];
+const key = process.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
 
 if (!url || !key) {
   throw new Error("Missing Supabase credentials in .env");
+}
+
+// This script signs up real accounts. Refuse to run unless the operator explicitly confirms the
+// target project, so it can't be pointed at production by accident.
+const targetHost = new URL(url).host;
+if (process.env["SECURITY_TEST_CONFIRM_HOST"] !== targetHost) {
+  console.error(
+    `Refusing to run: this script creates real accounts in ${targetHost}.\n` +
+      `Use a non-production project, then re-run with SECURITY_TEST_CONFIRM_HOST=${targetHost}`,
+  );
+  process.exit(1);
 }
 
 const supabase = createClient(url, key);
