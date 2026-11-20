@@ -206,7 +206,7 @@ grep -Fq 'careconnect-admission-denied' "$root/canary.raw" || blocked
 empty_containers || blocked
 # Same omitted-IP form used by CLI 2.117.0. Check reachability from inside
 # and outside plus the actual effective socket mapping.
-probe=$(d run -d --network "$project" -p 48480:8080 "$canary" httpd -f -p 8080) || blocked
+probe=$(d run -d --network "$project" -p 48480:8080 "$canary" /bin/busybox httpd -f -p 8080) || blocked
 [[ "$probe" =~ ^[a-f0-9]{64}$ ]] || blocked
 [[ "$(d port "$probe" 8080/tcp)" == 127.0.0.1:48480 ]] || blocked
 if curl --noproxy '*' -sS --max-time 2 http://127.0.0.1:48480 > /dev/null 2>&1 ||
