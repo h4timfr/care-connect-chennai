@@ -230,7 +230,7 @@ test("supervisor requires real refusal, a clean container inventory and a positi
   const create = script.indexOf("probe=$(d create");
   const snapshot = script.indexOf('d export --output "$root/canary.tar" "$probe"');
   const filesystemCheck = script.indexOf("Canary exported filesystem: bin/busybox present.");
-  const start = script.indexOf('d start "$probe"');
+  const start = script.indexOf('"start", probe]');
   assert.ok(create > 0 && snapshot > create && filesystemCheck > snapshot);
   assert.ok(start > filesystemCheck && proof > start);
   assert.ok(proof > script.indexOf("10.0.2.100:48480"));

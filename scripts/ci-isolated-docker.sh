@@ -241,7 +241,86 @@ fi
 printf 'Canary exported filesystem: bin/busybox present.\n'
 rm -- "$root/canary.tar" "$root/canary-files.raw" || blocked
 stage=live-admission-controls
-d start "$probe" >/dev/null || blocked
+merged=$(d inspect --format '{{with index . "GraphDriver"}}{{with index . "Data"}}{{index . "MergedDir"}}{{end}}{{end}}' "$probe") || blocked
+"$node" --input-type=module - "$root" "$engine_pid" "$probe" "$merged" <<'JS' || blocked
+import { spawn } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
+
+const [root, engine, probe, merged] = process.argv.slice(2);
+function read(operation, fallback) {
+  try { return operation(); } catch { return fallback; }
+}
+const namespace = (pid) => {
+  const value = read(() => readlinkSync(`/proc/${pid}/ns/mnt`), "");
+  return /^mnt:\[\d+\]$/.test(value) ? value : "unavailable";
+};
+const mergedPath = merged.startsWith(root + "/data/overlay2/") &&
+  /^[a-f0-9]+\/merged$/.test(merged.slice((root + "/data/overlay2/").length));
+function rootfs(pid) {
+  if (!mergedPath) return "unavailable";
+  const mounts = read(() => readFileSync(`/proc/${pid}/mountinfo`, "utf8"), "");
+  if (!mounts) return "unavailable";
+  if (!mounts.split("\n").some((line) => line.split(" ")[4] === merged)) return "not_mounted";
+  return existsSync(`/proc/${pid}/root${merged}/bin/busybox`) ? "mounted_and_visible" : "mounted_file_missing";
+}
+const socketType = (address) => {
+  if (address === root + "/exec/containerd/containerd.sock") return "run_owned";
+  if (["/run/containerd/containerd.sock", "/var/run/containerd/containerd.sock"].includes(address)) return "host_default";
+  return address ? "other" : "unavailable";
+};
+const observations = new Map();
+function hostContainerd(pids) {
+  const sockets = read(() => readFileSync("/proc/1/net/unix", "utf8"), "").split("\n");
+  const listeners = sockets.map((line) => line.trim().split(/\s+/))
+    .filter((fields) => fields[3] === "00010000" && /^\d+$/.test(fields[6]) &&
+      socketType(fields[7]) === "host_default")
+    .map((fields) => `socket:[${fields[6]}]`);
+  return pids.find((pid) => read(() => readdirSync(`/proc/${pid}/fd`), []).slice(0, 512)
+    .some((fd) => listeners.includes(read(() => readlinkSync(`/proc/${pid}/fd/${fd}`), ""))));
+}
+function observe() {
+  const daemon = { mount: namespace(engine), canary_rootfs: rootfs(engine) };
+  let containerd = { mount: "unavailable", canary_rootfs: "unavailable" };
+  let shim = { mount: "unavailable", canary_rootfs: "unavailable" };
+  let socket = "unavailable";
+  const containerdPids = [];
+  for (const pid of read(() => readdirSync("/proc"), []).filter((entry) => /^\d+$/.test(entry)).slice(0, 4096)) {
+    const comm = read(() => readFileSync(`/proc/${pid}/comm`, "utf8").trim(), "");
+    if (comm !== "containerd" && comm !== "containerd-shim") continue;
+    if (comm === "containerd") containerdPids.push(pid);
+    const args = read(() => readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0"), []);
+    if (comm === "containerd" && args.includes(root + "/exec/containerd/containerd.toml")) {
+      containerd = { mount: namespace(pid), canary_rootfs: rootfs(pid) };
+      if (socket === "unavailable" && existsSync(`/proc/${pid}/root${root}/exec/containerd/containerd.sock`)) {
+        socket = "run_owned_listener";
+      }
+    }
+    if (comm === "containerd-shim" && args[args.indexOf("-id") + 1] === probe) {
+      shim = { mount: namespace(pid), canary_rootfs: rootfs(pid) };
+      socket = socketType(args[args.indexOf("-address") + 1]);
+    }
+  }
+  if (socket === "host_default") {
+    const pid = hostContainerd(containerdPids);
+    containerd = pid ? { mount: namespace(pid), canary_rootfs: rootfs(pid) }
+      : { mount: "unavailable", canary_rootfs: "unavailable" };
+  }
+  const row = JSON.stringify({ dockerd: daemon, containerd, shim, containerd_socket: socket });
+  if (observations.size < 12) observations.set(row, true);
+}
+observe();
+const child = spawn("/usr/bin/timeout", ["90s", "/usr/bin/docker",
+  "--config", root + "/docker-cli", "--host", "unix://" + root + "/engine.sock",
+  "start", probe], { stdio: ["ignore", "ignore", "inherit"] });
+const timer = setInterval(observe, 10);
+const deadline = setTimeout(() => clearInterval(timer), 3000);
+child.on("close", (code) => {
+  clearInterval(timer);
+  clearTimeout(deadline);
+  for (const row of observations.keys()) console.log("Canary mount observation " + row);
+  process.exitCode = code === 0 ? 0 : 1;
+});
+JS
 [[ "$(d port "$probe" 8080/tcp)" == 127.0.0.1:48480 ]] || blocked
 if curl --noproxy '*' -sS --max-time 2 http://127.0.0.1:48480 > /dev/null 2>&1 ||
    curl --noproxy '*' -sS --max-time 2 'http://[::1]:48480' > /dev/null 2>&1; then blocked; fi
