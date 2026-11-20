@@ -206,8 +206,42 @@ grep -Fq 'careconnect-admission-denied' "$root/canary.raw" || blocked
 empty_containers || blocked
 # Same omitted-IP form used by CLI 2.117.0. Check reachability from inside
 # and outside plus the actual effective socket mapping.
-probe=$(d run -d --network "$project" -p 48480:8080 "$canary" /bin/busybox httpd -f -p 8080) || blocked
+stage=canary-image-metadata
+driver=$(d info --format '{{.Driver}}') || blocked
+image_metadata=$(d image inspect --format '[{{json .RepoDigests}},{{json .Architecture}},{{json .RootFS}}]' "$canary") || blocked
+printf '%s\n' "$image_metadata" | "$node" --input-type=module -e '
+  import { readFileSync } from "node:fs";
+  const [digests, architecture, rootfs] = JSON.parse(readFileSync(0, "utf8"));
+  const digest = /^sha256:[a-f0-9]{64}$/;
+  const manifests = digests.map((entry) => entry.split("@").at(-1));
+  const driver = process.argv[1];
+  if (!manifests.length || manifests.length > 8 || !manifests.every((value) => digest.test(value)) ||
+      !["amd64", "arm64"].includes(architecture) ||
+      rootfs.Type !== "layers" || !Array.isArray(rootfs.Layers) ||
+      !rootfs.Layers.length || rootfs.Layers.length > 16 ||
+      !rootfs.Layers.every((value) => digest.test(value))) process.exit(1);
+  console.log(JSON.stringify({
+    canary_manifest_digests: manifests, architecture, rootfs_layers: rootfs.Layers,
+    storage_driver: ["overlay2", "overlayfs", "vfs", "fuse-overlayfs", "btrfs", "zfs"].includes(driver) ? driver : "other",
+  }));
+' "$driver" 2>/dev/null || blocked
+
+stage=canary-filesystem
+probe=$(d create --network "$project" -p 48480:8080 "$canary" /bin/busybox httpd -f -p 8080) || blocked
 [[ "$probe" =~ ^[a-f0-9]{64}$ ]] || blocked
+if ! d export --output "$root/canary.tar" "$probe" ||
+   ! tar -tf "$root/canary.tar" >"$root/canary-files.raw"; then
+  printf 'Canary exported filesystem: unavailable.\n'
+  blocked
+fi
+if ! grep -Exq '(\./)?bin/busybox' "$root/canary-files.raw"; then
+  printf 'Canary exported filesystem: bin/busybox absent.\n'
+  blocked
+fi
+printf 'Canary exported filesystem: bin/busybox present.\n'
+rm -- "$root/canary.tar" "$root/canary-files.raw" || blocked
+stage=live-admission-controls
+d start "$probe" >/dev/null || blocked
 [[ "$(d port "$probe" 8080/tcp)" == 127.0.0.1:48480 ]] || blocked
 if curl --noproxy '*' -sS --max-time 2 http://127.0.0.1:48480 > /dev/null 2>&1 ||
    curl --noproxy '*' -sS --max-time 2 'http://[::1]:48480' > /dev/null 2>&1; then blocked; fi

@@ -227,6 +227,12 @@ test("supervisor requires real refusal, a clean container inventory and a positi
   const proof = script.indexOf('>"$root/verified.json"');
   assert.ok(proof > script.indexOf("careconnect-admission-denied"));
   assert.ok(proof > script.indexOf('d port "$probe"'));
+  const create = script.indexOf("probe=$(d create");
+  const snapshot = script.indexOf('d export --output "$root/canary.tar" "$probe"');
+  const filesystemCheck = script.indexOf("Canary exported filesystem: bin/busybox present.");
+  const start = script.indexOf('d start "$probe"');
+  assert.ok(create > 0 && snapshot > create && filesystemCheck > snapshot);
+  assert.ok(start > filesystemCheck && proof > start);
   assert.ok(proof > script.indexOf("10.0.2.100:48480"));
   assert.ok(proof > script.indexOf("[::]:48480"));
   assert.ok(proof > script.indexOf("0.0.0.0:48480"));
