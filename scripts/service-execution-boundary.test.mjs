@@ -216,7 +216,6 @@ for (const [workflow, job, firstUnsafe] of [
     "rehearsal",
     "node scripts/staging-reconciliation-rehearsal.mjs --execute",
   ],
-  ["sql-tests.yml", "sql-tests", "supabase init --yes"],
 ]) {
   test(`${workflow}: push and manual dispatch cannot bypass the required boundary`, () => {
     const source = readFileSync(path.join(root, ".github/workflows", workflow), "utf8").replaceAll(
@@ -240,6 +239,28 @@ for (const [workflow, job, firstUnsafe] of [
     );
   });
 }
+
+test("standalone SQL CI delegates to the private supervisor for push and dispatch", () => {
+  const sql = readFileSync(path.join(root, ".github/workflows/sql-tests.yml"), "utf8");
+  const workflow = readFileSync(
+    path.join(root, ".github/workflows/real-service-integration.yml"),
+    "utf8",
+  );
+  const phases = readFileSync(path.join(root, "scripts/ci-real-service-phase.sh"), "utf8");
+  assert.match(sql, /workflow_dispatch:/);
+  assert.match(sql, /push:/);
+  assert.match(
+    sql,
+    /sql-tests:\s+(?:#.*\s+)?uses: \.\/\.github\/workflows\/real-service-integration\.yml/,
+  );
+  assert.match(workflow, /workflow_call:/);
+  assert.doesNotMatch(sql, /supabase (?:init|start)|continue-on-error/);
+  const testPhase = phases.slice(phases.indexOf("  test)"), phases.indexOf("  cleanup)"));
+  assert.match(testPhase, /test\)\s+node scripts\/service-execution-boundary\.mjs/);
+  for (const check of ["ledger", "pgtap", "concurrency"]) {
+    assert.ok(testPhase.includes(`scripts/run-sql-ci-step.mjs ${check}`), check);
+  }
+});
 
 test("real-service push and manual dispatch both require the same isolated runner", () => {
   const workflow = readFileSync(

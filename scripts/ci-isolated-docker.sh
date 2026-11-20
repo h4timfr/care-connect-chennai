@@ -17,13 +17,16 @@ for bin in "$node" "$supabase"; do
 done
 [[ "$browser_cache" == /* && -d "$browser_cache" ]] || blocked
 stage=platform-prerequisites
-[[ $(uname -s) == Linux && $(ps -p 1 -o comm=) == systemd ]] || blocked
+[[ $(uname -s) == Linux ]] || { stage=platform-os; blocked; }
+[[ $(ps -p 1 -o comm=) == systemd ]] || { stage=platform-pid1; blocked; }
 for tool in docker dockerd ip ss slirp4netns systemd-run systemctl setpriv timeout curl unshare mount; do
-  command -v "$tool" >/dev/null || blocked
+  command -v "$tool" >/dev/null || { stage="platform-command-$tool"; blocked; }
 done
-[[ "$("$supabase" --version 2>/dev/null)" == 2.117.0 ]] || blocked
-group=$(getent group "$gid" | cut -d: -f1)
-[[ "$group" =~ ^[a-zA-Z_][a-zA-Z_0-9-]*$ ]] || blocked
+cli_version=$(PATH="$(dirname "$node"):$PATH" "$supabase" --version 2>/dev/null) ||
+  { stage=platform-supabase-version-command; blocked; }
+[[ "$cli_version" == 2.117.0 ]] || { stage=platform-supabase-version-mismatch; blocked; }
+group=$(getent group "$gid" | cut -d: -f1) || { stage=platform-group-lookup; blocked; }
+[[ "$group" =~ ^[a-zA-Z_][a-zA-Z_0-9-]*$ ]] || { stage=platform-group-format; blocked; }
 
 root=$(mktemp -d /var/tmp/careconnect-ci.XXXXXXXX)
 nonce=${root##*.}

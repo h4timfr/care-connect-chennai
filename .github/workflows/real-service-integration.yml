@@ -1,6 +1,7 @@
 name: Disposable Supabase real-service integration
 
 on:
+  workflow_call:
   workflow_dispatch:
   push:
     branches:
@@ -28,9 +29,6 @@ on:
       - "tsconfig.json"
       - "index.html"
       - "public/**"
-      - "supabase/config.toml"
-      - "supabase/migrations/**"
-      - "supabase/tests/**"
       - "scripts/migration-integrity.json"
       - "scripts/run-sql-ci-step*.mjs"
       - "scripts/local-sql-test-target*.mjs"
@@ -43,7 +41,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: careconnect-real-service-integration-${{ github.ref }}
+  group: careconnect-real-service-integration-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

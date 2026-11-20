@@ -61,6 +61,10 @@ jobs:
         run: node --test scripts/compare-staging-baseline.test.mjs scripts/staging-reconciliation-rehearsal.test.mjs scripts/local-sql-test-target.test.mjs scripts/run-sql-ci-step.test.mjs scripts/service-execution-boundary.test.mjs
 
       - name: Require pre-exposure service isolation
+        # Reconciliation starts its own project from a partial migration ledger.
+        # The fresh-stack supervisor owns a different project and cannot admit it.
+        # Keep this gate closed until a dedicated Linux runner can provision a
+        # private supervisor for the reconciliation project before CLI startup.
         # Required failure, not a skipped or optional rehearsal, until prevention is supported.
         run: node scripts/service-execution-boundary.mjs
 

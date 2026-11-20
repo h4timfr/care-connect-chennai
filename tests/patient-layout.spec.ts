@@ -10,7 +10,7 @@ async function expectNoHorizontalOverflow(page: Page) {
   ).toBeLessThanOrEqual(1);
 }
 
-for (const width of [375, 768, 1440]) {
+for (const width of [320, 375, 390, 768, 1440]) {
   test(`signed-out catalogue stays compact at ${width}px`, async ({ page, backend }) => {
     await backend({ doctors: [], clinics: [] }, { signedIn: false });
     await page.setViewportSize({ width, height: 900 });
@@ -21,13 +21,20 @@ for (const width of [375, 768, 1440]) {
 
     const hero = page.getByRole("region", { name: "Find a doctor in Chennai" });
     await expect(hero.getByRole("searchbox")).toBeVisible();
-    expect((await hero.boundingBox())!.height).toBeLessThan(230);
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    const height = (await hero.boundingBox())!.height;
+    test.info().annotations.push({ type: "hero-height-px", description: String(height) });
+    await test
+      .info()
+      .attach("catalogue-hero", { body: await hero.screenshot(), contentType: "image/png" });
+    expect(height).toBeLessThan(230);
 
     const doctors = page.getByRole("heading", { name: "No doctors listed yet" });
     const clinics = page.getByRole("heading", { name: "No clinics listed yet" });
     await expect(doctors).toBeVisible();
     await expect(clinics).toBeVisible();
-    expect((await doctors.locator("../..").boundingBox())!.height).toBeLessThan(110);
+    if (width >= 375)
+      expect((await doctors.locator("../..").boundingBox())!.height).toBeLessThan(110);
     const doctorsBox = (await doctors.boundingBox())!;
     const clinicsBox = (await clinics.boundingBox())!;
     if (width >= 768) {
@@ -49,6 +56,42 @@ for (const width of [375, 768, 1440]) {
     await expectNoHorizontalOverflow(page);
   });
 
+  for (const language of ["ta", "ur"]) {
+    test(`catalogue hero remains readable in ${language} at ${width}px`, async ({
+      page,
+      backend,
+    }) => {
+      await backend({ doctors: [], clinics: [] }, { signedIn: false });
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(
+        (locale) => localStorage.setItem("careconnect.language", locale),
+        language,
+      );
+      await page.goto("/");
+      await expect(page.locator("html")).toHaveAttribute(
+        "lang",
+        language === "ta" ? "ta-IN" : "ur",
+      );
+      await expect(page.locator("html")).toHaveAttribute("dir", language === "ur" ? "rtl" : "ltr");
+      const hero = page.locator("section[aria-labelledby=home-heading]");
+      await expect(hero.getByRole("searchbox")).toBeVisible();
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      await expectNoHorizontalOverflow(page);
+      expect(
+        await hero.evaluate((node) => node.scrollWidth - node.clientWidth),
+      ).toBeLessThanOrEqual(1);
+      const height = (await hero.boundingBox())!.height;
+      test.info().annotations.push({ type: "hero-height-px", description: String(height) });
+      await test
+        .info()
+        .attach("catalogue-hero", { body: await hero.screenshot(), contentType: "image/png" });
+      await hero.getByRole("searchbox").press("Enter");
+      await expect(page).toHaveURL(/\/discover/);
+    });
+  }
+}
+
+for (const width of [375, 768, 1440]) {
   test(`signed-in patient layouts keep actions usable at ${width}px`, async ({ page, backend }) => {
     await backend({
       conversations: [conversationRow([{ from: "clinic", body: "Hello from the clinic" }])],

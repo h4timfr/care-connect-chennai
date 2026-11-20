@@ -61,7 +61,7 @@ function Home() {
       <div className="space-y-5 sm:space-y-6">
         <section
           aria-labelledby="home-heading"
-          className="grid items-center gap-4 rounded-2xl border border-primary/15 bg-linear-to-br from-primary-soft via-card to-highlight-soft px-4 py-5 sm:gap-5 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-8"
+          className="grid items-center gap-2 rounded-2xl border border-primary/15 bg-linear-to-br from-primary-soft via-card to-highlight-soft px-4 py-2 sm:gap-5 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-8"
         >
           <div className="min-w-0">
             <h1
@@ -92,6 +92,7 @@ function Home() {
               <input
                 id="home-search"
                 type="search"
+                aria-describedby="home-search-hint"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("home.searchPlaceholder")}
@@ -101,7 +102,12 @@ function Home() {
                 {t("home.search")}
               </Button>
             </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">{t("home.searchHint")}</p>
+            <p
+              id="home-search-hint"
+              className="mt-1.5 text-xs text-muted-foreground max-[359px]:sr-only"
+            >
+              {t("home.searchHint")}
+            </p>
           </form>
         </section>
 
