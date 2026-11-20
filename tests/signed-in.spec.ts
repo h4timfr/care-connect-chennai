@@ -207,6 +207,29 @@ test.describe("Discover URL state", () => {
 });
 
 test.describe("Discover search input", () => {
+  test("clearing a clinic search returns the keyboard to the search box", async ({
+    page,
+    backend,
+  }) => {
+    await backend({}, { signedIn: false });
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/discover?tab=clinics&q=Adyar");
+    const input = page.getByRole("searchbox");
+    await expect(input).toHaveValue("Adyar");
+    await input.focus();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Clear search" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue("");
+    await page.keyboard.type("Chennai");
+    await expect(page).toHaveURL(/q=Chennai/);
+    await expect(page.getByRole("tab", { name: /Clinics/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
   test("user text never becomes PostgREST filter syntax", async ({ page, backend }) => {
     const mock = await backend({}, { signedIn: false });
     await page.goto("/discover");
@@ -548,7 +571,9 @@ test.describe("Booking", () => {
     await page.goto(
       `/book/${ids.doctorVerified}?date=${today}&time=09%3A00&clinicId=${ids.clinicA}`,
     );
-    await expect(page.getByRole("button", { name: "9:00 AM, unavailable" })).toBeDisabled();
+    const takenSlot = page.getByRole("button", { name: "9:00 AM, unavailable" });
+    await expect(takenSlot).toBeDisabled();
+    await expect(takenSlot).toHaveAttribute("aria-pressed", "false");
     await expect(page.getByRole("button", { name: "Request appointment" })).toBeDisabled();
     expect(mock.callsTo("POST", "/rest/v1/rpc/book_appointment")).toHaveLength(0);
     await page.getByRole("button", { name: "9:30 AM" }).click();
@@ -569,6 +594,54 @@ test.describe("Booking", () => {
     await expect(
       page.getByRole("group", { name: "Choose a date" }).locator('[aria-pressed="true"]'),
     ).toHaveCount(1);
+  });
+
+  test("pending booking keeps the submitted details fixed and allows edits after an error", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({
+      bookResult: { status: 400, body: { code: "P0001", message: "Booking failed" } },
+    });
+    enablePatientContact(mock.state, ids.clinicA, true);
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/rpc/book_appointment", async (route) => {
+      await pending;
+      await route.fallback();
+    });
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(`/book/${ids.doctorVerified}`);
+    const reason = page.getByLabel("Reason for visit (optional)");
+    const morning = page.getByRole("button", { name: "9:30 AM", exact: true });
+    const evening = page.getByRole("button", { name: "6:30 PM", exact: true });
+    const tomorrow = page.getByRole("group", { name: "Choose a date" }).getByRole("button").nth(1);
+    await morning.click();
+    await reason.fill("Follow-up");
+    const sent = page.waitForRequest("**/rpc/book_appointment");
+    await page.getByRole("button", { name: "Request appointment" }).click();
+    try {
+      expect((await sent).postDataJSON()).toMatchObject({
+        p_time: "09:30:00",
+        p_reason: "Follow-up",
+      });
+      await expect(reason).toBeDisabled();
+      await expect(evening).toBeDisabled();
+      await expect(tomorrow).toBeDisabled();
+    } finally {
+      release();
+    }
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(reason).toHaveValue("Follow-up");
+    await expect(morning).toHaveAttribute("aria-pressed", "true");
+    await expect(tomorrow).toBeEnabled();
+    await reason.fill("Changed reason");
+    await evening.click();
+    await expect(evening).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Request appointment" })).toBeEnabled();
+    expect(mock.callsTo("POST", "/rest/v1/rpc/book_appointment")).toHaveLength(1);
   });
 
   test("books through the RPC exactly once and shows the pending request", async ({

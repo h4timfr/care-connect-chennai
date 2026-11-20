@@ -118,6 +118,7 @@ function Discover() {
   const { t, fmt } = useI18n();
 
   const [text, setText] = useState(search.q ?? "");
+  const searchInput = useRef<HTMLInputElement>(null);
   const debouncedText = useDebouncedValue(text.trim(), SEARCH_DEBOUNCE_MS);
   const specialtyId = search.specialty ?? "";
   const tab: DiscoverTab = search.tab ?? "doctors";
@@ -285,6 +286,7 @@ function Discover() {
           </label>
           <input
             id="discover-search"
+            ref={searchInput}
             type="search"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -299,7 +301,10 @@ function Discover() {
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0"
-              onClick={() => setText("")}
+              onClick={() => {
+                setText("");
+                searchInput.current?.focus();
+              }}
               aria-label={t("discover.clearSearch")}
             >
               <X className="h-4 w-4" aria-hidden />

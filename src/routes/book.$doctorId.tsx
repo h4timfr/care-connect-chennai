@@ -288,7 +288,7 @@ function BookingForm({
   };
 
   return (
-    <>
+    <fieldset disabled={submitting} aria-label={t("book.title")} className="min-w-0 space-y-6">
       {!compactReview && clinics.length > 1 ? (
         <section className="surface-card space-y-3 p-5" aria-labelledby="clinic-heading">
           <h2 id="clinic-heading" className="font-medium">
@@ -433,6 +433,6 @@ function BookingForm({
         </Button>
         <p className="text-center text-xs text-muted-foreground">{t("book.noPayment")}</p>
       </section>
-    </>
+    </fieldset>
   );
 }
