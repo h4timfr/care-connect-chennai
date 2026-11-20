@@ -1,19 +1,24 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Circle } from "lucide-react";
+import { Building2, CheckCircle2, Circle } from "lucide-react";
+import { VerificationPill } from "@/components/ProviderStatus";
 import { ClinicShell } from "@/components/layout/ClinicShell";
+import { Button } from "@/components/ui/button";
 import { ErrorState, InfoNotice, PageLoader } from "@/components/common";
 import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";
 import { describeDataError } from "@/lib/supabase/errors";
 import { useI18n, type MessageKey } from "@/lib/i18n";
-import {
-  clinicHasBookableDoctor,
-  type MemberClinic,
-  useMyClinicContacts,
-} from "@/lib/supabase/queries";
+import { type MemberClinic, useMyClinicContacts } from "@/lib/supabase/queries";
 import { cn } from "@/lib/utils";
+import {
+  scheduleHasBookableWindow,
+  useClinicDoctorLinks,
+  useClinicSchedules,
+} from "@/lib/supabase/providers";
 
 export const Route = createFileRoute("/clinic/profile")({
+  head: () => ({ meta: [{ title: pageTitles.clinic }] }),
   component: ClinicProfileDetails,
 });
 
@@ -24,9 +29,24 @@ function roleKey(role: MemberClinic["memberRole"]): MessageKey {
 }
 
 function ClinicProfileDetails() {
-  const { activeClinic, doctorsOfClinic, catalog } = useApp();
+  const { activeClinic } = useApp();
   const { user } = useAuth();
   const contacts = useMyClinicContacts(user?.id, { enabled: !!activeClinic });
+  const configured =
+    !!activeClinic &&
+    !activeClinic.isSample &&
+    activeClinic.verificationState === "verified" &&
+    activeClinic.isPublished &&
+    activeClinic.bookingEnabled;
+  const links = useClinicDoctorLinks(configured ? activeClinic?.id : undefined);
+  const verified = new Set(
+    (links.error ? [] : (links.data ?? []))
+      .filter((link) => link.active && link.state === "verified" && !link.isSample)
+      .map((link) => link.doctorId),
+  );
+  const hours = useClinicSchedules(verified.size ? activeClinic?.id : undefined);
+  const availabilityError = links.error ?? hours.error;
+  const checking = links.isLoading || hours.isLoading;
   const { t, fmt } = useI18n();
   const title = t("clinicProfile.title");
 
@@ -34,14 +54,14 @@ function ClinicProfileDetails() {
   if (!activeClinic) return <ClinicShell title={title}>{null}</ClinicShell>;
   if (contacts.isPending) {
     return (
-      <ClinicShell title={title} description={t("clinicProfile.subtitle")}>
+      <ClinicShell title={title}>
         <PageLoader />
       </ClinicShell>
     );
   }
   if (contacts.error) {
     return (
-      <ClinicShell title={title} description={t("clinicProfile.subtitle")}>
+      <ClinicShell title={title}>
         <ErrorState
           title={title}
           message={t(describeDataError(contacts.error))}
@@ -72,8 +92,15 @@ function ClinicProfileDetails() {
   // Completeness covers what patients see on the public clinic page, nothing more.
   const missing = details.filter((d) => !d.value.trim()).map((d) => d.label);
   const done = details.length - missing.length;
-  // Mirrors the clinic-aware booking RPC, including clinic publication and explicit booking state.
-  const bookable = clinicHasBookableDoctor(activeClinic.id, doctorsOfClinic(activeClinic.id));
+  const bookable =
+    configured &&
+    !availabilityError &&
+    (hours.data ?? []).some(
+      (schedule) =>
+        verified.has(schedule.doctorId) &&
+        scheduleHasBookableWindow(schedule.startTime, schedule.endTime, schedule.slotMinutes),
+    );
+  const contact = activeClinic.patientContactPermission;
 
   const status: { label: string; value: string; good: boolean | null }[] = [
     { label: t("clinicProfile.yourRole"), value: t(roleKey(activeClinic.memberRole)), good: null },
@@ -81,26 +108,59 @@ function ClinicProfileDetails() {
       label: t("clinicProfile.listing"),
       value: activeClinic.isSample
         ? t("clinicProfile.listingSample")
-        : t("clinicProfile.listingReal"),
-      good: !activeClinic.isSample,
+        : activeClinic.isPublished && activeClinic.verificationState === "verified"
+          ? t("clinicProfile.listingReal")
+          : t("clinicWorkspace.unpublished"),
+      good:
+        !activeClinic.isSample &&
+        activeClinic.isPublished &&
+        activeClinic.verificationState === "verified",
     },
     {
       label: t("clinicProfile.booking"),
-      value: catalog.error
-        ? t("common.notProvided")
-        : bookable
-          ? t("clinicProfile.bookingOn")
-          : t("clinicProfile.bookingOff"),
-      good: catalog.error ? null : bookable,
+      value: checking
+        ? t("common.loading")
+        : availabilityError
+          ? t("clinicWorkspace.unavailable")
+          : bookable
+            ? t("clinicWorkspace.bookingConfigured")
+            : t("clinicProfile.bookingOff"),
+      good: checking || availabilityError ? null : bookable,
+    },
+    {
+      label: t("clinicWorkspace.bookingPermission"),
+      value: t(
+        activeClinic.bookingEnabled ? "clinicWorkspace.enabled" : "clinicWorkspace.disabled",
+      ),
+      good: activeClinic.bookingEnabled,
+    },
+    {
+      label: t("clinicWorkspace.patientContact"),
+      value: t(`admin.contact.${contact}`),
+      good: contact === "granted",
     },
   ];
 
   return (
-    <ClinicShell title={title} description={t("clinicProfile.subtitle")}>
+    <ClinicShell title={title}>
       <div className="grid max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
+          <div className="surface-card flex flex-wrap items-center gap-3 p-4 sm:p-5">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
+              <Building2 className="h-5 w-5" aria-hidden />
+            </span>
+            <h2
+              dir="auto"
+              className="min-w-0 font-display text-lg font-bold [overflow-wrap:anywhere]"
+            >
+              {activeClinic.name}
+            </h2>
+            {activeClinic.isSample ? null : (
+              <VerificationPill state={activeClinic.verificationState} />
+            )}
+          </div>
           <InfoNotice className="text-sm">{t("clinicProfile.readOnly")}</InfoNotice>
-          <dl className="surface-card grid gap-4 p-6 text-sm">
+          <dl className="surface-card grid gap-4 p-4 text-sm sm:grid-cols-2 sm:p-5">
             {details.map((d) => (
               <div key={d.label} className="min-w-0">
                 <dt className="text-muted-foreground">{d.label}</dt>
@@ -138,8 +198,21 @@ function ClinicProfileDetails() {
                 </div>
               ))}
             </dl>
-            {!bookable && !catalog.error ? (
-              <p className="mt-3 text-xs text-muted-foreground">{t("clinicProfile.bookingHow")}</p>
+            {availabilityError ? (
+              <div className="mt-3" role="alert">
+                <p className="mb-2 text-sm">{t(describeDataError(availabilityError))}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void (links.error ? links.refetch() : hours.refetch())}
+                >
+                  {t("common.tryAgain")}
+                </Button>
+              </div>
+            ) : !bookable && !checking ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                {t("clinicProfile.bookingHow")} {t("setup.publishingHelp")}
+              </p>
             ) : null}
           </section>
 

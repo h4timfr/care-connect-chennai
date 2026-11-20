@@ -93,7 +93,7 @@ interface AppState {
 
   conversations: Conversation[];
   conversationsStatus: QueryStatus;
-  sendMessage: (conversationId: string, body: string) => Promise<void>;
+  sendMessage: (conversationId: string, body: string, messageId: string) => Promise<void>;
   ensureConversation: (args: {
     clinicId: string;
     doctorId?: string;
@@ -146,15 +146,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     enabled: isLoggedIn && onClinicAppointmentsPage,
   });
 
-  // Conversations (with every message) are only loaded, and subscribed to, where they're shown.
-  // ensureConversation checks the server itself, so other pages don't need them.
+  const [selectedClinicId, setSelectedClinicId] = useState<string | null>(() => {
+    try {
+      return typeof window === "undefined" ? null : sessionStorage.getItem(ACTIVE_CLINIC_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const memberClinics = authorizedClinics ?? NO_MEMBER_CLINICS;
+  const activeClinic = memberClinics.find((c) => c.id === selectedClinicId) ?? memberClinics[0];
+
   const onMessagesPage = pathname === "/messages" || pathname === "/clinic/messages";
+  const clinicInbox = pathname === "/clinic/messages";
   const conversationsQuery = useConversations(
-    patient?.id,
-    authorizedClinicIds,
-    // Wait for memberships: starting earlier fetches twice, because the query key changes
-    // when the clinic ids arrive.
-    isLoggedIn && onMessagesPage && !authorizedClinicsQuery.isPending,
+    clinicInbox ? "clinic_id" : "patient_id",
+    isLoggedIn && onMessagesPage
+      ? clinicInbox
+        ? authorizedClinicsQuery.error
+          ? undefined
+          : activeClinic?.id
+        : patientQuery.error
+          ? undefined
+          : patient?.id
+      : undefined,
   );
 
   // useMutation returns a new object every render, but its mutate/mutateAsync functions are stable.
@@ -205,15 +219,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // The clinic portal supports a single active clinic; RLS guarantees the membership is real.
   // Staff can belong to several clinics. The choice only selects among memberships the server
   // returned (RLS still decides what each query can read); it is remembered for the tab session.
-  const [selectedClinicId, setSelectedClinicId] = useState<string | null>(() => {
-    try {
-      return typeof window === "undefined" ? null : sessionStorage.getItem(ACTIVE_CLINIC_KEY);
-    } catch {
-      return null;
-    }
-  });
-  const memberClinics = authorizedClinics ?? NO_MEMBER_CLINICS;
-  const activeClinic = memberClinics.find((c) => c.id === selectedClinicId) ?? memberClinics[0];
   const setActiveClinicId = useCallback((clinicId: string) => {
     setSelectedClinicId(clinicId);
     try {
@@ -281,9 +286,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const sendMessage = useCallback(
-    async (conversationId: string, body: string) => {
+    async (conversationId: string, body: string, messageId: string) => {
       if (!auth.user) throw new Error("Please sign in to send messages.");
-      await send({ conversationId, senderId: auth.user.id, body });
+      await send({ conversationId, senderId: auth.user.id, body, messageId });
     },
     [auth.user, send],
   );
@@ -301,10 +306,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!auth.user) throw new Error("Please sign in to message a clinic.");
       if (!patient)
         throw new Error("Your account has no patient profile, so it can't message clinics.");
-      const existing = conversations.find(
-        (c) => c.clinicId === clinicId && c.patientId === patient.id,
-      );
-      if (existing) return existing.id;
       return createConversation({
         clinicId,
         patientId: patient.id,
@@ -312,7 +313,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...(appointmentId ? { appointmentId } : {}),
       });
     },
-    [conversations, auth.user, createConversation, patient],
+    [auth.user, createConversation, patient],
   );
 
   const toggleSavedDoctor = useCallback(

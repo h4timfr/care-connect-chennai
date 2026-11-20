@@ -141,19 +141,19 @@ removes the legacy `get_doctor_slots(uuid, date)` overload.
 
 ## What is ready and what needs the database update
 
-| Part                                                             | Status                                                                                                       |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Password visibility, select contrast, redesign, mobile fixes     | Frontend only. Ready.                                                                                        |
-| `/providers` information page, clinic sign-in entrance           | Frontend only. Ready.                                                                                        |
-| Clinic portal: doctor verification status, opening hours editor  | Works now (existing policies); after 00054 it is limited to verified doctors                                 |
-| `/clinic/signup` clinic applications                             | **Needs 00054.** Until then it says applications aren't open yet.                                            |
-| Proposing doctors                                                | **Needs 00054.** Until then it says the update isn't deployed.                                               |
+| Part                                                             | Status                                                                                                                  |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Password visibility, select contrast, redesign, mobile fixes     | Frontend only. Ready.                                                                                                   |
+| `/providers` information page, clinic sign-in entrance           | Frontend only. Ready.                                                                                                   |
+| Clinic portal: doctor verification status, opening hours editor  | Works now (existing policies); after 00054 it is limited to verified doctors                                            |
+| `/clinic/signup` clinic applications                             | **Needs 00054.** Until then it says applications aren't open yet.                                                       |
+| Proposing doctors                                                | **Needs 00054.** Until then it says the update isn't deployed.                                                          |
 | `/admin` console                                                 | **Needs 00052, 00054, 00057, 00058 and 00059.** Until then it fails closed or reports publication controls unavailable. |
-| `/clinic/login`, `/doctor/login`, provider entrances on `/login` | Frontend only. Ready (authorization uses existing tables).                                                   |
-| Doctor applications in `/admin`                                  | **Needs 00055.** Until then the tab says the update isn't deployed.                                          |
-| `/doctor/signup` (doctor applications)                           | **Needs 00055.** Until then it says applications aren't open.                                                |
-| Doctor portal (`/doctor/*`)                                      | **Needs 00055.** Before it no account is linked to a doctor, so everyone sees "Doctor access isn't enabled". |
-| Provider-candidate review (`/admin/providers`)                   | **Needs 00056.** Until then it says the update isn't deployed. Empty until research is imported.             |
+| `/clinic/login`, `/doctor/login`, provider entrances on `/login` | Frontend only. Ready (authorization uses existing tables).                                                              |
+| Doctor applications in `/admin`                                  | **Needs 00055.** Until then the tab says the update isn't deployed.                                                     |
+| `/doctor/signup` (doctor applications)                           | **Needs 00055.** Until then it says applications aren't open.                                                           |
+| Doctor portal (`/doctor/*`)                                      | **Needs 00055.** Before it no account is linked to a doctor, so everyone sees "Doctor access isn't enabled".            |
+| Provider-candidate review (`/admin/providers`)                   | **Needs 00056.** Until then it says the update isn't deployed. Empty until research is imported.                        |
 
 ## Deploying (manual, by the database owner)
 
@@ -161,8 +161,7 @@ Nothing here is applied automatically.
 
 1. Establish and verify the complete shared migration history and live schema before applying
    anything. The intended local sequence is `00052` → `00053` → `00054` → `00055` → `00056` →
-   `00057` → `00058` → `00059`. Validate the applicable pending changes on **staging**, including
-   00059. Do not blindly run `db push` or reapply a migration based only on its local file.
+   `00057` → `00058` → `00059`. Validate the applicable pending changes on **staging**, including 00059. Do not blindly run `db push` or reapply a migration based only on its local file.
    Migration 00055 has local edits; reconcile whether it was already applied elsewhere and compare
    its deployed definition before deciding whether a forward migration is needed.
 2. Run the SQL/security suite on staging through test `015` (suite `001`–`015`), including test
@@ -180,6 +179,15 @@ Nothing here is applied automatically.
    VALUES ('<auth user id of the administrator>', 'platform_admin');
    ```
 5. Sign in as that account and open `https://careconnect.studio/admin`.
+
+## Link an existing doctor to another clinic (migration 00063)
+
+1. The signed-in doctor copies the **Doctor profile ID** from **Doctor dashboard → Link to a clinic** and shares it with the clinic administrator.
+2. The administrator opens **Clinic → Doctors → Link an existing doctor**, enters that ID, and sends the request. The clinic can track or withdraw a request while it is open.
+3. The doctor verifies the clinic name and accepts or declines from their dashboard. Acceptance creates one pending relationship with the existing doctor profile.
+4. The platform administrator verifies the relationship through **Administration → Doctor verification**. The clinic or doctor can then add hours. Online booking still requires the existing clinic verification, publication, and booking controls.
+
+Apply `00063_existing_doctor_clinic_links.sql` only after verifying that the approved target has migrations through `00062`. The matching frontend must be running against that target. On a backend without this migration, the relationship panel reports that the feature is unavailable. Direct database linking and the separate **Propose a doctor** path are unnecessary for an already linked doctor account.
 
 ## Provider-candidate research (migration 00056)
 

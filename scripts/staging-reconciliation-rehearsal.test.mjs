@@ -61,7 +61,7 @@ test("restore diagnostic categories never echo raw SQL, credentials or object na
   );
 });
 
-test("all forty-one reviewed migration contents match; CRLF checkout is equivalent", () => {
+test("reviewed migration contents match; CRLF checkout is equivalent", () => {
   assert.doesNotThrow(() => verifyMigrationContents(originals, manifest));
   const crlf = new Map(
     [...originals].map(([file, source]) => [
@@ -123,20 +123,20 @@ test("pinned CLI version accepts the actual update notice observed in successful
   }
 });
 
-test("inventory is exact, with an intentional gap and 40 genuinely pending versions", () => {
-  assert.equal(validateInventory(files).length, 41);
+test("inventory is exact, with an intentional gap and 43 genuinely pending versions", () => {
+  assert.equal(validateInventory(files).length, 44);
   assert.deepEqual(pendingVersions(["00001"]), targetVersions.slice(1));
-  assert.equal(pendingVersions(["00001"]).length, 40);
+  assert.equal(pendingVersions(["00001"]).length, 43);
   assert.deepEqual(pendingVersions(targetVersions), []);
   assert.equal(aliasFile, "20261009041700_00001_initial_schema.sql");
 });
 
-test("pgTAP inventory is exactly numbered 001 through 022", () => {
+test("pgTAP inventory is exactly numbered 001 through 024", () => {
   const testFiles = readdirSync(path.join(root, "supabase/tests"));
-  assert.equal(validateTestInventory(testFiles).length, 22);
-  assert.throws(() => validateTestInventory(testFiles.filter((f) => !f.startsWith("022_"))));
-  assert.throws(() => validateTestInventory([...testFiles, "023_unreviewed.test.sql"]));
-  assert.throws(() => validateTestInventory(testFiles.map((f) => f.replace(/^022_/, "023_"))));
+  assert.equal(validateTestInventory(testFiles).length, 24);
+  assert.throws(() => validateTestInventory(testFiles.filter((f) => !f.startsWith("024_"))));
+  assert.throws(() => validateTestInventory([...testFiles, "025_unreviewed.test.sql"]));
+  assert.throws(() => validateTestInventory(testFiles.map((f) => f.replace(/^024_/, "025_"))));
 });
 
 for (const [label, invalid] of [
@@ -230,13 +230,11 @@ test("new demo-boundary SQL plan is exactly 18 assertions", () => {
   assert.equal([...source.matchAll(/SELECT\s+extensions\.(?:is|ok|throws_ok)\s*\(/gi)].length, 18);
 });
 
-test("publication safety guard disables only this branch, with production unspecified", () => {
+test("publication safety preserves the branch freeze and requires the guarded Vercel build", () => {
   const config = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8"));
-  assert.deepEqual(config.git.deploymentEnabled, { "claude/careconnect-frontend-repair": false });
-  assert.equal(
-    Object.keys(config)
-      .filter((k) => k !== "$schema")
-      .join(","),
-    "git",
-  );
+  assert.deepEqual(config, {
+    $schema: "https://openapi.vercel.sh/vercel.json",
+    buildCommand: "CARECONNECT_VERCEL_BUILD=1 npm run build",
+    git: { deploymentEnabled: { "claude/careconnect-frontend-repair": false } },
+  });
 });

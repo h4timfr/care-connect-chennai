@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -15,6 +16,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "@/lib/toast";
 import { AdminGate } from "@/components/AdminGate";
+import { GuidedTour } from "@/components/GuidedTour";
 import { FormAlert } from "@/components/AuthCard";
 import { EmptyState, ErrorState, InfoNotice, PageLoader } from "@/components/common";
 import { PatientShell } from "@/components/layout/PatientShell";
@@ -66,7 +68,7 @@ export const Route = createFileRoute("/admin_/providers")({
     tab: tab === "doctors" ? "doctors" : tab === "facilities" ? "facilities" : undefined,
     id: typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id) ? id : undefined,
   }),
-  head: () => ({ meta: [{ title: "Provider candidates — CareConnect administration" }] }),
+  head: () => ({ meta: [{ title: pageTitles.admin }] }),
   component: ProvidersReviewPage,
 });
 
@@ -100,6 +102,9 @@ function ProvidersReviewPage() {
       </div>
       <div className="mt-6">
         <AdminGate>
+          <div className="mb-2 flex justify-end">
+            <GuidedTour role="admin" />
+          </div>
           <Review />
         </AdminGate>
       </div>

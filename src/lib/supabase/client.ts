@@ -1,8 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../database.types";
-import { isPrivilegedSupabaseKey, resolveSupabaseConfig } from "./config";
+import config from "virtual:careconnect-public-config";
 
-const config = resolveSupabaseConfig(import.meta.env, import.meta.env["VITE_VERCEL_ENV"]);
 const supabaseUrl = config.ok ? config.url : undefined;
 const supabaseKey = config.ok ? config.key : undefined;
 
@@ -34,9 +33,6 @@ function getConfigError(): string | null {
     /^(your[-_]|<|placeholder)/i.test(supabaseKey)
   ) {
     return "VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY still contain the placeholder values from .env.example. Replace them with your project's values and restart the dev server.";
-  }
-  if (isPrivilegedSupabaseKey(supabaseKey)) {
-    return "The configured Supabase key is a secret/service-role key. Only the publishable (anon) key may be used in the browser.";
   }
   return null;
 }

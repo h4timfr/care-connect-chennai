@@ -98,7 +98,17 @@ for (const [themeName, theme] of [
   ["dark", dark],
 ] as const) {
   test(`${themeName} theme text meets WCAG AA contrast`, () => {
-    const failures = PAIRS[themeName]
+    const backdropPairs = ["foreground", "muted-foreground", "primary"].flatMap((foreground) =>
+      ["primary-soft", "background", "highlight-soft"].map(
+        (stop): [string, string, string, number] => [
+          `${foreground} on backdrop ${stop}`,
+          foreground,
+          stop,
+          1,
+        ],
+      ),
+    );
+    const failures = [...PAIRS[themeName], ...backdropPairs]
       .map(([label, fg, bg, alpha]) => [label, contrast(theme, fg, bg, alpha)] as const)
       .filter(([, ratio]) => ratio < 4.5)
       .map(([label, ratio]) => `${label}: ${ratio.toFixed(2)}`);

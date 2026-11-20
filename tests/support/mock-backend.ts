@@ -41,6 +41,7 @@ export interface MockState {
   slots: Row[];
   bookResult: { status: number; body: unknown } | null;
   failMessageInsert: boolean;
+  loseMessageInsertResponse: boolean;
   failStatusUpdate: boolean;
   /** Overrides /auth/v1/token (sign-in and refresh) and /auth/v1/signup responses. */
   tokenResponse: { status: number; body: unknown } | null;
@@ -305,6 +306,7 @@ export function defaultState(): MockState {
     ],
     bookResult: null,
     failMessageInsert: false,
+    loseMessageInsertResponse: false,
     failStatusUpdate: false,
     tokenResponse: null,
     signupResponse: null,
@@ -570,6 +572,7 @@ export async function mockBackend(
     }
 
     // ---- RPC
+    if (path === "/rest/v1/rpc/list_doctor_clinic_link_requests") return json(route, 200, []);
     if (path === "/rest/v1/rpc/get_doctor_slots") return json(route, 200, state.slots);
     if (path === "/rest/v1/rpc/admin_list_clinics") {
       if (state.platformAdmin !== true) {
@@ -642,6 +645,11 @@ export async function mockBackend(
     const pgError = (status: number, code: string, message: string) =>
       json(route, status, { code, message, details: "", hint: "" });
     const notFoundFn = () => pgError(404, "PGRST202", "Could not find the function");
+    if (
+      path === "/rest/v1/rpc/can_message_assigned_doctor" ||
+      path === "/rest/v1/rpc/doctor_message_inbox"
+    )
+      return notFoundFn();
     if (path === "/rest/v1/rpc/withdraw_provider_application") {
       if (state.applications === "notDeployed") return notFoundFn();
       const app = state.applications.find((a) => a["id"] === args["p_application_id"]);
@@ -740,6 +748,9 @@ export async function mockBackend(
       case "doctors": {
         const withClinicState = (row: Row): Row => ({
           ...row,
+          doctor_schedules: state.schedules.filter(
+            (schedule) => schedule["doctor_id"] === row["id"],
+          ),
           clinic_doctors: ((row["clinic_doctors"] as Row[] | undefined) ?? []).map((link) => {
             const clinic = state.clinics.find((c) => c["id"] === link["clinic_id"]);
             return {
@@ -747,6 +758,7 @@ export async function mockBackend(
               clinics: clinic
                 ? {
                     name: clinic["name"],
+                    is_demo: clinic["is_demo"],
                     clinic_verification_state: clinic["clinic_verification_state"],
                     is_published: clinic["is_published"],
                     patient_contact_permission: clinic["patient_contact_permission"],
@@ -1177,7 +1189,16 @@ export async function mockBackend(
           if (Array.isArray(state.conversations)) state.conversations.push(created);
           return respond([created]);
         }
-        return respond(state.conversations);
+        if (state.conversations === "error") return respond("error");
+        const filters = ["clinic_id", "patient_id", "kind", "appointment_id", "doctor_id"];
+        return respond(
+          state.conversations.filter((row) =>
+            filters.every((key) => {
+              const filter = url.searchParams.get(key);
+              return !filter || !filter.startsWith("eq.") || row[key] === filter.slice(3);
+            }),
+          ),
+        );
       }
       case "messages": {
         if (method === "POST") {
@@ -1191,7 +1212,6 @@ export async function mockBackend(
           const conversation = conversations.find(
             (c) => c["id"] === (body as Row)["conversation_id"],
           );
-          (conversation?.["messages"] as Row[] | undefined)?.push(created);
           const doctorConversation = Array.isArray(state.doctorConversations)
             ? state.doctorConversations.find((c) => c["id"] === (body as Row)["conversation_id"])
             : undefined;
@@ -1203,15 +1223,35 @@ export async function mockBackend(
               hint: "",
             });
           }
+          const messages = conversation?.["messages"] as Row[] | undefined;
+          const doctorMessages = doctorConversation?.["messages"] as Row[] | undefined;
+          const duplicate = [...(messages ?? []), ...(doctorMessages ?? [])].some(
+            (message) => message["id"] === created.id,
+          );
+          if (duplicate) return json(route, 409, { code: "23505", message: "Duplicate message" });
+          messages?.push(created);
           (doctorConversation?.["messages"] as Row[] | undefined)?.push({
             id: created["id"],
             body: (body as Row)["body"],
             created_at: created["created_at"],
             from: "you",
           });
+          if (state.loseMessageInsertResponse) {
+            state.loseMessageInsertResponse = false;
+            return route.abort("failed");
+          }
           return respond([created]);
         }
-        return respond([]);
+        const conversations = Array.isArray(state.conversations) ? state.conversations : [];
+        return respond(
+          conversations
+            .flatMap((conversation) => (conversation["messages"] as Row[]) ?? [])
+            .filter((message) =>
+              ["id", "conversation_id", "sender_id"].every(
+                (column) => url.searchParams.get(column) === `eq.${message[column]}`,
+              ),
+            ),
+        );
       }
     }
 

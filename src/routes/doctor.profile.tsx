@@ -1,11 +1,11 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
-import { toast } from "@/lib/toast";
+import { useRef, useState, type FormEvent } from "react";
 import { DoctorShell } from "@/components/layout/DoctorShell";
 import { FormAlert } from "@/components/AuthCard";
 import { InfoNotice } from "@/components/common";
-import { LinkStatus } from "@/components/ProviderStatus";
+import { DoctorClinics } from "@/components/doctor/DoctorClinics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ import { useUpdateMyDoctor, type MyDoctor } from "@/lib/supabase/doctor";
 import { codeOf, describeDataError } from "@/lib/supabase/errors";
 
 export const Route = createFileRoute("/doctor/profile")({
-  head: () => ({ meta: [{ title: "Profile — CareConnect Doctor Portal" }] }),
+  head: () => ({ meta: [{ title: pageTitles.doctor }] }),
   component: DoctorProfilePage,
 });
 
@@ -44,17 +44,22 @@ function ProfileForm({ me }: { me: MyDoctor }) {
   const [experience, setExperience] = useState(String(me.experienceYears));
   const [fee, setFee] = useState(String(me.consultationFee));
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const inFlight = useRef(false);
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    if (inFlight.current) return;
+    setSaved(false);
     const years = Number(experience);
     const amount = Number(fee);
-    if (!Number.isInteger(years) || years < 0 || years > 70)
+    if (!experience.trim() || !Number.isInteger(years) || years < 0 || years > 70)
       return setError(t("propose.error.experience"));
     if (!(amount >= 0 && amount <= 100000) || fee.trim() === "")
       return setError(t("propose.error.fee"));
     if (about.length > 1000) return setError(t("error.checkDetails"));
     setError(null);
+    inFlight.current = true;
     try {
       await update.mutateAsync({
         doctorId: me.id,
@@ -66,9 +71,11 @@ function ProfileForm({ me }: { me: MyDoctor }) {
           consultationFee: amount,
         },
       });
-      toast.success(t("details.saved"));
+      setSaved(true);
     } catch (err) {
       setError(codeOf(err) === "P0001" ? t("doctorProfile.notAllowed") : t(describeDataError(err)));
+    } finally {
+      inFlight.current = false;
     }
   };
 
@@ -80,59 +87,43 @@ function ProfileForm({ me }: { me: MyDoctor }) {
   ];
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <section className="surface-card p-5" aria-labelledby="managed-heading">
-        <h2 id="managed-heading" className="font-semibold">
-          {t("doctorProfile.managedTitle")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("doctorProfile.managedBody")}</p>
-        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-          {managed.map(([label, value]) => (
-            <div key={label} className="min-w-0">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="font-medium [overflow-wrap:anywhere]" dir="auto">
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className="surface-card p-5" aria-labelledby="doctor-links-heading">
-        <h2 id="doctor-links-heading" className="font-semibold">
-          {t("doctorProfile.clinicsTitle")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("doctorProfile.clinicsBody")}</p>
-        {me.links.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">{t("doctorDashboard.noClinics")}</p>
-        ) : (
-          <ul className="mt-3 divide-y">
-            {me.links.map((l) => (
-              <li
-                key={l.clinicId}
-                className="flex flex-wrap items-center justify-between gap-2 py-2.5"
-              >
-                <span className="min-w-0 font-medium [overflow-wrap:anywhere]" dir="auto">
-                  {l.clinicName}
-                </span>
-                <LinkStatus state={l.state} active={l.active} />
-              </li>
+    <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+      <div className="min-w-0 space-y-5">
+        <section
+          className="rounded-2xl border bg-card p-4 sm:p-5"
+          aria-labelledby="managed-heading"
+        >
+          <h2 id="managed-heading" className="font-display text-lg font-semibold">
+            {t("doctorProfile.managedTitle")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("doctorProfile.managedBody")}</p>
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            {managed.map(([label, value]) => (
+              <div key={label} className="min-w-0">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="font-medium [overflow-wrap:anywhere]" dir="auto">
+                  {value}
+                </dd>
+              </div>
             ))}
-          </ul>
-        )}
-      </section>
+          </dl>
+        </section>
+
+        <DoctorClinics me={me} profile />
+      </div>
 
       <form
         onSubmit={save}
         noValidate
-        className="surface-card space-y-4 p-5"
+        onChange={() => setSaved(false)}
+        className="min-w-0 space-y-4 self-start rounded-2xl border bg-card p-4 sm:p-5"
         aria-labelledby="editable-heading"
       >
-        <h2 id="editable-heading" className="font-semibold">
+        <h2 id="editable-heading" className="font-display text-lg font-semibold">
           {t("doctorProfile.editableTitle")}
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        <fieldset disabled={update.isPending} className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="dp-experience">{t("propose.experience")}</Label>
             <Input
               id="dp-experience"
@@ -144,7 +135,7 @@ function ProfileForm({ me }: { me: MyDoctor }) {
               onChange={(e) => setExperience(e.target.value)}
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="dp-fee">{t("propose.fee")}</Label>
             <Input
               id="dp-fee"
@@ -160,7 +151,7 @@ function ProfileForm({ me }: { me: MyDoctor }) {
               {t("doctorProfile.feeHint")}
             </p>
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
+          <div className="min-w-0 space-y-1.5 sm:col-span-2">
             <Label htmlFor="dp-qualifications">{t("propose.qualifications")}</Label>
             <Input
               id="dp-qualifications"
@@ -168,7 +159,7 @@ function ProfileForm({ me }: { me: MyDoctor }) {
               onChange={(e) => setQualifications(e.target.value)}
             />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
+          <div className="min-w-0 space-y-1.5 sm:col-span-2">
             <Label htmlFor="dp-languages">{t("propose.languages")}</Label>
             <Input
               id="dp-languages"
@@ -176,7 +167,7 @@ function ProfileForm({ me }: { me: MyDoctor }) {
               onChange={(e) => setLanguages(e.target.value)}
             />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
+          <div className="min-w-0 space-y-1.5 sm:col-span-2">
             <Label htmlFor="dp-about">{t("propose.about")}</Label>
             <Textarea
               id="dp-about"
@@ -186,9 +177,14 @@ function ProfileForm({ me }: { me: MyDoctor }) {
               onChange={(e) => setAbout(e.target.value)}
             />
           </div>
-        </div>
+        </fieldset>
         <InfoNotice className="text-xs">{t("doctorProfile.publicNote")}</InfoNotice>
         {error ? <FormAlert>{error}</FormAlert> : null}
+        {saved ? (
+          <p role="status" className="text-sm text-primary">
+            {t("details.saved")}
+          </p>
+        ) : null}
         <Button type="submit" disabled={update.isPending}>
           {update.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
           {update.isPending ? t("common.saving") : t("details.save")}

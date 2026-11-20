@@ -63,6 +63,7 @@ export const ta: Messages = {
   "specialty.dermatology": "தோல் மருத்துவம்",
   "specialty.gynecology": "மகளிர் மருத்துவம்",
   "specialty.neurology": "நரம்பியல்",
+  "specialty.psychiatry": "மனநல மருத்துவம்",
   "specialty.ophthalmology": "கண் மருத்துவம்",
   "specialty.dentistry": "பல் மருத்துவம்",
   "specialty.ent": "காது, மூக்கு, தொண்டை (ENT)",
@@ -349,9 +350,11 @@ export const ta: Messages = {
   "messages.loading": "செய்திகள் ஏற்றப்படுகின்றன…",
   "messages.loadError": "உங்கள் செய்திகளை ஏற்ற முடியவில்லை",
   "messages.notSent": "செய்தி அனுப்பப்படவில்லை. {reason}",
+  "messages.deliveryUnconfirmed":
+    "செய்தி சென்றடைந்ததை உறுதிசெய்ய முடியவில்லை. அதே செய்தியை மீண்டும் அனுப்புங்கள்.",
   "messages.emptyTitle": "இன்னும் உரையாடல்கள் இல்லை",
   "messages.emptyBody":
-    "ஒரு சந்திப்பு பற்றி கிளினிக்கிடம் கேட்க, மருத்துவர் அல்லது கிளினிக் பக்கத்தை அல்லது உங்கள் சந்திப்புகளில் ஒன்றைத் திறந்து “கிளினிக்கிற்குச் செய்தி அனுப்பு” என்பதைத் தேர்ந்தெடுக்கவும்.",
+    "வசதி இருந்தால் மருத்துவருக்கோ கிளினிக்கிற்கோ செய்தி அனுப்ப உங்கள் முன்பதிவைத் திறக்கவும். பொதுவான கேள்விக்கு மருத்துவர் அல்லது கிளினிக் பக்கத்தில் “கிளினிக்கிற்குச் செய்தி அனுப்பு” என்பதைத் தேர்ந்தெடுக்கவும்.",
   "messages.conversations": "உரையாடல்கள்",
   "messages.noMessages": "இன்னும் செய்திகள் இல்லை",
   "messages.back": "உரையாடல்களுக்குத் திரும்பு",
@@ -560,6 +563,35 @@ export const ta: Messages = {
   "clinicShell.role.other": "கிளினிக் உறுப்பினர்",
 
   // ---- Clinic dashboard
+  "clinicWorkspace.history": "வரலாறு",
+  "clinicWorkspace.details": "சந்திப்பு விவரங்கள்",
+  "clinicWorkspace.doctorUnavailable": "மருத்துவர் விவரங்கள் கிடைக்கவில்லை",
+  "clinicWorkspace.clearFilters": "வடிகட்டிகளை நீக்கு",
+  "clinicWorkspace.statusReview": "நிலையை மாற்றும் முன் சந்திப்பைச் சரிபார்க்கவும்.",
+  "clinicWorkspace.applyChange": "நிலை மாற்றத்தைச் சேமி",
+  "clinicWorkspace.upcomingBookings": "வரவிருக்கும் முன்பதிவுகள்",
+  "clinicWorkspace.rosterSummary":
+    "{verified} சரிபார்க்கப்பட்டவர்கள் · {scheduled} பேருக்கு நேரம் அமைக்கப்பட்டுள்ளது",
+  "clinicWorkspace.viewAppointments": "சந்திப்புகளைப் பார்",
+  "clinicWorkspace.removeHours": "நேரத்தை நீக்கு",
+  "clinicWorkspace.unpublished": "அடைவு பட்டியலில் வெளியிடப்படவில்லை",
+  "clinicWorkspace.unavailable": "சரிபார்க்க முடியவில்லை",
+  "clinicWorkspace.bookingConfigured": "முன்பதிவு நேரம் அமைக்கப்பட்டுள்ளது",
+  "clinicWorkspace.bookingPermission": "இணைய முன்பதிவு அனுமதி",
+  "clinicWorkspace.enabled": "செயல்படுத்தப்பட்டது",
+  "clinicWorkspace.disabled": "முடக்கப்பட்டுள்ளது",
+  "clinicWorkspace.patientContact": "நோயாளி விசாரணைகளுக்கான அனுமதி",
+  "clinicWorkspace.roster": "மருத்துவர் பட்டியல்",
+  "clinicWorkspace.rosterCount":
+    "{total} இணைக்கப்பட்டவர்கள் · {verified} செயலில் உள்ள சரிபார்க்கப்பட்டவர்கள்",
+  "clinicWorkspace.noDayVisits": "இந்த நாளில் சந்திப்புகள் இல்லை.",
+  "clinicWorkspace.weeklyHoursNote":
+    "வாராந்திர ஆலோசனை நேரம். முன்பதிவுகளைச் சந்திப்புப் பட்டியலில் பார்க்கவும்.",
+  "clinicWorkspace.noDayHours":
+    "இந்த நாளில் சரிபார்க்கப்பட்ட மருத்துவருக்கான வாராந்திர நேரம் இல்லை.",
+  "clinicWorkspace.needsReplyFilter": "பதில் தேவை",
+  "clinicWorkspace.noRepliesNeeded": "பதிலுக்காக எந்த உரையாடலும் காத்திருக்கவில்லை.",
+  "clinicWorkspace.sending": "பதில் அனுப்பப்படுகிறது…",
   "clinicDashboard.title": "டாஷ்போர்டு",
   "clinicDashboard.overview": "{date} க்கான கண்ணோட்டம்",
   "clinicDashboard.loading": "டாஷ்போர்டு ஏற்றப்படுகிறது…",
@@ -660,7 +692,7 @@ export const ta: Messages = {
   "clinicProfile.title": "கிளினிக் சுயவிவரம்",
   "clinicProfile.subtitle": "நோயாளிகளுக்கு உங்கள் கிளினிக் எப்படித் தோன்றுகிறது",
   "clinicProfile.readOnly":
-    "போர்டலில் கிளினிக் விவரங்களைத் திருத்தும் வசதி இன்னும் கிடைக்கவில்லை. நோயாளிகள் தற்போது பார்க்கும் தகவல் இதுதான்.",
+    "கிளினிக் விவரங்களை மாற்ற CareConnect-ஐ அணுகவும். அடைவு வெளியீடு, இணைய முன்பதிவு, நோயாளி விசாரணை ஆகியவை தனித்தனியாக நிர்வகிக்கப்படுகின்றன.",
   "clinicProfile.name": "கிளினிக் பெயர்",
   "clinicProfile.description": "விளக்கம்",
 
@@ -712,6 +744,12 @@ export const ta: Messages = {
   "admin.tab.doctors": "மருத்துவர் சரிபார்ப்பு",
   "admin.tab.publication": "வழங்குநர் வெளியீடு",
   "admin.tab.teams": "கிளினிக் குழுக்கள்",
+  "admin.confirmPublicationAction":
+    "{clinic} க்கான {action} செயல்பாட்டை உறுதிப்படுத்தவும். மாற்றத்தைச் செயல்படுத்தும் முன் அதன் அனுமதிகளைச் சரிபார்க்கவும்.",
+  "admin.acknowledgeContactConsent":
+    "நோயாளிகளின் விசாரணைகளைப் பெற கிளினிக் வெளிப்படையாக அனுமதி அளித்ததை உறுதிப்படுத்துகிறேன்.",
+  "admin.publicationChanged":
+    "கிளினிக்கின் வெளியீட்டு அமைப்புகள் மாறிவிட்டன. இந்தச் சாளரத்தை மூடி, மீண்டும் முயல்வதற்கு முன் தற்போதைய அமைப்புகளைப் பார்க்கவும்.",
   "admin.publicationHelp":
     "சரிபார்ப்பு, கோப்பக வெளியீடு, நோயாளர் செய்தி அனுமதி மற்றும் இணைய முன்பதிவு தனித்தனி கட்டுப்பாடுகள். நோயாளர் தொடர்பை அனுமதிக்கும் முன் கிளினிக்கின் வெளிப்படையான ஒப்புதலை உறுதிப்படுத்தவும். மாதிரி கிளினிக்குகளை இயக்க முடியாது.",
   "admin.noPublicationClinics": "மதிப்பாய்வுக்கு உண்மையான கிளினிக் பதிவுகள் இல்லை.",
@@ -906,6 +944,30 @@ export const ta: Messages = {
   "admin.doctorVerifyReminder":
     "மருத்துவக் கவுன்சிலிடம் பதிவு எண்ணையும் விண்ணப்பதாரரின் அடையாளத்தையும் உறுதிசெய்த பிறகே ஒப்புதல் அளிக்கவும்.",
   "admin.tab.doctorApplications": "மருத்துவர் விண்ணப்பங்கள்",
+  "doctorWorkspace.allAppointments": "அனைத்து சந்திப்புகள்",
+  "doctorWorkspace.period": "சந்திப்புக் காலம்",
+  "doctorWorkspace.status": "நிலை",
+  "doctorWorkspace.allStatuses": "அனைத்து நிலைகள்",
+  "doctorWorkspace.date": "தேதி",
+  "doctorWorkspace.noMatches": "இந்த வடிகட்டிகளுக்கு ஏற்ற சந்திப்புகள் இல்லை",
+  "doctorWorkspace.todayAppointments": "இன்றைய சந்திப்புகள்",
+  "doctorWorkspace.quickLinks": "விரைவு அணுகல்",
+  "doctorWorkspace.viewToday": "இன்றைய சந்திப்புகளைக் காண்க",
+  "doctorWorkspace.todayQueue": "இன்று மீதமுள்ள சந்திப்புகள்",
+  "doctorWorkspace.noTodayQueue": "இன்று இனி சந்திப்புகள் இல்லை",
+  "doctorWorkspace.noHours": "நேரம் அமைக்கப்படவில்லை",
+  "doctorWorkspace.editDay": "{day} நேரத்தைத் திருத்துக",
+  "doctorWorkspace.scheduleLocked":
+    "வரவிருக்கும் சந்திப்புகள் இருப்பதால் இந்த நேரங்களை மாற்ற முடியாது.",
+  "doctorWorkspace.scheduleLoadError": "உங்கள் சேவை நேரங்களை ஏற்ற முடியவில்லை",
+  "doctorWorkspace.slotTooLong":
+    "சேவை நேரத்தில் குறைந்தது ஒரு சந்திப்புக்காவது நேரம் இருக்க வேண்டும்.",
+  "doctorWorkspace.removeHoursBody":
+    "வாரந்தோறும் தொடரும் இந்த நேரத்தை நீக்கவா? ஏற்கெனவே உள்ள முன்பதிவுகள் நீக்கத்தைத் தடுக்கலாம்.",
+  "doctorWorkspace.allThreads": "அனைத்து உரையாடல்கள்",
+  "doctorWorkspace.refreshInbox": "செய்திகளைப் புதுப்பிக்கவும்",
+  "doctorWorkspace.privateUnavailable":
+    "தனிப்பட்ட சந்திப்புச் செய்திச் சேவை தற்போது கிடைக்கவில்லை.",
   "doctorAppointments.loadError": "உங்கள் சந்திப்புகளை ஏற்ற முடியவில்லை",
   "doctorAppointments.nonePast": "முந்தைய சந்திப்புகள் இல்லை",
   "doctorAppointments.noneUpcoming": "வரவிருக்கும் சந்திப்புகள் இல்லை",
@@ -1194,6 +1256,32 @@ export const ta: Messages = {
   "candidates.title": "வழங்குநர் வேட்பாளர்கள்",
 
   // ---- Portal status (link state, clinic profile)
+
+  "linkRequest.linkDoctor": "ஏற்கெனவே உள்ள மருத்துவரை இணைக்கவும்",
+  "linkRequest.linkClinic": "கிளினிக்குடன் இணையவும்",
+  "linkRequest.title": "இணைப்புக் கோரிக்கைகள்",
+  "linkRequest.profileId": "மருத்துவர் சுயவிவர ஐடி",
+  "linkRequest.clinicHelp":
+    "மருத்துவரிடம் அவருடைய சுயவிவர ஐடியைக் கேளுங்கள். CareConnect இணைப்பைச் சரிபார்க்கும் முன் மருத்துவர் கோரிக்கையை ஏற்க வேண்டும்.",
+  "linkRequest.doctorHelp":
+    "உங்கள் சுயவிவர ஐடியை கிளினிக் நிர்வாகியிடம் பகிருங்கள். அந்த கிளினிக்கில் நீங்கள் மருத்துவம் பார்த்தால் மட்டுமே கோரிக்கையை ஏற்கவும்.",
+  "linkRequest.send": "இணைப்புக் கோரிக்கையை அனுப்பவும்",
+  "linkRequest.refresh": "கோரிக்கைகளைப் புதுப்பிக்கவும்",
+  "linkRequest.waiting": "மருத்துவர் ஒப்புதலுக்காகக் காத்திருக்கிறது",
+  "linkRequest.declined": "மருத்துவர் நிராகரித்தார்",
+  "linkRequest.withdrawn": "கிளினிக் திரும்பப் பெற்றது",
+  "linkRequest.accept": "கோரிக்கையை ஏற்கவும்",
+  "linkRequest.decline": "கோரிக்கையை நிராகரிக்கவும்",
+  "linkRequest.withdraw": "கோரிக்கையைத் திரும்பப் பெறவும்",
+  "linkRequest.empty": "இன்னும் இணைப்புக் கோரிக்கைகள் இல்லை.",
+  "linkRequest.loadError": "இணைப்புக் கோரிக்கைகளை ஏற்ற முடியவில்லை",
+  "linkRequest.unavailable": "இணைப்புக் கோரிக்கைகள் கிடைக்கவில்லை.",
+  "linkRequest.invalidId": "மருத்துவர் பகிர்ந்த சுயவிவர ஐடியை உள்ளிடவும்.",
+  "linkRequest.invalidDoctor": "இந்த மருத்துவர் சுயவிவரத்தை இணைக்க முடியாது.",
+  "linkRequest.duplicate": "இந்த இணைப்பு அல்லது நிலுவையில் உள்ள கோரிக்கை ஏற்கெனவே உள்ளது.",
+  "linkRequest.answered":
+    "இந்தக் கோரிக்கைக்கு ஏற்கெனவே பதில் அளிக்கப்பட்டுள்ளது. தற்போதைய நிலையைக் காண புதுப்பிக்கவும்.",
+
   "verification.inactive": "செயலில் இல்லை",
   "doctorSchedule.inactive":
     "இந்தக் கிளினிக்குடனான உங்கள் இணைப்பு செயலில் இல்லை, அதனால் இங்கே நேரங்களை அமைக்க முடியாது.",
@@ -1219,4 +1307,98 @@ export const ta: Messages = {
     "விடுபட்ட விவரங்களைச் சேர்க்க CareConnect-ஐத் தொடர்புகொள்ளவும். போர்டலில் திருத்தும் வசதி இன்னும் இல்லை.",
   // Inbox: the patient wrote last (derived from the messages, not a stored counter).
   "messages.awaitingReply": "பதிலுக்காகக் காத்திருக்கிறது",
+  "messageDoctor.button": "மருத்துவருக்குச் செய்தி அனுப்புங்கள்",
+  "messages.appointmentOn": "சந்திப்பு {date}",
+  "messages.privateDoctor": "மருத்துவருடன் தனிப்பட்ட உரையாடல்",
+  "messages.doctorWriteBelow": "இதுவரை செய்திகள் இல்லை. கீழே மருத்துவருக்கு எழுதுங்கள்.",
+  "messages.doctorNonEmergency": "தனிப்பட்ட செய்திகள் அவசரமற்ற தொடர்புக்கு மட்டுமே.",
+  "messages.doctorClosed":
+    "இந்தச் சந்திப்புக்கான மருத்துவர் உரையாடலில் புதிய செய்திகள் அனுப்ப முடியாது.",
+  "messages.senderDoctor": "மருத்துவர்:",
+  "messages.doctorLoadError": "மருத்துவரின் தனிப்பட்ட செய்திகளை ஏற்ற முடியவில்லை",
+  "setup.doctorTitle": "மருத்துவர் அமைப்பு",
+  "setup.clinicTitle": "கிளினிக் அமைப்பு",
+  "setup.done": "முடிந்தது",
+  "setup.pending": "நிலுவையில்",
+  "setup.action": "அடுத்த செயல்",
+  "setup.blocked": "முந்தைய படிகள் நிலுவையில் உள்ளன",
+  "setup.unavailable": "நிலை கிடைக்கவில்லை",
+  "setup.application": "விண்ணப்பம் சமர்ப்பிக்கப்பட்டது",
+  "setup.profile": "சுயவிவரம் அங்கீகரிக்கப்பட்டது",
+  "setup.connectionAccepted": "கிளினிக் இணைப்புக் கோரிக்கை ஏற்கப்பட்டது",
+  "setup.relationshipVerified": "கிளினிக் இணைப்பு சரிபார்க்கப்பட்டது",
+  "setup.hours": "ஆலோசனை நேரம் அமைக்கப்பட்டது",
+  "setup.ready": "முன்பதிவுகளைப் பெறத் தயார்",
+  "setup.viewApplication": "விண்ணப்பத்தைப் பார்க்கவும்",
+  "setup.noApplication": "இந்தச் சுயவிவரத்திற்கு விண்ணப்பம் பதிவாகவில்லை.",
+  "setup.doctorRespond": "தொடர கிளினிக்கின் கோரிக்கையை ஏற்கவும்.",
+  "setup.doctorRequest": "கிளினிக் கோரிக்கை அனுப்ப உங்கள் சுயவிவர ஐடியைப் பகிரவும்.",
+  "setup.viewRequests": "இணைப்புக் கோரிக்கைகளைப் பார்க்கவும்",
+  "setup.clinicVerification": "கிளினிக் சரிபார்க்கப்பட்டது",
+  "setup.linkDoctor": "மருத்துவர் அழைக்கப்பட்டார் அல்லது இணைக்கப்பட்டார்",
+  "setup.doctorConsent": "மருத்துவரின் ஒப்புதலும் சரிபார்ப்பும்",
+  "setup.manageHours": "ஆலோசனை நேரத்தை நிர்வகிக்கவும்",
+  "setup.onlineBooking": "ஆன்லைன் முன்பதிவு இயக்கப்பட்டது",
+  "setup.patientContact": "நோயாளி தொடர்புக்கு அனுமதி",
+  "setup.publishingHelp":
+    "வெளியீட்டையும் ஆன்லைன் முன்பதிவையும் CareConnect மதிப்பாய்வு செய்கிறது. நிலுவையில் இருந்தால் உங்கள் கிளினிக் அல்லது CareConnect-ஐ அணுகவும்.",
+  "setup.contactHelp": "நோயாளி தொடர்புக்கு CareConnect-இன் தனி அனுமதி தேவை.",
+  "book.review": "உங்கள் முன்பதிவைச் சரிபார்க்கவும்",
+  "book.changeSlot": "கிளினிக், தேதி அல்லது நேரத்தை மாற்றவும்",
+  "messages.clinicThread": "கிளினிக் உரையாடல்",
+  "admin.reviewNavigation": "மதிப்பாய்வுப் பட்டியல்கள்",
+  "setup.consentNotRecorded": "சரிபார்க்கப்பட்ட இணைப்புக்குத் தனி ஒப்புதல் பதிவு கிடைக்கவில்லை.",
+  "setup.hoursTooShort": "குறைந்தது ஒரு சந்திப்பிற்குப் போதுமான ஆலோசனை நேரத்தை அமைக்கவும்.",
+  "admin.awaitingLoaded": "இந்தப் பட்டியலில் மதிப்பாய்வுக்காகக் காத்திருப்பவை: {count}",
+  "welcome.title": "CareConnect-க்கு வரவேற்கிறோம்",
+  "welcome.language":
+    "உங்கள் மொழியைத் தேர்ந்தெடுக்கவும். உலக உருண்டை மெனுவில் எப்போது வேண்டுமானாலும் மாற்றலாம்.",
+  "welcome.languageError":
+    "இந்த மொழியை ஏற்ற முடியவில்லை. மீண்டும் முயலுங்கள் அல்லது தொடர்ந்து பயன்படுத்துங்கள்.",
+  "tour.help": "உதவியும் வழிகாட்டியும்",
+  "welcome.tourOffer": "சுருக்கமான வழிகாட்டியைப் பார்க்க விரும்புகிறீர்களா?",
+  "welcome.startTour": "சுருக்க வழிகாட்டியைத் தொடங்கவும்",
+  "welcome.skipTour": "இப்போது தவிர்க்கவும்",
+  "welcome.getStarted": "தொடங்குங்கள்",
+  "welcome.tourHint": "விருப்ப வழிகாட்டியை உதவியிலிருந்து எப்போது வேண்டுமானாலும் திறக்கலாம்.",
+  "tour.restart": "வழிகாட்டியை மீண்டும் தொடங்கவும்",
+  "tour.skip": "தவிர்க்கவும்",
+  "tour.back": "பின்னால்",
+  "tour.next": "அடுத்து",
+  "tour.finish": "முடிக்கவும்",
+  "tour.progress": "படி {step} / {total}",
+  "tour.title.patient": "நோயாளி வழிகாட்டி",
+  "tour.title.doctor": "மருத்துவர் தள வழிகாட்டி",
+  "tour.title.clinic": "கிளினிக் தள வழிகாட்டி",
+  "tour.title.admin": "நிர்வாக வழிகாட்டி",
+  "tour.patient.find":
+    "பெயர், சிறப்பு அல்லது பகுதி மூலம் மருத்துவர்களையும் கிளினிக்குகளையும் தேட மருத்துவர்கள் தேடல் பக்கத்தைத் திறக்கவும்.",
+  "tour.patient.book":
+    "மருத்துவரின் சுயவிவரத்தில் கிடைக்கும் நேரங்களைப் பாருங்கள். நேரத்தைத் தேர்ந்தெடுத்து, கோரிக்கை அனுப்பும் முன் கிளினிக், தேதி, நேரத்தைச் சரிபார்க்கவும்.",
+  "tour.patient.track":
+    "கிளினிக் உங்கள் கோரிக்கையை உறுதிப்படுத்தியதா, அடுத்து என்ன செய்யலாம் என்பதைக் காண முன்பதிவுகளைத் திறக்கவும்.",
+  "tour.patient.message":
+    "வசதி இருந்தால் முன்பதிவைத் திறந்து மருத்துவருக்கோ கிளினிக்கிற்கோ செய்தி அனுப்புங்கள். மருத்துவருடனான தனிப்பட்ட உரையாடல் கிளினிக் செய்திகளிலிருந்து தனியாக இருக்கும்.",
+  "tour.doctor.verify":
+    "விண்ணப்பம், சுயவிவர ஒப்புதல், கிளினிக் இணைப்புச் சரிபார்ப்பு ஆகியவற்றின் நிலையை முகப்புப் பட்டியலில் பாருங்கள்.",
+  "tour.doctor.accept":
+    "முகப்பில் கிளினிக் கோரிக்கைகளைப் பாருங்கள். பணியாற்ற விரும்பும் கிளினிக்கின் கோரிக்கையை மட்டும் ஏற்கவும். இணைப்பை CareConnect தனியாகச் சரிபார்க்கும்.",
+  "tour.doctor.hours":
+    "இணைப்பு சரிபார்க்கப்பட்ட கிளினிக்கில் ஆலோசனை நேரத்தை அமைக்க அட்டவணையைத் திறக்கவும்.",
+  "tour.doctor.manage":
+    "சந்திப்புகளைக் காண முன்பதிவுகளைத் திறக்கவும். முன்பதிவு தொடர்பான தனிப்பட்ட உரையாடல்களைக் காண செய்திகளைத் திறக்கவும்.",
+  "tour.clinic.verify":
+    "கிளினிக்கின் சரிபார்ப்பு மற்றும் அமைப்பின் நிலையை முகப்புப் பட்டியலில் பாருங்கள்.",
+  "tour.clinic.link":
+    "ஏற்கெனவே உள்ள சுயவிவரத்துடன் இணைக்க மருத்துவர்கள் பக்கத்தில் கோரிக்கை அனுப்புங்கள். மருத்துவர் ஒப்புதல் தருவார். இணைப்பை CareConnect சரிபார்க்கும்.",
+  "tour.clinic.schedule":
+    "மருத்துவர்கள் பக்கத்தில் ஆலோசனை நேரத்தை அமைத்து நாள்காட்டியில் பாருங்கள். ஆன்லைன் முன்பதிவையும் நோயாளி தொடர்பையும் CareConnect தனித்தனியாக நிர்வகிக்கிறது.",
+  "tour.clinic.manage":
+    "கோரிக்கைகளை நிர்வகிக்க முன்பதிவுகளைத் திறக்கவும். கிளினிக் உரையாடல்களுக்குப் பதிலளிக்க செய்திகளைத் திறக்கவும்.",
+  "tour.admin.review":
+    "முடிவுக்காகக் காத்திருக்கும் விண்ணப்பங்களைக் காண கிளினிக் விண்ணப்பங்களையும் மருத்துவர் விண்ணப்பங்களையும் திறக்கவும்.",
+  "tour.admin.verify":
+    "கிளினிக் இணைப்புகளை மதிப்பாய்வு செய்ய மருத்துவர் சரிபார்ப்பைத் திறக்கவும். இது மருத்துவரின் ஒப்புதலிலிருந்து தனியானது.",
+  "tour.admin.publish":
+    "அடைவு வெளியீடு, ஆன்லைன் முன்பதிவு, நோயாளி தொடர்பு அனுமதிகளை நிர்வகிக்க வழங்குநர் வெளியீட்டுப் பக்கத்தைத் திறக்கவும்.",
 };

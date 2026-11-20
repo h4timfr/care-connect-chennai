@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Mail, MapPin, Phone, SearchX } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
@@ -19,7 +20,7 @@ import { useI18n } from "@/lib/i18n";
 import { describeDataError } from "@/lib/supabase/errors";
 
 export const Route = createFileRoute("/clinics/$clinicId")({
-  head: () => ({ meta: [{ title: "Clinic — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.clinic }] }),
   component: ClinicProfile,
 });
 

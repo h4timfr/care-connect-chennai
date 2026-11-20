@@ -17,7 +17,7 @@ export function AuthCard({
 }) {
   const { t } = useI18n();
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-primary-soft via-background to-highlight-soft px-4 py-16">
+    <div className="relative flex min-h-screen items-center justify-center px-4 py-16">
       <div className="absolute end-4 top-4">
         <LanguageSelect />
       </div>

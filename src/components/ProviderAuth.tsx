@@ -31,7 +31,6 @@ const PORTAL = {
     name: "portal.clinic.name",
     accent: "border-t-highlight",
     badge: "bg-highlight-soft text-highlight",
-    backdrop: "from-highlight-soft via-background to-primary-soft",
     signup: "/clinic/signup",
     login: "/clinic/login",
   },
@@ -40,7 +39,6 @@ const PORTAL = {
     name: "portal.doctor.name",
     accent: "border-t-primary",
     badge: "bg-primary-soft text-primary",
-    backdrop: "from-primary-soft via-background to-highlight-soft",
     signup: "/doctor/signup",
     login: "/doctor/login",
   },
@@ -63,12 +61,7 @@ export function PortalAuthCard({
   const { t } = useI18n();
   const p = PORTAL[portal];
   return (
-    <div
-      className={cn(
-        "relative flex min-h-screen items-center justify-center bg-gradient-to-br px-4 py-16",
-        p.backdrop,
-      )}
-    >
+    <div className="relative flex min-h-screen items-center justify-center px-4 py-16">
       <div className="absolute end-4 top-4">
         <LanguageSelect />
       </div>

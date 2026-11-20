@@ -28,9 +28,9 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
   const { t, fmt } = useI18n();
 
   return (
-    <article className="surface-card p-4 sm:p-5">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-        <Initials name={doctor?.name ?? ""} className="h-11 w-11" />
+    <article className="rounded-xl border bg-card p-3.5 sm:p-4">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+        <Initials name={doctor?.name ?? ""} className="size-10" />
         <div className="min-w-0">
           <h3 className="truncate font-display text-base font-semibold">
             {doctor?.name ?? t("common.doctor")}
@@ -46,7 +46,7 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
         </div>
       </div>
 
-      <dl className="mt-4 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+      <dl className="mt-3 grid gap-x-4 gap-y-1.5 text-sm text-muted-foreground sm:grid-cols-2">
         <div>
           <dt className="sr-only">{t("appointment.date")}</dt>
           <dd className="flex items-center gap-2">
@@ -78,7 +78,7 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
         </div>
       </dl>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
         <Button asChild variant="outline" size="sm">
           <Link to="/appointments/$appointmentId" params={{ appointmentId: appointment.id }}>
             {t("appointment.viewDetails")}

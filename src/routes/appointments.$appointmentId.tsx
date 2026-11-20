@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, CalendarDays, Clock, MapPin, SearchX } from "lucide-react";
 import { PatientShell } from "@/components/layout/PatientShell";
@@ -5,6 +6,7 @@ import { CancelAppointmentButton } from "@/components/AppointmentCard";
 import { isCancellable, isPastAppointment } from "@/lib/supabase/appointments";
 import type { Appointment } from "@/lib/types";
 import { MessageClinicButton } from "@/components/MessageClinicButton";
+import { MessageDoctorButton } from "@/components/MessageDoctorButton";
 import { CatalogNotice } from "@/components/CatalogNotice";
 import { EmptyState, ErrorState, Initials, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -15,7 +17,7 @@ import { doctorCanPatientContact } from "@/lib/supabase/queries";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export const Route = createFileRoute("/appointments/$appointmentId")({
-  head: () => ({ meta: [{ title: "Appointment details — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.appointments }] }),
   component: AppointmentDetails,
 });
 
@@ -100,14 +102,9 @@ function AppointmentDetails() {
         </Link>
         <CatalogNotice />
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="font-display text-2xl font-bold">{t("appointmentDetails.title")}</h1>
-          <StatusBadge status={appointment.status} />
-        </div>
-        <p className="text-sm text-muted-foreground">{t(statusHelp(appointment))}</p>
-
-        <div className="surface-card space-y-6 p-5 sm:p-6">
-          <div className="flex items-start gap-4 border-b pb-6">
+        <h1 className="font-display text-2xl font-bold">{t("appointmentDetails.title")}</h1>
+        <div className="surface-card space-y-4 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
             <Initials name={doctor?.name ?? ""} className="h-16 w-16 text-xl" />
             <div className="min-w-0">
               <h2 className="font-display text-xl font-bold">
@@ -129,8 +126,24 @@ function AppointmentDetails() {
               {clinic ? <p className="mt-1 text-sm text-muted-foreground">{clinic.name}</p> : null}
             </div>
           </div>
+          <div className="space-y-2">
+            <StatusBadge status={appointment.status} />
+            <p className="text-sm text-muted-foreground">{t(statusHelp(appointment))}</p>
+          </div>
+          <div className="flex flex-wrap items-start gap-2">
+            {appointment.status !== "completed" && appointment.status !== "cancelled" ? (
+              <MessageDoctorButton key={appointment.id} appointmentId={appointment.id} />
+            ) : null}
+            <MessageClinicButton
+              clinicId={appointment.clinicId}
+              doctorId={appointment.doctorId}
+              appointmentId={appointment.id}
+              className="min-h-10"
+              contactable={doctor ? doctorCanPatientContact(doctor, appointment.clinicId) : false}
+            />
+          </div>
 
-          <dl className="grid gap-6 text-sm sm:grid-cols-2">
+          <dl className="grid gap-4 border-t pt-4 text-sm sm:grid-cols-2">
             <div className="space-y-2">
               <dt className="font-medium">{t("appointmentDetails.dateTime")}</dt>
               <dd className="flex items-center gap-2 text-muted-foreground">
@@ -170,17 +183,11 @@ function AppointmentDetails() {
             </div>
           </dl>
 
-          <div className="flex flex-wrap gap-3 border-t pt-6">
-            <MessageClinicButton
-              clinicId={appointment.clinicId}
-              doctorId={appointment.doctorId}
-              appointmentId={appointment.id}
-              contactable={doctor ? doctorCanPatientContact(doctor, appointment.clinicId) : false}
-            />
-            {isCancellable(appointment) ? (
+          {isCancellable(appointment) ? (
+            <div className="border-t pt-4">
               <CancelAppointmentButton appointment={appointment} />
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </PatientShell>

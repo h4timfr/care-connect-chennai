@@ -171,6 +171,13 @@
 
   body {
     background-color: var(--color-background);
+    /* The sign-in palette is the page backdrop. Cards and navigation keep their own surfaces. */
+    background-image: linear-gradient(
+      to bottom right in oklab,
+      var(--color-primary-soft),
+      var(--color-background),
+      var(--color-highlight-soft)
+    );
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -184,6 +191,30 @@
     letter-spacing: -0.015em;
     /* Long single words (common in Malayalam and Tamil) wrap instead of widening the page. */
     overflow-wrap: anywhere;
+  }
+
+  :lang(hi) h1,
+  :lang(hi) h2,
+  :lang(hi) h3,
+  :lang(hi) h4,
+  :lang(ta) h1,
+  :lang(ta) h2,
+  :lang(ta) h3,
+  :lang(ta) h4,
+  :lang(te) h1,
+  :lang(te) h2,
+  :lang(te) h3,
+  :lang(te) h4,
+  :lang(ml) h1,
+  :lang(ml) h2,
+  :lang(ml) h3,
+  :lang(ml) h4,
+  :lang(kn) h1,
+  :lang(kn) h2,
+  :lang(kn) h3,
+  :lang(kn) h4 {
+    letter-spacing: normal;
+    line-height: 1.4;
   }
 
   ::selection {

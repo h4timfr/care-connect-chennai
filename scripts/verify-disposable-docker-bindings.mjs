@@ -3,6 +3,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { isIP } from "node:net";
 import { pathToFileURL } from "node:url";
+import {
+  privateDockerIdentity,
+  reportServiceExecutionBlock,
+} from "./service-execution-boundary.mjs";
 
 const projectLabel = "com.supabase.cli.project";
 const workflowLabel = "com.careconnect.disposable-real-service-run";
@@ -83,12 +87,20 @@ export function parseSsListeners(output) {
   return { listeners, malformedLines };
 }
 
-function validateNetwork(network, expectedName, expectedRunLabel) {
+function validateNetwork(network, expectedName, expectedRunLabel, requireInternal = true) {
   const failures = [];
   if (!network || network.Name !== expectedName) failures.push("network-name-mismatch");
   if (network?.Driver !== "bridge") failures.push("network-driver-not-bridge");
-  if (network?.Internal !== true) failures.push("network-not-internal");
-  if (network?.EnableIPv6 === true) failures.push("network-ipv6-direct-routing-enabled");
+  if (network?.Internal !== requireInternal)
+    failures.push(requireInternal ? "network-not-internal" : "private-bridge-policy-mismatch");
+  if (
+    !requireInternal &&
+    (network?.IPAM?.Config?.length !== 1 ||
+      network.IPAM.Config[0]?.Subnet !== "172.30.0.0/24" ||
+      network.IPAM.Config[0]?.Gateway !== "172.30.0.1")
+  )
+    failures.push("private-bridge-gateway-mismatch");
+  if (network?.EnableIPv6 !== false) failures.push("network-ipv6-direct-routing-enabled");
   if (network?.Options?.[hostBindingOption] !== expectedHostBinding) {
     failures.push("network-loopback-default-missing");
   }
@@ -124,8 +136,9 @@ export function assessDockerRuntime({
   containers,
   listeners,
   malformedListenerLines = 0,
+  requireInternal = true,
 }) {
-  const failures = validateNetwork(network, expectedNetworkName, expectedRunLabel);
+  const failures = validateNetwork(network, expectedNetworkName, expectedRunLabel, requireInternal);
   if (malformedListenerLines > 0) failures.push("host-listener-output-unparseable");
   const projectContainers = containers.filter(
     (container) => container.Config?.Labels?.[projectLabel] === projectId,
@@ -252,7 +265,10 @@ async function createNetwork(name, runLabel, evidencePath, markerPath) {
       "create",
       "--driver",
       "bridge",
-      "--internal",
+      "--subnet",
+      "172.30.0.0/24",
+      "--gateway",
+      "172.30.0.1",
       "--label",
       `${workflowLabel}=${runLabel}`,
       "--opt",
@@ -263,7 +279,7 @@ async function createNetwork(name, runLabel, evidencePath, markerPath) {
     if (!/^[a-f0-9]{64}$/i.test(networkId)) throw new Error("network-id-invalid");
     writeEvidence(markerPath, { id: networkId, name, run_label: runLabel });
     const network = inspectNetwork(networkId);
-    const failures = validateNetwork(network, name, runLabel);
+    const failures = validateNetwork(network, name, runLabel, false);
     const evidence = {
       status: failures.length === 0 ? "PASS" : "FAIL",
       failure_codes: failures,
@@ -281,7 +297,7 @@ async function createNetwork(name, runLabel, evidencePath, markerPath) {
     writeEvidence(evidencePath, evidence);
     if (failures.length) throw new Error("network-policy-verification-failed");
     console.log(
-      "Disposable Docker network policy PASS (internal bridge; default published-port binding 127.0.0.1).",
+      "Disposable Docker network policy PASS (private namespace bridge; default published-port binding 127.0.0.1).",
     );
   } catch (error) {
     saveFailure(
@@ -320,6 +336,7 @@ function verifyRuntime(name, configPath, evidencePath, runLabel, startupOutcome)
       containers,
       listeners,
       malformedListenerLines: malformedLines,
+      requireInternal: false,
     });
     const result = applyStartupOutcome(assessment, startupOutcome);
     writeEvidence(evidencePath, {
@@ -436,7 +453,23 @@ function cleanupNetwork(name, markerPath, evidencePath) {
 
 const [mode, networkName, third, fourth, fifth, sixth] = process.argv.slice(2);
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  if (mode === "create") {
+  try {
+    const owned = privateDockerIdentity(mode === "create" ? "provisioned" : "verified");
+    if (
+      networkName !== owned.project ||
+      (mode === "create" && third !== owned.run) ||
+      (mode === "verify" && fifth !== owned.run)
+    )
+      throw new Error("network ownership mismatch");
+  } catch (error) {
+    if (!reportServiceExecutionBlock(error)) {
+      console.error("Disposable Docker network command refused (invalid ownership).");
+      process.exitCode = 78;
+    }
+  }
+  if (process.exitCode) {
+    // Do not inspect or remove resources when the runtime identity is unknown.
+  } else if (mode === "create") {
     await createNetwork(networkName, third, fourth, fifth);
   } else if (mode === "verify") {
     verifyRuntime(networkName, third, fourth, fifth, sixth);

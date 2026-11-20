@@ -9,10 +9,12 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useFocusMainOnNavigate } from "@/hooks/useFocusMainOnNavigate";
 import { cn } from "@/lib/utils";
 import { LanguageSelect } from "@/components/LanguageSelect";
+import { GuidedTour } from "@/components/GuidedTour";
+import { RoleTourOffer } from "@/components/RoleTourOffer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ErrorState, PageLoader } from "@/components/common";
 import { describeDataError } from "@/lib/supabase/errors";
@@ -69,6 +71,7 @@ export function ClinicShell({
   const { loading, user } = useProtectedRoute("/clinic/login");
   const { signOut } = useAuth();
   const mainRef = useRef<HTMLElement>(null);
+  const [startTour, setStartTour] = useState(0);
   const { t } = useI18n();
   const {
     activeClinic,
@@ -86,7 +89,7 @@ export function ClinicShell({
 
   if (loading || !user || isLoadingClinicAccess) {
     return (
-      <div className="min-h-screen bg-surface p-6">
+      <div className="min-h-screen p-6">
         <PageLoader
           label={!loading && !user ? t("common.redirectingToSignIn") : t("clinicShell.loading")}
         />
@@ -97,7 +100,7 @@ export function ClinicShell({
   // A failed membership lookup is not the same as having no membership.
   if (clinicAccessError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface p-6">
+      <div className="flex min-h-screen items-center justify-center p-6">
         <div className="w-full max-w-md">
           <ErrorState
             title={t("clinicShell.accessError")}
@@ -111,7 +114,7 @@ export function ClinicShell({
 
   if (!activeClinic) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
         <Stethoscope className="mb-4 h-12 w-12 text-muted-foreground" aria-hidden />
         <h1 className="mb-2 font-display text-2xl font-bold">{t("portal.clinic.noAccessTitle")}</h1>
         <p className="mb-6 max-w-md text-muted-foreground">
@@ -136,11 +139,14 @@ export function ClinicShell({
   const role = t(roleKey(activeClinic.memberRole));
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen">
       <SkipToContent />
-      <div className="mx-auto flex max-w-[1500px]">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e bg-sidebar px-4 py-5 lg:flex">
-          <Link to="/clinic" className="mb-6 flex items-center gap-2 px-2">
+      <div className="mx-auto flex max-w-[1600px]">
+        <aside className="sticky top-0 hidden h-screen w-[216px] shrink-0 flex-col border-e bg-sidebar px-3 py-5 xl:w-[244px] xl:px-4 lg:flex">
+          <Link
+            to="/clinic"
+            className="mb-6 flex items-center gap-2 rounded-lg px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+          >
             <BrandMark />
             <span className="min-w-0">
               <span className="block font-display text-sm font-bold">CareConnect</span>
@@ -149,21 +155,25 @@ export function ClinicShell({
               </span>
             </span>
           </Link>
-          <nav className="flex flex-1 flex-col gap-1" aria-label={t("clinicNav.label")}>
+          <nav
+            className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto"
+            aria-label={t("clinicNav.label")}
+          >
             {NAV.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
+                data-tour-target={item.to}
                 aria-current={isActive(item.to, item.exact) ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   isActive(item.to, item.exact)
                     ? "bg-highlight-soft text-highlight"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="min-w-0 truncate">{t(item.label)}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere]">{t(item.label)}</span>
               </Link>
             ))}
           </nav>
@@ -199,10 +209,12 @@ export function ClinicShell({
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b bg-card/90 px-4 py-3 backdrop-blur sm:px-6">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <header className="relative z-30 border-b bg-card/95 px-3 py-3 sm:px-6 lg:sticky lg:top-0">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2">
               <div className="min-w-0">
-                <h1 className="truncate font-display text-lg font-bold sm:text-xl">{title}</h1>
+                <h1 className="font-display text-xl font-bold [overflow-wrap:anywhere] sm:text-2xl">
+                  {title}
+                </h1>
                 {memberClinics.length > 1 ? (
                   <div className="mt-1 max-w-xs lg:hidden">
                     <ClinicPicker
@@ -213,49 +225,58 @@ export function ClinicShell({
                     />
                   </div>
                 ) : (
-                  <p className="truncate text-xs text-muted-foreground lg:hidden">
+                  <p className="text-xs text-muted-foreground [overflow-wrap:anywhere] lg:hidden">
                     {activeClinic.name} · {role}
                   </p>
                 )}
                 {description ? (
-                  <p className="truncate text-sm text-muted-foreground">{description}</p>
+                  <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                    {description}
+                  </p>
                 ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+                <GuidedTour role="clinic" iconOnly startRequested={startTour} />
                 <LanguageSelect />
                 <ThemeToggle />
-                {actions}
               </div>
+              {actions ? (
+                <div className="col-span-2 flex min-w-0 justify-start sm:justify-end">
+                  {actions}
+                </div>
+              ) : null}
             </div>
             <nav
-              className="-mx-1 mt-3 flex gap-1 overflow-x-auto pb-1 lg:hidden"
+              className="mt-3 flex flex-wrap gap-1.5 border-t pt-2.5 lg:hidden"
               aria-label={t("clinicNav.mobileLabel")}
             >
               {NAV.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
+                  data-tour-target={item.to}
                   aria-current={isActive(item.to, item.exact) ? "page" : undefined}
                   className={cn(
-                    "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    "inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium [overflow-wrap:anywhere] transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                     isActive(item.to, item.exact)
                       ? "bg-highlight text-highlight-foreground"
                       : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {t(item.label)}
+                  <item.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="min-w-0">{t(item.label)}</span>
                 </Link>
               ))}
               <Link
                 to="/"
-                className="shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                className="inline-flex min-h-9 max-w-full items-center rounded-lg border px-2.5 py-1.5 text-xs font-medium text-muted-foreground [overflow-wrap:anywhere] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 {t("clinicShell.patientApp")}
               </Link>
               <button
                 type="button"
                 onClick={() => void signOut()}
-                className="shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                className="inline-flex min-h-9 max-w-full items-center rounded-lg border px-2.5 py-1.5 text-xs font-medium text-muted-foreground [overflow-wrap:anywhere] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 {t("common.signOut")}
               </button>
@@ -265,8 +286,11 @@ export function ClinicShell({
             ref={mainRef}
             id="main-content"
             tabIndex={-1}
-            className="px-4 py-6 outline-none sm:px-6"
+            className="mx-auto min-w-0 max-w-screen-2xl px-3 py-4 outline-none sm:px-6 sm:py-6"
           >
+            {pathname === "/clinic" || pathname === "/clinic/" ? (
+              <RoleTourOffer role="clinic" onStart={() => setStartTour((value) => value + 1)} />
+            ) : null}
             {children}
           </main>
         </div>

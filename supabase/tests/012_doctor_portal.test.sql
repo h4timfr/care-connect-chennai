@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(65);
+SELECT extensions.plan(67);
 
 -- Contract
 SELECT extensions.ok(
@@ -124,8 +124,22 @@ SELECT extensions.is(
     'patient', 'message senders are labelled without exposing account ids'
 );
 SELECT extensions.lives_ok(
-    $$ INSERT INTO public.messages (conversation_id, sender_id, body) VALUES ('00000000-0000-0000-0000-000000000621', '00000000-0000-0000-0000-0000000006d1', 'Hello, how can I help?') $$,
-    'a doctor can reply in their conversation'
+    $$ INSERT INTO public.messages (id, conversation_id, sender_id, body)
+       VALUES ('00000000-0000-4000-8000-0000000006ff','00000000-0000-0000-0000-000000000621',
+               '00000000-0000-0000-0000-0000000006d1', 'Hello, how can I help?') $$,
+    'a doctor can reply in their conversation with a retry-safe ID'
+);
+SELECT extensions.throws_ok(
+    $$ INSERT INTO public.messages (id, conversation_id, sender_id, body)
+       VALUES ('00000000-0000-4000-8000-0000000006ff','00000000-0000-0000-0000-000000000621',
+               '00000000-0000-0000-0000-0000000006d1', 'Hello, how can I help?') $$,
+    '23505', NULL, 'a doctor retry gets a unique conflict for reconciliation through the scoped RPC'
+);
+SELECT extensions.is(
+    (SELECT count(*)::int FROM public.doctor_conversations() c
+     CROSS JOIN LATERAL jsonb_array_elements(c.messages) m
+     WHERE m->>'id' = '00000000-0000-4000-8000-0000000006ff'),
+    1, 'the doctor RPC returns exactly one copy of the retried message'
 );
 SELECT extensions.throws_ok(
     $$ INSERT INTO public.messages (conversation_id, sender_id, body) VALUES ('00000000-0000-0000-0000-000000000622', '00000000-0000-0000-0000-0000000006d1', 'x') $$,

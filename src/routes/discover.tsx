@@ -1,7 +1,8 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { PatientShell } from "@/components/layout/PatientShell";
+import { PatientPageHeading, PatientShell } from "@/components/layout/PatientShell";
 import { DoctorCard } from "@/components/DoctorCard";
 import { ClinicCard } from "@/components/ClinicCard";
 import { CardGridSkeleton, EmptyState, ErrorState } from "@/components/common";
@@ -77,7 +78,7 @@ export const Route = createFileRoute("/discover")({
   }),
   head: () => ({
     meta: [
-      { title: "Find doctors and clinics in Chennai — CareConnect" },
+      { title: pageTitles.discovery },
       {
         name: "description",
         content:
@@ -154,14 +155,7 @@ function Discover() {
     });
   }, [debouncedText, navigate]);
 
-  // Filter options come from the listed data, so every option can return results.
-  const specialtyOptions = useMemo(() => {
-    const present = new Set([
-      ...catalogDoctors.map((d) => d.specialtyId),
-      ...catalogClinics.flatMap((c) => c.specialtyIds),
-    ]);
-    return SPECIALTIES.filter((s) => present.has(s.id));
-  }, [catalogDoctors, catalogClinics]);
+  const specialtyOptions = SPECIALTIES;
 
   const languageOptions = useMemo(
     () => [...new Set(catalogDoctors.flatMap((d) => d.languages))].sort(),
@@ -276,19 +270,16 @@ function Discover() {
     text.trim() !== debouncedText;
 
   return (
-    <PatientShell>
-      <div className="space-y-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold">{t("discover.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("discover.subtitle")}</p>
-        </div>
+    <PatientShell compact>
+      <div className="space-y-4">
+        <PatientPageHeading title={t("discover.title")} description={t("discover.subtitle")} />
 
         <form
           role="search"
           onSubmit={(e) => e.preventDefault()}
-          className="surface-card flex items-center gap-2 p-2 pl-4 focus-within:ring-2 focus-within:ring-ring"
+          className="flex items-center gap-2 rounded-xl border bg-card p-1.5 ps-3 shadow-xs focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30"
         >
-          <Search className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+          <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           <label htmlFor="discover-search" className="sr-only">
             {t("discover.searchLabel")}
           </label>
@@ -358,17 +349,17 @@ function Discover() {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
           <aside
             id="discover-filters"
             aria-label={t("discover.doctorFilters")}
             className={cn(
-              "surface-card h-fit space-y-5 p-4 lg:sticky lg:top-24 lg:block",
+              "h-fit min-w-0 space-y-3.5 rounded-xl border bg-card p-3.5 lg:sticky lg:top-20 lg:block",
               showFilters ? "block" : "hidden",
             )}
           >
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">{t("discover.filters")}</h2>
+              <h2 className="text-sm font-semibold">{t("discover.filters")}</h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -495,7 +486,7 @@ function Discover() {
 
           <div className="min-w-0">
             <Tabs value={tab} onValueChange={setTab}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <TabsList>
                   <TabsTrigger value="doctors">
                     {doctors && doctors.length < SEARCH_RESULT_LIMIT
@@ -534,7 +525,11 @@ function Discover() {
               </div>
 
               <p
-                className="mt-3 flex min-h-5 items-center gap-1.5 text-xs text-muted-foreground"
+                className={
+                  updating
+                    ? "mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"
+                    : "sr-only"
+                }
                 aria-live="polite"
               >
                 {updating ? (
@@ -545,7 +540,7 @@ function Discover() {
                 ) : null}
               </p>
 
-              <TabsContent value="doctors" className="mt-1">
+              <TabsContent value="doctors" className="mt-3">
                 <ResultsState
                   query={doctorResults}
                   errorTitle={t("discover.loadErrorDoctors")}
@@ -558,7 +553,7 @@ function Discover() {
                 >
                   {(list) => (
                     <>
-                      <p className="mb-3 text-sm text-muted-foreground">
+                      <p className="mb-2 text-sm text-muted-foreground">
                         {t.plural(
                           hasAnyCriteria ? "discover.matches" : "discover.listed",
                           list.length,
@@ -567,7 +562,7 @@ function Discover() {
                           ? ` ${t("discover.limitNote", { limit: fmt.number(SEARCH_RESULT_LIMIT) })}`
                           : ""}
                       </p>
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid gap-3 md:grid-cols-2">
                         {list.map((d) => (
                           <DoctorCard key={d.id} doctor={d} />
                         ))}
@@ -577,7 +572,7 @@ function Discover() {
                 </ResultsState>
               </TabsContent>
 
-              <TabsContent value="clinics" className="mt-1">
+              <TabsContent value="clinics" className="mt-3">
                 <ResultsState
                   query={clinicResults}
                   errorTitle={t("discover.loadErrorClinics")}
@@ -593,11 +588,11 @@ function Discover() {
                   {(list) => (
                     <>
                       {list.length >= SEARCH_RESULT_LIMIT ? (
-                        <p className="mb-3 text-sm text-muted-foreground">
+                        <p className="mb-2 text-sm text-muted-foreground">
                           {t("discover.limitNote", { limit: fmt.number(SEARCH_RESULT_LIMIT) })}
                         </p>
                       ) : null}
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid gap-3 md:grid-cols-2">
                         {list.map((c) => (
                           <ClinicCard key={c.id} clinic={c} />
                         ))}
@@ -655,6 +650,7 @@ function ResultsState<T>({
   if (query.error) {
     return (
       <ErrorState
+        compact
         title={errorTitle}
         message={t(describeDataError(query.error))}
         onRetry={() => void query.refetch()}
@@ -665,6 +661,7 @@ function ResultsState<T>({
   if (!query.data.length) {
     return (
       <EmptyState
+        compact
         icon={SearchX}
         title={emptyTitle}
         description={emptyDescription}

@@ -64,6 +64,7 @@ export const en = {
   "specialty.dermatology": "Dermatology",
   "specialty.gynecology": "Gynaecology",
   "specialty.neurology": "Neurology",
+  "specialty.psychiatry": "Psychiatry",
   "specialty.ophthalmology": "Ophthalmology",
   "specialty.dentistry": "Dentistry",
   "specialty.ent": "ENT",
@@ -333,9 +334,11 @@ export const en = {
   "messages.loading": "Loading messages…",
   "messages.loadError": "We couldn't load your messages",
   "messages.notSent": "Message not sent. {reason}",
+  "messages.deliveryUnconfirmed":
+    "Delivery could not be confirmed. Send again to retry the same message.",
   "messages.emptyTitle": "No conversations yet",
   "messages.emptyBody":
-    "To ask a clinic about an appointment, open a doctor or clinic page, or one of your appointments, and choose “Message clinic”.",
+    "Open an appointment to message your doctor or clinic when available. For a general enquiry, choose Message clinic on a doctor or clinic page.",
   "messages.conversations": "Conversations",
   "messages.noMessages": "No messages yet",
   "messages.back": "Back to conversations",
@@ -536,6 +539,32 @@ export const en = {
   "clinicShell.role.other": "Clinic member",
 
   // ---- Clinic dashboard
+  "clinicWorkspace.history": "History",
+  "clinicWorkspace.details": "Appointment details",
+  "clinicWorkspace.doctorUnavailable": "Doctor details unavailable",
+  "clinicWorkspace.clearFilters": "Clear filters",
+  "clinicWorkspace.statusReview": "Review the appointment before changing its status.",
+  "clinicWorkspace.applyChange": "Apply status change",
+  "clinicWorkspace.upcomingBookings": "Upcoming bookings",
+  "clinicWorkspace.rosterSummary": "{verified} verified · {scheduled} with hours set",
+  "clinicWorkspace.viewAppointments": "View appointments",
+  "clinicWorkspace.removeHours": "Remove hours",
+  "clinicWorkspace.unpublished": "Not published in the directory",
+  "clinicWorkspace.unavailable": "Could not check",
+  "clinicWorkspace.bookingConfigured": "Booking hours configured",
+  "clinicWorkspace.bookingPermission": "Online booking permission",
+  "clinicWorkspace.enabled": "Enabled",
+  "clinicWorkspace.disabled": "Disabled",
+  "clinicWorkspace.patientContact": "Permission for patient enquiries",
+  "clinicWorkspace.roster": "Doctor roster",
+  "clinicWorkspace.rosterCount": "{total} linked · {verified} active and verified",
+  "clinicWorkspace.noDayVisits": "No appointments for this day.",
+  "clinicWorkspace.weeklyHoursNote":
+    "Recurring consultation hours. Check appointments separately for existing bookings.",
+  "clinicWorkspace.noDayHours": "No verified doctor has recurring hours on this day.",
+  "clinicWorkspace.needsReplyFilter": "Needs a reply",
+  "clinicWorkspace.noRepliesNeeded": "No conversations are waiting for a reply.",
+  "clinicWorkspace.sending": "Sending reply…",
   "clinicDashboard.title": "Dashboard",
   "clinicDashboard.overview": "Overview for {date}",
   "clinicDashboard.loading": "Loading dashboard…",
@@ -636,7 +665,7 @@ export const en = {
   "clinicProfile.title": "Clinic profile",
   "clinicProfile.subtitle": "How your clinic appears to patients",
   "clinicProfile.readOnly":
-    "Editing clinic details isn't available in the portal yet. This is the information patients currently see.",
+    "Contact CareConnect to update clinic details. Directory publication, online booking, and patient enquiries are managed separately.",
   "clinicProfile.name": "Clinic name",
   "clinicProfile.description": "Description",
 
@@ -686,6 +715,12 @@ export const en = {
   "admin.tab.doctors": "Doctor verification",
   "admin.tab.publication": "Provider publishing",
   "admin.tab.teams": "Clinic teams",
+  "admin.confirmPublicationAction":
+    "Confirm {action} for {clinic}. Review the resulting permissions before applying this change.",
+  "admin.acknowledgeContactConsent":
+    "I confirm the clinic has explicitly authorized patient enquiries.",
+  "admin.publicationChanged":
+    "The clinic’s publication settings changed. Close this dialog and review the current settings before trying again.",
   "admin.publicationHelp":
     "Verification, directory publication, permission for patient messages, and online booking are separate controls. Grant patient contact permission only after confirming the clinic has authorized patient enquiries. Sample clinics cannot be enabled.",
   "admin.noPublicationClinics": "No real clinic records are available to review.",
@@ -871,6 +906,27 @@ export const en = {
   "admin.doctorVerifyReminder":
     "Approve only after confirming the registration number with the medical council and the applicant's identity.",
   "admin.tab.doctorApplications": "Doctor applications",
+  "doctorWorkspace.allAppointments": "All appointments",
+  "doctorWorkspace.period": "Appointment period",
+  "doctorWorkspace.status": "Status",
+  "doctorWorkspace.allStatuses": "All statuses",
+  "doctorWorkspace.date": "Date",
+  "doctorWorkspace.noMatches": "No appointments match these filters",
+  "doctorWorkspace.todayAppointments": "Appointments today",
+  "doctorWorkspace.quickLinks": "Quick access",
+  "doctorWorkspace.viewToday": "View today’s appointments",
+  "doctorWorkspace.todayQueue": "Remaining today",
+  "doctorWorkspace.noTodayQueue": "No more appointments today",
+  "doctorWorkspace.noHours": "No hours set",
+  "doctorWorkspace.editDay": "Edit hours for {day}",
+  "doctorWorkspace.scheduleLocked": "Existing future appointments prevent changes to these hours.",
+  "doctorWorkspace.scheduleLoadError": "We couldn't load your opening hours",
+  "doctorWorkspace.slotTooLong": "The opening window must fit at least one appointment.",
+  "doctorWorkspace.removeHoursBody":
+    "Remove this recurring window? Existing bookings may prevent removal.",
+  "doctorWorkspace.allThreads": "All conversations",
+  "doctorWorkspace.refreshInbox": "Refresh inbox",
+  "doctorWorkspace.privateUnavailable": "Private appointment messaging is currently unavailable.",
   "doctorAppointments.loadError": "We couldn't load your appointments",
   "doctorAppointments.nonePast": "No past appointments",
   "doctorAppointments.noneUpcoming": "No upcoming appointments",
@@ -1152,6 +1208,32 @@ export const en = {
   "candidates.title": "Provider candidates",
 
   // ---- Portal status (link state, clinic profile)
+
+  "linkRequest.linkDoctor": "Link an existing doctor",
+  "linkRequest.linkClinic": "Link to a clinic",
+  "linkRequest.title": "Relationship requests",
+  "linkRequest.profileId": "Doctor profile ID",
+  "linkRequest.clinicHelp":
+    "Ask the doctor for their profile ID. They must accept before CareConnect can verify the relationship.",
+  "linkRequest.doctorHelp":
+    "Share your profile ID with the clinic administrator. Accept a request only if you practise at that clinic.",
+  "linkRequest.send": "Send link request",
+  "linkRequest.refresh": "Refresh requests",
+  "linkRequest.waiting": "Waiting for doctor approval",
+  "linkRequest.declined": "Declined by doctor",
+  "linkRequest.withdrawn": "Withdrawn by clinic",
+  "linkRequest.accept": "Accept request",
+  "linkRequest.decline": "Decline request",
+  "linkRequest.withdraw": "Withdraw request",
+  "linkRequest.empty": "No relationship requests yet.",
+  "linkRequest.loadError": "We couldn't load relationship requests",
+  "linkRequest.unavailable": "Relationship requests are unavailable.",
+  "linkRequest.invalidId": "Enter the doctor profile ID shared by the doctor.",
+  "linkRequest.invalidDoctor": "That doctor profile isn't available for linking.",
+  "linkRequest.duplicate": "This relationship or an open request already exists.",
+  "linkRequest.answered":
+    "This request has already been answered. Refresh to see its current status.",
+
   "verification.inactive": "Inactive",
   "doctorSchedule.inactive": "This clinic link is inactive, so opening hours can't be set here.",
   "doctorSchedule.rejected":
@@ -1176,6 +1258,97 @@ export const en = {
     "To add missing details, contact CareConnect. Editing isn't available in the portal yet.",
   // Inbox: the patient wrote last (derived from the messages, not a stored counter).
   "messages.awaitingReply": "Awaiting reply",
+  "messageDoctor.button": "Message doctor",
+  "messages.appointmentOn": "Appointment {date}",
+  "messages.privateDoctor": "Private doctor conversation",
+  "messages.doctorWriteBelow": "No messages yet. Write to your doctor below.",
+  "messages.doctorNonEmergency": "Private messages are for non-emergency communication only.",
+  "messages.doctorClosed": "This appointment’s doctor conversation is closed to new messages.",
+  "messages.senderDoctor": "Doctor:",
+  "messages.doctorLoadError": "We couldn't load private doctor messages",
+  "setup.doctorTitle": "Doctor setup",
+  "setup.clinicTitle": "Clinic setup",
+  "setup.done": "Complete",
+  "setup.pending": "Pending",
+  "setup.action": "Next action",
+  "setup.blocked": "Waiting for earlier steps",
+  "setup.unavailable": "Status unavailable",
+  "setup.application": "Application submitted",
+  "setup.profile": "Profile approved",
+  "setup.connectionAccepted": "Clinic connection accepted",
+  "setup.relationshipVerified": "Clinic relationship verified",
+  "setup.hours": "Consultation hours configured",
+  "setup.ready": "Ready to receive appointments",
+  "setup.viewApplication": "View application",
+  "setup.noApplication": "No application is recorded for this profile.",
+  "setup.doctorRespond": "Accept a clinic request to continue.",
+  "setup.doctorRequest": "Share your profile ID with the clinic so it can send a request.",
+  "setup.viewRequests": "View link requests",
+  "setup.clinicVerification": "Clinic verified",
+  "setup.linkDoctor": "Doctor invited or linked",
+  "setup.doctorConsent": "Doctor consent and verification",
+  "setup.manageHours": "Manage consultation hours",
+  "setup.onlineBooking": "Online booking enabled",
+  "setup.patientContact": "Patient contact enabled",
+  "setup.publishingHelp":
+    "CareConnect reviews publishing and online booking. Check with your clinic or CareConnect if this is still pending.",
+  "setup.contactHelp": "Patient contact requires separate authorization from CareConnect.",
+  "book.review": "Review your appointment",
+  "book.changeSlot": "Change clinic, date or time",
+  "messages.clinicThread": "Clinic conversation",
+  "admin.reviewNavigation": "Review queues",
+  "setup.consentNotRecorded": "No separate consent record was found for the verified link.",
+  "setup.hoursTooShort": "Set a consultation window long enough for at least one appointment.",
+  "admin.awaitingLoaded": "Awaiting review in this list: {count}",
+  "welcome.title": "Welcome to CareConnect",
+  "welcome.language": "Choose your language. You can change it any time from the globe menu.",
+  "welcome.languageError": "We couldn’t load that language. Try again or keep browsing.",
+  "tour.help": "Help and tour",
+  "welcome.tourOffer": "Take a quick tour?",
+  "welcome.startTour": "Start quick tour",
+  "welcome.skipTour": "Skip for now",
+  "welcome.getStarted": "Get started",
+  "welcome.tourHint": "You can explore the optional guide from Help at any time.",
+  "tour.restart": "Restart tour",
+  "tour.skip": "Skip",
+  "tour.back": "Back",
+  "tour.next": "Next",
+  "tour.finish": "Finish",
+  "tour.progress": "Step {step} of {total}",
+  "tour.title.patient": "Patient guide",
+  "tour.title.doctor": "Doctor portal guide",
+  "tour.title.clinic": "Clinic portal guide",
+  "tour.title.admin": "Administration guide",
+  "tour.patient.find":
+    "Open Find doctors to search for doctors and clinics by name, specialty, or area.",
+  "tour.patient.book":
+    "On a doctor’s profile, check available times. Choose a slot and review the clinic, date, and time before requesting the appointment.",
+  "tour.patient.track":
+    "Open Appointments to see whether the clinic has confirmed your request and what you can do next.",
+  "tour.patient.message":
+    "Open an appointment to see Message doctor or Message clinic when available. Private doctor conversations are separate from clinic messages.",
+  "tour.doctor.verify":
+    "Use the dashboard checklist to follow your application, profile approval, and clinic verification.",
+  "tour.doctor.accept":
+    "Review clinic requests on your dashboard. Accept only a clinic you intend to work with. CareConnect verifies the relationship separately.",
+  "tour.doctor.hours":
+    "Open Schedule to set consultation hours at a clinic where your relationship is verified.",
+  "tour.doctor.manage":
+    "Open Appointments to see your visits. Open Messages to find your private appointment conversations.",
+  "tour.clinic.verify":
+    "Use the dashboard checklist to see the clinic’s verification and setup status.",
+  "tour.clinic.link":
+    "Open Doctors to request a link to an existing profile. The doctor gives consent and CareConnect verifies the relationship.",
+  "tour.clinic.schedule":
+    "Set consultation hours under Doctors and review them in the Calendar. CareConnect controls online booking and patient contact separately.",
+  "tour.clinic.manage":
+    "Open Appointments to manage booking requests and Messages to respond to clinic conversations.",
+  "tour.admin.review":
+    "Use Clinic applications and Doctor applications to find reviews waiting for a decision.",
+  "tour.admin.verify":
+    "Use Doctor verification to review clinic relationships. Verification is separate from the doctor’s consent.",
+  "tour.admin.publish":
+    "Open Provider publishing to manage directory visibility, online booking, and patient contact permissions.",
 } as const;
 
 export type MessageKey = keyof typeof en;

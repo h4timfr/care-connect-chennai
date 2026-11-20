@@ -111,6 +111,12 @@ export const SPECIALTIES: SpecialtyInfo[] = [
     keywords: ["neuro"],
   },
   {
+    id: "psychiatry",
+    name: "Psychiatry",
+    icon: "Brain",
+    keywords: ["psychiat", "mental health"],
+  },
+  {
     id: "ophthalmology",
     name: "Ophthalmology",
     icon: "Eye",

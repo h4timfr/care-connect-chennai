@@ -1,15 +1,10 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const runId = process.env["CARECONNECT_RUN_ID"]!;
-const workflows = [
-  { id: "patient", title: "patient booking and cancellation" },
-  { id: "clinic", title: "clinic appointment visibility" },
-  { id: "doctor", title: "doctor appointment and messaging" },
-  { id: "administrator", title: "administrator publication control" },
-] as const;
-type WorkflowId = (typeof workflows)[number]["id"];
+const workflowIds = ["patient", "clinic", "doctor", "administrator"] as const;
+type WorkflowId = (typeof workflowIds)[number];
 type AssertionResult = { name: string; status: "PASS" | "FAIL" };
 type WorkflowResult = {
   name: WorkflowId;
@@ -95,205 +90,249 @@ async function patientAppointment(page: Page) {
   );
 }
 
-test("patient books and cancels an appointment through the interface", async ({ page }) => {
-  addNetworkEvidence(page);
-  const clinicId = process.env["CARECONNECT_CLINIC_ID"]!;
-  const doctorId = process.env["CARECONNECT_DOCTOR_ID"]!;
-  const date = process.env["CARECONNECT_BROWSER_DATE"]!;
-  const time = process.env["CARECONNECT_BROWSER_TIME"]!;
-  const reason = process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]!;
+test(
+  "patient books and cancels an appointment through the interface",
+  { tag: "@workflow-patient" },
+  async ({ page }) => {
+    addNetworkEvidence(page);
+    const clinicId = process.env["CARECONNECT_CLINIC_ID"]!;
+    const doctorId = process.env["CARECONNECT_DOCTOR_ID"]!;
+    const date = process.env["CARECONNECT_BROWSER_DATE"]!;
+    const time = process.env["CARECONNECT_BROWSER_TIME"]!;
+    const reason = process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]!;
 
-  await patientAppointment(page);
-  await page.goto(
-    "/book/" +
-      doctorId +
-      "?date=" +
-      date +
-      "&time=" +
-      encodeURIComponent(time) +
-      "&clinicId=" +
-      clinicId,
-  );
-  await check(
-    expect(page.getByRole("heading", { name: "Synthetic CI Doctor" })).toBeVisible({
-      timeout: 20_000,
-    }),
-    "booking page displays the published synthetic doctor",
-  );
-  const slotLabel = time.replace(/^0(?=\d:)/, "");
-  const slot = page.getByRole("button", { name: new RegExp(slotLabel) }).first();
-  await check(
-    slot.isEnabled().then((enabled) => expect(enabled).toBe(true)),
-    "available slot is enabled",
-  );
-  await slot.click();
-  await page.getByLabel("Reason for visit (optional)").fill(reason);
-  await page.getByRole("button", { name: "Request appointment" }).click();
-  await check(
-    expect(page).toHaveURL(/\/appointments\/[0-9a-f-]+/i, { timeout: 20_000 }),
-    "booking navigates to appointment confirmation",
-  );
-  await check(
-    expect(page.getByRole("heading", { name: "Appointment details" })).toBeVisible(),
-    "appointment confirmation details render",
-  );
-  await check(
-    expect(page.getByText("Awaiting confirmation", { exact: true })).toBeVisible(),
-    "new appointment status is shown as awaiting confirmation",
-  );
+    await patientAppointment(page);
+    await page.goto(
+      "/book/" +
+        doctorId +
+        "?date=" +
+        date +
+        "&time=" +
+        encodeURIComponent(time) +
+        "&clinicId=" +
+        clinicId,
+    );
+    await check(
+      expect(page.getByRole("heading", { name: "Synthetic CI Doctor" })).toBeVisible({
+        timeout: 20_000,
+      }),
+      "booking page displays the published synthetic doctor",
+    );
+    const review = page.getByRole("region", { name: "Review your appointment" });
+    const request = review.getByRole("button", { name: "Request appointment" });
+    await check(
+      expect(request).toBeEnabled({ timeout: 20_000 }),
+      "the selected slot is revalidated before the appointment can be requested",
+    );
+    const requestedHour = Number(time.slice(0, 2));
+    const expectedTime = `${requestedHour % 12 || 12}:${time.slice(3, 5)} ${requestedHour < 12 ? "AM" : "PM"}`;
+    await check(
+      expect(review.getByText(new RegExp(`${expectedTime}.*IST`))).toBeVisible(),
+      "the review shows the selected appointment time in India Standard Time",
+    );
+    await page.getByLabel("Reason for visit (optional)").fill(reason);
+    await request.click();
+    await check(
+      expect(page).toHaveURL(/\/appointments\/[0-9a-f-]+/i, { timeout: 20_000 }),
+      "booking navigates to appointment confirmation",
+    );
+    await check(
+      expect(page.getByRole("heading", { name: "Appointment details" })).toBeVisible(),
+      "appointment confirmation details render",
+    );
+    await check(
+      expect(page.getByText("Awaiting confirmation", { exact: true })).toBeVisible(),
+      "new appointment status is shown as awaiting confirmation",
+    );
 
-  await page.getByRole("button", { name: "Cancel appointment" }).click();
-  const confirmation = page.getByRole("alertdialog");
-  await check(
-    expect(confirmation.getByRole("heading", { name: "Cancel this appointment?" })).toBeVisible(),
-    "cancellation confirmation is shown",
-  );
-  await confirmation.getByRole("button", { name: "Cancel appointment" }).click();
-  await check(
-    expect(page.getByText("Cancelled", { exact: true })).toBeVisible({ timeout: 20_000 }),
-    "cancelled appointment status updates in the interface",
-  );
-});
+    await page.getByRole("button", { name: "Cancel appointment" }).click();
+    const confirmation = page.getByRole("alertdialog");
+    await check(
+      expect(confirmation.getByRole("heading", { name: "Cancel this appointment?" })).toBeVisible(),
+      "cancellation confirmation is shown",
+    );
+    await confirmation.getByRole("button", { name: "Cancel appointment" }).click();
+    await check(
+      expect(page.getByText("Cancelled", { exact: true })).toBeVisible({ timeout: 20_000 }),
+      "cancelled appointment status updates in the interface",
+    );
+  },
+);
 
-test("clinic staff sees the created appointment in the clinic portal", async ({ page }) => {
-  addNetworkEvidence(page);
-  await signIn(
-    page,
-    "clinic",
-    process.env["CARECONNECT_CLINIC_EMAIL"]!,
-    process.env["CARECONNECT_CLINIC_PASSWORD"]!,
-  );
-  await page.goto("/clinic/appointments");
-  await check(
-    expect(page.getByRole("heading", { name: "Appointments" })).toBeVisible({ timeout: 20_000 }),
-    "clinic appointment page opens for an authorized staff member",
-  );
-  const appointmentRow = page
-    .getByRole("row")
-    .filter({ hasText: "Synthetic CI Patient" })
-    .filter({ hasText: "Synthetic CI Doctor" })
-    .filter({ hasText: process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]! })
-    .first();
-  await check(
-    expect(appointmentRow).toBeVisible({ timeout: 20_000 }),
-    "clinic appointment table renders the synthetic patient and doctor",
-  );
-});
+test(
+  "clinic staff sees the created appointment in the clinic portal",
+  { tag: "@workflow-clinic" },
+  async ({ page }) => {
+    addNetworkEvidence(page);
+    await signIn(
+      page,
+      "clinic",
+      process.env["CARECONNECT_CLINIC_EMAIL"]!,
+      process.env["CARECONNECT_CLINIC_PASSWORD"]!,
+    );
+    await page.goto("/clinic/appointments");
+    await check(
+      expect(page.getByRole("heading", { name: "Appointments" })).toBeVisible({ timeout: 20_000 }),
+      "clinic appointment page opens for an authorized staff member",
+    );
+    const rows = page
+      .getByRole("row")
+      .filter({ hasText: "Synthetic CI Patient" })
+      .filter({ hasText: "Synthetic CI Doctor" });
+    await check(
+      expect(rows.first()).toBeVisible({ timeout: 20_000 }),
+      "clinic appointment table renders the synthetic patient and doctor",
+    );
+    const reason = process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]!;
+    const dialog = page.getByRole("dialog");
+    let found = false;
+    for (const row of await rows.all()) {
+      await row.getByRole("button", { name: "Appointment details" }).click();
+      await expect(dialog).toBeVisible();
+      if (await dialog.getByText(reason, { exact: true }).isVisible()) {
+        found = true;
+        break;
+      }
+      await page.keyboard.press("Escape");
+    }
+    await check(
+      Promise.resolve().then(() => expect(found).toBe(true)),
+      "clinic appointment details show the reason entered during the patient booking",
+    );
+  },
+);
 
-test("doctor sees the appointment, receives a patient message, and replies in the portals", async ({
-  page,
-  browser,
-}) => {
-  addNetworkEvidence(page);
-  const conversationId = process.env["CARECONNECT_CONVERSATION_ID"]!;
-  const patientMessage = "Synthetic UI patient message " + runId;
-  const doctorReply = "Synthetic UI doctor reply " + runId;
+test(
+  "doctor sees the appointment, receives a patient message, and replies in the portals",
+  { tag: "@workflow-doctor" },
+  async ({ page, browser }) => {
+    addNetworkEvidence(page);
+    const conversationId = process.env["CARECONNECT_CONVERSATION_ID"]!;
+    const patientMessage = "Synthetic UI patient message " + runId;
+    const doctorReply = "Synthetic UI doctor reply " + runId;
 
-  await patientAppointment(page);
-  await page.goto("/messages?c=" + conversationId);
-  const patientInput = page.getByLabel("Message", { exact: true });
-  await check(
-    expect(patientInput).toBeVisible({ timeout: 20_000 }),
-    "patient message thread opens",
-  );
-  await patientInput.fill(patientMessage);
-  await page.getByRole("button", { name: "Send message" }).click();
-  await check(
-    expect(page.getByText(patientMessage, { exact: true })).toBeVisible({ timeout: 20_000 }),
-    "patient message appears in the patient portal",
-  );
+    await patientAppointment(page);
+    await page.goto("/messages?c=" + conversationId);
+    const patientInput = page.getByLabel("Message", { exact: true });
+    await check(
+      expect(patientInput).toBeVisible({ timeout: 20_000 }),
+      "patient message thread opens",
+    );
+    await patientInput.fill(patientMessage);
+    await page.getByRole("button", { name: "Send message" }).click();
+    await check(
+      expect(page.getByText(patientMessage, { exact: true })).toBeVisible({ timeout: 20_000 }),
+      "patient message appears in the patient portal",
+    );
 
-  const doctorPage = await browser.newPage();
-  addNetworkEvidence(doctorPage);
-  await signIn(
-    doctorPage,
-    "doctor",
-    process.env["CARECONNECT_DOCTOR_EMAIL"]!,
-    process.env["CARECONNECT_DOCTOR_PASSWORD"]!,
-  );
-  await doctorPage.goto("/doctor/appointments");
-  const appointment = doctorPage
-    .getByRole("listitem")
-    .filter({ hasText: "Synthetic CI Patient" })
-    .filter({ hasText: process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]! });
-  await check(
-    expect(appointment).toBeVisible({ timeout: 20_000 }),
-    "doctor appointments page displays the appointment created through patient UI",
-  );
-  await doctorPage.goto("/doctor/messages?c=" + conversationId);
-  const doctorThread = doctorPage.getByRole("region", { name: "Synthetic CI Patient" });
-  await check(
-    expect(doctorThread.getByText(patientMessage, { exact: true })).toBeVisible({
-      timeout: 40_000,
-    }),
-    "doctor inbox receives the patient message through its scoped inbox query",
-  );
-  await doctorPage.getByLabel("Write a reply", { exact: true }).fill(doctorReply);
-  await doctorPage.getByRole("button", { name: "Send reply" }).click();
-  await check(
-    expect(doctorThread.getByText(doctorReply, { exact: true })).toBeVisible({ timeout: 20_000 }),
-    "doctor reply appears in the doctor portal thread",
-  );
+    const doctorPage = await browser.newPage();
+    addNetworkEvidence(doctorPage);
+    await signIn(
+      doctorPage,
+      "doctor",
+      process.env["CARECONNECT_DOCTOR_EMAIL"]!,
+      process.env["CARECONNECT_DOCTOR_PASSWORD"]!,
+    );
+    await doctorPage.goto("/doctor/appointments");
+    const appointment = doctorPage
+      .getByRole("listitem")
+      .filter({ hasText: "Synthetic CI Patient" })
+      .filter({ hasText: process.env["CARECONNECT_BROWSER_APPOINTMENT_REASON"]! });
+    await check(
+      expect(appointment).toBeVisible({ timeout: 20_000 }),
+      "doctor appointments page displays the appointment created through patient UI",
+    );
+    await doctorPage.goto("/doctor/messages?c=" + conversationId);
+    const doctorThread = doctorPage.getByRole("region", { name: "Synthetic CI Patient" });
+    await check(
+      expect(doctorThread.getByText(patientMessage, { exact: true })).toBeVisible({
+        timeout: 40_000,
+      }),
+      "doctor inbox receives the patient message through its scoped inbox query",
+    );
+    await doctorPage.getByLabel("Write a reply", { exact: true }).fill(doctorReply);
+    await doctorPage.getByRole("button", { name: "Send reply" }).click();
+    await check(
+      expect(doctorThread.getByText(doctorReply, { exact: true })).toBeVisible({ timeout: 20_000 }),
+      "doctor reply appears in the doctor portal thread",
+    );
 
-  await page.reload();
-  await check(
-    expect(page.getByText(doctorReply, { exact: true })).toBeVisible({ timeout: 20_000 }),
-    "patient sees the doctor reply in the patient portal",
-  );
-  await doctorPage.close();
-});
+    await page.reload();
+    await check(
+      expect(
+        page.locator('[aria-live="polite"]').getByText(doctorReply, { exact: true }),
+      ).toBeVisible({ timeout: 20_000 }),
+      "patient sees the doctor reply in the patient portal",
+    );
+    await doctorPage.close();
+  },
+);
 
-test("administrator reviews the clinic and changes publication through the interface", async ({
-  page,
-}) => {
-  addNetworkEvidence(page);
-  await signIn(
-    page,
-    "patient",
-    process.env["CARECONNECT_ADMIN_EMAIL"]!,
-    process.env["CARECONNECT_ADMIN_PASSWORD"]!,
-  );
-  await page.goto("/admin");
-  await check(
-    expect(page.getByRole("heading", { name: "CareConnect administration" })).toBeVisible({
-      timeout: 20_000,
-    }),
-    "platform administrator opens the administration interface",
-  );
-  await page.getByRole("tab", { name: "Provider publishing" }).click();
-  const clinic = page
-    .getByRole("listitem")
-    .filter({ has: page.getByRole("heading", { name: process.env["CARECONNECT_CLINIC_NAME"]! }) });
-  await check(
-    expect(clinic).toBeVisible({ timeout: 20_000 }),
-    "publication panel displays the synthetic clinic",
-  );
-  await check(
-    expect(clinic.getByText("Enabled", { exact: true }).first()).toBeVisible(),
-    "clinic publication begins enabled",
-  );
-  await clinic.getByRole("button", { name: "Unpublish listing" }).click();
-  await check(
-    expect(clinic.getByText("Disabled", { exact: true }).first()).toBeVisible({ timeout: 20_000 }),
-    "authorized administrator unpublishes the clinic through the UI",
-  );
-  await clinic.getByRole("button", { name: "Publish listing" }).click();
-  await check(
-    expect(clinic.getByText("Enabled", { exact: true }).first()).toBeVisible({ timeout: 20_000 }),
-    "authorized administrator restores clinic publication through the UI",
-  );
-});
-
-function workflowId(title: string): WorkflowId | null {
-  return workflows.find((workflow) => workflow.title === title)?.id ?? null;
-}
+test(
+  "administrator reviews the clinic and changes publication through the interface",
+  { tag: "@workflow-administrator" },
+  async ({ page }) => {
+    addNetworkEvidence(page);
+    await signIn(
+      page,
+      "patient",
+      process.env["CARECONNECT_ADMIN_EMAIL"]!,
+      process.env["CARECONNECT_ADMIN_PASSWORD"]!,
+    );
+    await page.goto("/admin");
+    await check(
+      expect(page.getByRole("heading", { name: "CareConnect administration" })).toBeVisible({
+        timeout: 20_000,
+      }),
+      "platform administrator opens the administration interface",
+    );
+    await page.getByRole("tab", { name: "Provider publishing" }).click();
+    const clinic = page.getByRole("listitem").filter({
+      has: page.getByRole("heading", { name: process.env["CARECONNECT_CLINIC_NAME"]! }),
+    });
+    await check(
+      expect(clinic).toBeVisible({ timeout: 20_000 }),
+      "publication panel displays the synthetic clinic",
+    );
+    await check(
+      expect(clinic.getByText("Enabled", { exact: true }).first()).toBeVisible(),
+      "clinic publication begins enabled",
+    );
+    await clinic.getByRole("button", { name: "Unpublish listing" }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Confirm", exact: true })
+      .click();
+    await check(
+      expect(clinic.getByText("Disabled", { exact: true }).first()).toBeVisible({
+        timeout: 20_000,
+      }),
+      "authorized administrator unpublishes the clinic through the UI",
+    );
+    await clinic.getByRole("button", { name: "Publish listing" }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Confirm", exact: true })
+      .click();
+    await check(
+      expect(clinic.getByText("Enabled", { exact: true }).first()).toBeVisible({ timeout: 20_000 }),
+      "authorized administrator restores clinic publication through the UI",
+    );
+  },
+);
 
 function writeWorkflowEvidence() {
   const directory = path.join(process.cwd(), "test-artifacts");
   mkdirSync(directory, { recursive: true });
-  const completed = new Map(results.map((result) => [result.name, result]));
-  const items = workflows.map(
-    ({ id }) =>
+  const filename = path.join(directory, "browser-workflow-summary.json");
+  // A failed test restarts the worker even with retries disabled. Preserve
+  // observations already recorded by that worker during this same run.
+  const previous: WorkflowResult[] = existsSync(filename)
+    ? JSON.parse(readFileSync(filename, "utf8")).workflows
+    : [];
+  const completed = new Map([...previous, ...results].map((result) => [result.name, result]));
+  const items = workflowIds.map(
+    (id) =>
       completed.get(id) ?? {
         name: id,
         status: "BLOCKED" as const,
@@ -308,7 +347,7 @@ function writeWorkflowEvidence() {
     blocked: items.filter((item) => item.status === "BLOCKED").length,
   };
   writeFileSync(
-    path.join(directory, "browser-workflow-summary.json"),
+    filename,
     JSON.stringify(
       {
         environment: "disposable-local-supabase",
@@ -345,8 +384,8 @@ function writeWorkflowEvidence() {
 }
 
 test.afterEach(async ({ page }, testInfo: TestInfo) => {
-  const name = workflowId(testInfo.title);
-  if (!name) return;
+  const name = workflowIds.find((id) => testInfo.tags.includes("@workflow-" + id));
+  if (!name) throw new Error("Real-service browser workflow is missing its evidence tag.");
   const status =
     testInfo.status === "skipped"
       ? "BLOCKED"

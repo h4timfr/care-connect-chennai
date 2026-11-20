@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -15,7 +16,7 @@ import { endPasswordRecovery, useIsPasswordRecovery } from "@/lib/supabase/recov
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({ meta: [{ title: "Choose a new password — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.patient }] }),
   component: ResetPasswordPage,
 });
 

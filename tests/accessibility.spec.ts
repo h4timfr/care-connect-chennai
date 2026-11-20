@@ -107,7 +107,11 @@ test("the skip link is the first stop and moves focus to the main content", asyn
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/#main-content$/);
   await page.keyboard.press("Tab");
-  // The next stop is inside <main> (the search box), not back in the header.
+  // A first-time visitor can skip the language choices and continue to the search box.
+  await expect(page.getByRole("button", { name: "Skip", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("main")).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.locator("#discover-search")).toBeFocused();
 });
 

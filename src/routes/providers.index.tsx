@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 
 export const Route = createFileRoute("/providers/")({
-  head: () => ({ meta: [{ title: "For clinics — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.clinic }] }),
   component: ProvidersPage,
 });
 

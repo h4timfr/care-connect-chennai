@@ -1,185 +1,258 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { pageTitles } from "@/lib/page-titles";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { ClinicShell } from "@/components/layout/ClinicShell";
-import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
-import { CatalogNotice } from "@/components/CatalogNotice";
+import { EmptyState, ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";
 import { addDays, isoDate } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { describeStatusError } from "@/lib/supabase/appointments";
+import { describeDataError } from "@/lib/supabase/errors";
+import { useClinicDoctorLinks, useClinicSchedules } from "@/lib/supabase/providers";
 
 export const Route = createFileRoute("/clinic/calendar")({
+  head: () => ({ meta: [{ title: pageTitles.clinic }] }),
   component: ClinicCalendar,
 });
 
-/** Default visible hours; extended automatically to cover any appointment outside them. */
-const DEFAULT_FIRST_HOUR = 8;
-const DEFAULT_LAST_HOUR = 20;
-
 function ClinicCalendar() {
-  const { activeClinic, clinicAppointmentsStatus: status } = useApp();
+  const { activeClinic } = useApp();
   const { user } = useAuth();
-  const [dayOffset, setDayOffset] = useState(0);
-  const date = isoDate(addDays(new Date(), dayOffset));
-  const { t, fmt } = useI18n();
-
-  let body;
-  if (!activeClinic) {
-    body = null;
-  } else if (status.isLoading) {
-    body = <PageLoader label={t("clinicCalendar.loading")} />;
-  } else if (status.error) {
-    body = (
-      <ErrorState
-        title={t("clinicCalendar.loadError")}
-        message={t(describeStatusError(status.error))}
-        onRetry={status.refetch}
-      />
-    );
-  } else {
-    body = (
-      <DaySchedule key={`${user?.id}:${activeClinic.id}`} clinicId={activeClinic.id} date={date} />
-    );
-  }
-
+  const { t } = useI18n();
   return (
-    <ClinicShell
-      title={t("clinicCalendar.title")}
-      description={fmt.longDate(date)}
-      actions={
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDayOffset(0)}
-            disabled={dayOffset === 0}
-          >
-            {t("clinicCalendar.today")}
-          </Button>
-          <div className="flex items-center gap-1 rounded-md border">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-none"
-              onClick={() => setDayOffset((d) => d - 1)}
-              aria-label={t("clinicCalendar.previousDay")}
-            >
-              <ChevronLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />
-            </Button>
-            <span className="px-2 text-sm font-medium" aria-live="polite">
-              {fmt.shortDate(date)}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-none"
-              onClick={() => setDayOffset((d) => d + 1)}
-              aria-label={t("clinicCalendar.nextDay")}
-            >
-              <ChevronRight className="h-4 w-4 rtl:rotate-180" aria-hidden />
-            </Button>
-          </div>
-        </div>
-      }
-    >
-      {body}
+    <ClinicShell title={t("clinicCalendar.title")} description={t("clinicCalendar.timeIst")}>
+      {activeClinic ? (
+        <DaySchedule key={[user?.id, activeClinic.id].join(":")} clinicId={activeClinic.id} />
+      ) : null}
     </ClinicShell>
   );
 }
 
-function DaySchedule({ clinicId, date }: { clinicId: string; date: string }) {
-  const { clinicAppointments, doctorsOfClinic } = useApp();
-  const [doctorId, setDoctorId] = useState("all");
+function DaySchedule({ clinicId }: { clinicId: string }) {
+  const { clinicAppointments, clinicAppointmentsStatus: status, doctorById } = useApp();
   const { t, fmt } = useI18n();
-
-  const doctors = doctorsOfClinic(clinicId);
-  const appointments = clinicAppointments.filter(
-    (a) =>
-      a.clinicId === clinicId &&
-      a.date === date &&
-      a.status !== "cancelled" &&
-      (doctorId === "all" || a.doctorId === doctorId),
+  const [dayOffset, setDayOffset] = useState(0);
+  const [doctorId, setDoctorId] = useState("");
+  const date = isoDate(addDays(new Date(), dayOffset));
+  const weekday = new Date(date + "T12:00:00Z").getUTCDay();
+  const roster = useClinicDoctorLinks(clinicId);
+  const weekly = useClinicSchedules(clinicId);
+  const doctors = roster.error ? [] : (roster.data ?? []);
+  const doctorName = (id: string) =>
+    doctors.find((doctor) => doctor.doctorId === id)?.doctorName ??
+    doctorById(id)?.name ??
+    t("clinicWorkspace.doctorUnavailable");
+  const appointments = clinicAppointments
+    .filter(
+      (row) =>
+        row.clinicId === clinicId &&
+        row.date === date &&
+        row.status !== "cancelled" &&
+        (!doctorId || row.doctorId === doctorId),
+    )
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const verified = new Set(
+    doctors.filter((link) => link.active && link.state === "verified").map((link) => link.doctorId),
   );
-  const hourOf = (time: string) => Number(time.split(":")[0]);
-  const appointmentHours = appointments.map((a) => hourOf(a.time));
-  const first = Math.min(DEFAULT_FIRST_HOUR, ...appointmentHours);
-  const last = Math.max(DEFAULT_LAST_HOUR, ...appointmentHours);
-  const hours = Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  const windows = (weekly.data ?? [])
+    .filter(
+      (row) =>
+        row.dayOfWeek === weekday &&
+        verified.has(row.doctorId) &&
+        (!doctorId || doctorId === row.doctorId),
+    )
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const hoursError = roster.error ?? weekly.error;
 
   return (
     <div className="space-y-4">
-      <CatalogNotice />
-      {doctors.length > 1 ? (
-        <div
-          className="flex gap-2 overflow-x-auto rounded-xl border bg-card p-3"
-          role="group"
-          aria-label={t("clinicCalendar.filterByDoctor")}
-        >
-          <Button
-            variant={doctorId === "all" ? "default" : "outline"}
-            size="sm"
-            aria-pressed={doctorId === "all"}
-            onClick={() => setDoctorId("all")}
+      <section className="surface-card space-y-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2
+            className="min-w-0 font-display font-semibold [overflow-wrap:anywhere]"
+            aria-live="polite"
           >
-            {t("clinicCalendar.allDoctors")}
-          </Button>
-          {doctors.map((d) => (
+            {fmt.longDate(date)}
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-              key={d.id}
-              variant={doctorId === d.id ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              aria-pressed={doctorId === d.id}
-              onClick={() => setDoctorId(d.id)}
+              className="h-auto min-h-9 whitespace-normal"
+              disabled={dayOffset === 0}
+              onClick={() => setDayOffset(0)}
             >
-              {d.name}
+              {t("clinicCalendar.today")}
             </Button>
-          ))}
+            <div className="flex overflow-hidden rounded-lg border">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-none"
+                onClick={() => setDayOffset((previous) => previous - 1)}
+                aria-label={t("clinicCalendar.previousDay")}
+              >
+                <ChevronLeft aria-hidden className="rtl:rotate-180" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-none"
+                onClick={() => setDayOffset((previous) => previous + 1)}
+                aria-label={t("clinicCalendar.nextDay")}
+              >
+                <ChevronRight aria-hidden className="rtl:rotate-180" />
+              </Button>
+            </div>
+          </div>
         </div>
-      ) : null}
+        {doctors.length > 1 ? (
+          <div
+            className="flex flex-wrap gap-1.5 border-t pt-3"
+            role="group"
+            aria-label={t("clinicCalendar.filterByDoctor")}
+          >
+            <Button
+              size="sm"
+              variant={!doctorId ? "default" : "outline"}
+              aria-pressed={!doctorId}
+              onClick={() => setDoctorId("")}
+            >
+              {t("clinicCalendar.allDoctors")}
+            </Button>
+            {doctors.map((doctor) => (
+              <Button
+                key={doctor.doctorId}
+                size="sm"
+                className="h-auto min-h-9 max-w-full whitespace-normal [overflow-wrap:anywhere]"
+                variant={doctorId === doctor.doctorId ? "default" : "outline"}
+                aria-pressed={doctorId === doctor.doctorId}
+                onClick={() => setDoctorId(doctor.doctorId)}
+              >
+                {doctor.doctorName}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+      </section>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+        <section
+          className="surface-card min-w-0 overflow-hidden"
+          aria-labelledby="clinic-calendar-visits"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b p-4">
+            <h2
+              id="clinic-calendar-visits"
+              className="flex items-center gap-2 font-display font-semibold"
+            >
+              <CalendarDays className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+              {t("clinicAppointments.title")}
+            </h2>
+            {status.isLoading || status.error ? null : (
+              <span className="text-sm text-muted-foreground">
+                {t.plural("clinicCalendar.count", appointments.length)}
+              </span>
+            )}
+          </div>
+          {status.isLoading ? (
+            <PageLoader label={t("clinicCalendar.loading")} />
+          ) : status.error ? (
+            <ErrorState
+              title={t("clinicCalendar.loadError")}
+              message={t(describeStatusError(status.error))}
+              onRetry={status.refetch}
+            />
+          ) : !appointments.length ? (
+            <EmptyState icon={CalendarDays} title={t("clinicWorkspace.noDayVisits")} />
+          ) : (
+            <ol className="divide-y">
+              {appointments.map((row) => (
+                <li
+                  key={row.id}
+                  className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 text-sm"
+                >
+                  <time
+                    className="shrink-0 font-semibold text-primary"
+                    dateTime={row.time}
+                    dir="ltr"
+                  >
+                    {fmt.time(row.time)}
+                  </time>
+                  <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                    <p dir="auto" className="font-medium">
+                      {row.patientName || t("common.unknownPatient")}
+                    </p>
+                    <p dir="auto" className="text-muted-foreground">
+                      {doctorName(row.doctorId)}
+                    </p>
+                  </div>
+                  <StatusBadge status={row.status} />
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
 
-      <div className="surface-card overflow-hidden">
-        <div className="grid grid-cols-[64px_minmax(0,1fr)] border-b bg-muted/50 text-xs font-medium text-muted-foreground">
-          <div className="border-e p-3 text-center">{t("clinicCalendar.timeIst")}</div>
-          <div className="p-3">{t.plural("clinicCalendar.count", appointments.length)}</div>
-        </div>
-        <ol className="divide-y">
-          {hours.map((h) => {
-            const inHour = appointments
-              .filter((a) => hourOf(a.time) === h)
-              .sort((a, b) => a.time.localeCompare(b.time));
-            return (
-              <li key={h} className="grid min-h-16 grid-cols-[64px_minmax(0,1fr)]">
-                <div className="border-e bg-muted/10 p-3 text-end text-xs text-muted-foreground">
-                  {fmt.hour(h)}
-                </div>
-                <div className="flex flex-wrap items-start gap-2 p-2">
-                  {inHour.map((a) => (
-                    <div
-                      key={a.id}
-                      className="flex w-full flex-col gap-1 rounded-lg border bg-background p-2 text-sm shadow-sm sm:w-[260px]"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="min-w-0 font-medium [overflow-wrap:anywhere]">
-                          {a.patientName || t("common.unknownPatient")}
-                        </span>
-                        <StatusBadge status={a.status} />
-                      </div>
-                      <span className="min-w-0 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                        {fmt.time(a.time)}
-                        {doctors.find((d) => d.id === a.doctorId)
-                          ? ` · ${doctors.find((d) => d.id === a.doctorId)?.name}`
-                          : ""}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+        <section
+          className="surface-card min-w-0 overflow-hidden"
+          aria-labelledby="clinic-calendar-hours"
+        >
+          <div className="border-b p-4">
+            <h2
+              id="clinic-calendar-hours"
+              className="flex items-center gap-2 font-display font-semibold"
+            >
+              <CalendarClock className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+              {t("schedule.title")}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("clinicWorkspace.weeklyHoursNote")}
+            </p>
+          </div>
+          {roster.isLoading || weekly.isLoading ? (
+            <PageLoader />
+          ) : hoursError ? (
+            <ErrorState
+              title={t("doctorWorkspace.scheduleLoadError")}
+              message={t(describeDataError(hoursError))}
+              onRetry={() => void (roster.error ? roster.refetch() : weekly.refetch())}
+            />
+          ) : windows.length > 0 ? (
+            <ul className="divide-y">
+              {windows.map((window) => (
+                <li key={window.id} className="px-4 py-3 text-sm [overflow-wrap:anywhere]">
+                  <p dir="auto" className="font-medium">
+                    {doctorName(window.doctorId)}
+                  </p>
+                  <p className="text-muted-foreground">
+                    <bdi>
+                      {fmt.time(window.startTime)} – {fmt.time(window.endTime)}
+                    </bdi>
+                    {" · "}
+                    {t("schedule.slotLength", { minutes: fmt.number(window.slotMinutes) })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="p-4 text-sm text-muted-foreground">{t("clinicWorkspace.noDayHours")}</p>
+          )}
+          <div className="border-t p-4">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-auto min-h-9 whitespace-normal"
+            >
+              <Link to="/clinic/doctors" hash="clinic-consultation-hours">
+                {t("setup.manageHours")}
+              </Link>
+            </Button>
+          </div>
+        </section>
       </div>
     </div>
   );

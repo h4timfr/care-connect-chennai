@@ -1,11 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { usesBuildSystemEnvironment } from "../src/lib/supabase/build-config";
 import { resolveSupabaseConfig } from "../src/lib/supabase/config";
 
-const productionUrl = "https://careconnect-production.supabase.co";
+const productionUrl = "https://bqijgbmhlwtslhrtszsj.supabase.co";
 const productionKey = "sb_publishable_production-test";
 const stagingUrl = "https://aqwzrpwiqbrykorlqwow.supabase.co";
 const stagingKey = "sb_publishable_staging-test";
+
+test("only Vercel and isolated builds bypass dotenv loading", () => {
+  assert.equal(usesBuildSystemEnvironment({ CARECONNECT_VERCEL_BUILD: "1" }), true);
+  assert.equal(usesBuildSystemEnvironment({ VERCEL: "1", VERCEL_ENV: "preview" }), true);
+  assert.equal(usesBuildSystemEnvironment({ VERCEL: "1", VERCEL_ENV: "production" }), true);
+  assert.equal(usesBuildSystemEnvironment({ CARECONNECT_ISOLATED_TEST: "1" }), true);
+  assert.equal(usesBuildSystemEnvironment({ VERCEL: "1", VERCEL_ENV: "development" }), false);
+  assert.equal(usesBuildSystemEnvironment({}), false);
+});
 
 test("Preview selects the staging URL and key even when Production values are present", () => {
   const result = resolveSupabaseConfig(
@@ -142,6 +152,20 @@ test("Production still selects the existing URL and publishable key", () => {
   assert.deepEqual(result, { ok: true, url: productionUrl, key: productionKey });
 });
 
+test("the production project requires explicit selection even without Vercel context", () => {
+  for (const url of [productionUrl, `${productionUrl}.`]) {
+    const result = resolveSupabaseConfig({
+      VITE_SUPABASE_URL: url,
+      VITE_SUPABASE_PUBLISHABLE_KEY: productionKey,
+    });
+
+    assert.deepEqual(result, {
+      ok: false,
+      error: "The CareConnect production project requires VITE_SUPABASE_TARGET=production.",
+    });
+  }
+});
+
 test("Production retains the legacy anon-key fallback", () => {
   const result = resolveSupabaseConfig({
     VITE_SUPABASE_TARGET: "production",
@@ -150,6 +174,25 @@ test("Production retains the legacy anon-key fallback", () => {
   });
 
   assert.deepEqual(result, { ok: true, url: productionUrl, key: productionKey });
+});
+
+test("Production rejects a staging URL or publishable key in its production settings", () => {
+  const config = {
+    VITE_SUPABASE_TARGET: "production",
+    VITE_SUPABASE_URL: productionUrl,
+    VITE_SUPABASE_PUBLISHABLE_KEY: productionKey,
+    VITE_SUPABASE_STAGING_PUBLISHABLE_KEY: stagingKey,
+  };
+  const wrongUrl = resolveSupabaseConfig(
+    { ...config, VITE_SUPABASE_URL: stagingUrl },
+    "production",
+  );
+  const wrongKey = resolveSupabaseConfig(
+    { ...config, VITE_SUPABASE_PUBLISHABLE_KEY: stagingKey },
+    "production",
+  );
+  assert.equal(wrongUrl.ok, false);
+  assert.equal(wrongKey.ok, false);
 });
 
 test("local development retains localhost HTTP URL support without Vercel target", () => {

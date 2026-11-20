@@ -11,21 +11,32 @@ export type SupabaseConfigResult =
   { ok: true; url: string; key: string } | { ok: false; error: string };
 
 const STAGING_SUPABASE_ORIGIN = "https://aqwzrpwiqbrykorlqwow.supabase.co";
+const PRODUCTION_SUPABASE_ORIGIN = "https://bqijgbmhlwtslhrtszsj.supabase.co";
+
+function matchesProjectOrigin(url: URL, origin: string) {
+  return (
+    url.origin === origin &&
+    url.pathname === "/" &&
+    !url.search &&
+    !url.hash &&
+    !url.username &&
+    !url.password
+  );
+}
 
 function fail(error: string): SupabaseConfigResult {
   return { ok: false, error };
 }
 
-export function isPrivilegedSupabaseKey(key: string): boolean {
-  if (key.startsWith("sb_secret_")) return true;
-  const payload = key.split(".")[1];
-  if (!payload) return false;
-  if (typeof globalThis.atob !== "function") return true;
+function isPublicSupabaseKey(key: string): boolean {
+  if (/^sb_publishable_[A-Za-z0-9_-]+$/.test(key)) return true;
+  const jwt = /^[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+$/.exec(key);
+  if (!jwt?.[1]) return false;
   try {
-    const claims = JSON.parse(globalThis.atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as {
+    const claims = JSON.parse(globalThis.atob(jwt[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
       role?: unknown;
     };
-    return claims.role === "service_role";
+    return claims?.role === "anon";
   } catch {
     return false;
   }
@@ -75,6 +86,12 @@ export function resolveSupabaseConfig(
     return fail("The configured Supabase URL must be a valid absolute URL.");
   }
   const isLocal = parsedUrl.hostname === "localhost" || parsedUrl.hostname === "127.0.0.1";
+  if (
+    parsedUrl.hostname.replace(/\.$/, "") === new URL(PRODUCTION_SUPABASE_ORIGIN).hostname &&
+    target !== "production"
+  ) {
+    return fail("The CareConnect production project requires VITE_SUPABASE_TARGET=production.");
+  }
   if (parsedUrl.protocol !== "https:" && !(parsedUrl.protocol === "http:" && isLocal)) {
     return fail("The configured Supabase URL must use HTTPS outside local development.");
   }
@@ -86,14 +103,7 @@ export function resolveSupabaseConfig(
   }
 
   if (isStaging) {
-    if (
-      parsedUrl.origin !== STAGING_SUPABASE_ORIGIN ||
-      parsedUrl.pathname !== "/" ||
-      parsedUrl.search ||
-      parsedUrl.hash ||
-      parsedUrl.username ||
-      parsedUrl.password
-    ) {
+    if (!matchesProjectOrigin(parsedUrl, STAGING_SUPABASE_ORIGIN)) {
       return fail(
         "VITE_SUPABASE_STAGING_URL must point to the approved CareConnect staging project.",
       );
@@ -104,7 +114,16 @@ export function resolveSupabaseConfig(
     }
   }
 
-  if (isPrivilegedSupabaseKey(key)) {
+  if (target === "production") {
+    if (!matchesProjectOrigin(parsedUrl, PRODUCTION_SUPABASE_ORIGIN)) {
+      return fail("VITE_SUPABASE_URL must point to the approved CareConnect production project.");
+    }
+    if (key === env.VITE_SUPABASE_STAGING_PUBLISHABLE_KEY?.trim()) {
+      return fail("The production publishable key must be distinct from the staging key.");
+    }
+  }
+
+  if (!isPublicSupabaseKey(key)) {
     return fail("Only a Supabase publishable (anon) key may be used in the browser.");
   }
   return { ok: true, url, key };

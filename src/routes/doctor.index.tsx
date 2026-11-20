@@ -1,116 +1,189 @@
+import type { ReactNode } from "react";
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays } from "lucide-react";
+import { DoctorOverview } from "@/components/doctor/DoctorOverview";
 import { DoctorShell } from "@/components/layout/DoctorShell";
+import { DoctorClinicLinkRequests } from "@/components/DoctorClinicLinkRequests";
+import { SetupChecklist, setupLinkClass, type SetupStep } from "@/components/SetupChecklist";
 import { EmptyState, ErrorState, InfoNotice, StatusBadge } from "@/components/common";
 import { LinkStatus } from "@/components/ProviderStatus";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
-import { useDoctorAppointments, type MyDoctor } from "@/lib/supabase/doctor";
+import { useAuth } from "@/lib/supabase/auth";
+import {
+  useDoctorAppointments,
+  useMyDoctorApplications,
+  type MyDoctor,
+} from "@/lib/supabase/doctor";
+import { useDoctorClinicLinkRequests } from "@/lib/supabase/doctor-clinic-links";
 import { describeDataError, isNotDeployed } from "@/lib/supabase/errors";
 import { isAppointmentInPast } from "@/lib/appointment-time";
 
 export const Route = createFileRoute("/doctor/")({
-  head: () => ({ meta: [{ title: "Doctor Portal — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.doctor }] }),
   component: DoctorDashboard,
 });
 
 function DoctorDashboard() {
   const { t } = useI18n();
   return (
-    <DoctorShell title={t("doctorDashboard.title")} description={t("doctorDashboard.subtitle")}>
-      {(me) => <Dashboard me={me} />}
+    <DoctorShell
+      title={t("doctorDashboard.title")}
+      description={t("doctorDashboard.subtitle")}
+      applicationProgress={(applications) => <DoctorSetup applications={applications} />}
+    >
+      {(me, tourOffer) => <Dashboard key={me.id} me={me} tourOffer={tourOffer} />}
     </DoctorShell>
   );
 }
 
-function Dashboard({ me }: { me: MyDoctor }) {
-  const { t, fmt } = useI18n();
-  const verified = me.links.some((l) => l.verified && l.active);
-  const appointments = useDoctorAppointments(true);
-  const upcoming = (appointments.data ?? [])
-    .filter(
-      (a) =>
-        !isAppointmentInPast(a.date, a.time) &&
-        a.status !== "cancelled" &&
-        a.status !== "completed",
-    )
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
-    .slice(0, 5);
+function DoctorSetup({
+  me,
+  requests,
+  applications,
+}: {
+  me?: MyDoctor;
+  requests?: ReturnType<typeof useDoctorClinicLinkRequests>;
+  applications: ReturnType<typeof useMyDoctorApplications>;
+}) {
+  const { t } = useI18n();
+  const list = applications.error ? [] : (applications.data ?? []);
+  const application =
+    list.find((entry) => entry.status === (me ? "approved" : "submitted")) ?? list[0];
+  const verifiedLinks = me?.links.filter((link) => link.active && link.verified) ?? [];
+  const verified = verifiedLinks.length > 0;
+  const withHours = verifiedLinks.filter((link) => link.hasHours);
+  const scheduled = withHours.length > 0;
+  const usable = withHours.filter((link) => link.hasBookableHours);
+  const ready = !me?.isSample && usable.some((link) => link.bookingEnabled === true);
+  const publicationUnknown = usable.some((link) => link.bookingEnabled === undefined);
+  const visibleRequests = requests?.error ? [] : (requests?.data ?? []);
+  const accepted = visibleRequests.some(
+    (request) => request.status === "accepted" || request.status === "verified",
+  );
+  const awaitingConsent = visibleRequests.some((request) => request.status === "requested");
+  const awaitingVerification =
+    visibleRequests.some((request) => request.status === "accepted") ||
+    me?.links.some((link) => link.active && link.state === "pending");
+  const applicationState = applications.error
+    ? "unavailable"
+    : applications.isLoading
+      ? "checking"
+      : application
+        ? "done"
+        : me
+          ? "unavailable"
+          : "action";
 
+  const steps: SetupStep[] = [
+    {
+      label: "setup.application",
+      state: applicationState,
+      ...(application && !applications.error
+        ? { detail: `apply.status.${application.status}` as const }
+        : me && !applications.error && !applications.isLoading
+          ? { detail: "setup.noApplication" }
+          : {}),
+      ...(!me && !applications.isLoading
+        ? {
+            link: (
+              <Link to="/doctor/signup" className={setupLinkClass}>
+                {t(application ? "setup.viewApplication" : "portal.doctor.register")}
+              </Link>
+            ),
+          }
+        : {}),
+    },
+    {
+      label: "setup.profile",
+      state: me
+        ? "done"
+        : applications.error
+          ? "unavailable"
+          : applications.isLoading
+            ? "checking"
+            : application?.status === "submitted"
+              ? "pending"
+              : "blocked",
+    },
+    {
+      label: "setup.connectionAccepted",
+      state: accepted
+        ? "done"
+        : !me
+          ? "blocked"
+          : requests?.error
+            ? "unavailable"
+            : requests?.isLoading
+              ? "checking"
+              : verified && !awaitingConsent
+                ? "unavailable"
+                : "action",
+      ...(verified && !accepted && !awaitingConsent && requests?.isSuccess
+        ? { detail: "setup.consentNotRecorded" }
+        : {}),
+      ...(me && !accepted && (!verified || awaitingConsent)
+        ? {
+            detail: awaitingConsent ? "setup.doctorRespond" : "setup.doctorRequest",
+            link: (
+              <a href="#doctor-link-requests" className={setupLinkClass}>
+                {t("setup.viewRequests")}
+              </a>
+            ),
+          }
+        : {}),
+    },
+    {
+      label: "setup.relationshipVerified",
+      state: verified
+        ? "done"
+        : awaitingVerification
+          ? "pending"
+          : requests?.error
+            ? "unavailable"
+            : requests?.isLoading
+              ? "checking"
+              : "blocked",
+    },
+    {
+      label: "setup.hours",
+      state: usable.length ? "done" : verified ? "action" : "blocked",
+      ...(scheduled && !usable.length ? { detail: "setup.hoursTooShort" } : {}),
+      ...(verified && !usable.length
+        ? {
+            link: (
+              <Link to="/doctor/schedule" className={setupLinkClass}>
+                {t("doctorSchedule.title")}
+              </Link>
+            ),
+          }
+        : {}),
+    },
+    {
+      label: "setup.ready",
+      state: ready
+        ? "done"
+        : !usable.length || me?.isSample
+          ? "blocked"
+          : publicationUnknown
+            ? "unavailable"
+            : "pending",
+      ...(usable.length > 0 && !ready && !me?.isSample ? { detail: "setup.publishingHelp" } : {}),
+    },
+  ];
+  return <SetupChecklist title="setup.doctorTitle" steps={steps} />;
+}
+
+function Dashboard({ me, tourOffer }: { me: MyDoctor; tourOffer: ReactNode }) {
+  const { user } = useAuth();
+  const applications = useMyDoctorApplications(user?.id);
+  const requests = useDoctorClinicLinkRequests();
   return (
     <div className="space-y-6">
-      {!verified ? (
-        <InfoNotice className="text-sm">{t("doctorDashboard.pendingNote")}</InfoNotice>
-      ) : null}
-
-      <section aria-labelledby="doctor-clinics" className="surface-card p-5">
-        <h2 id="doctor-clinics" className="font-semibold">
-          {t("doctorDashboard.clinics")}
-        </h2>
-        {me.links.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">{t("doctorDashboard.noClinics")}</p>
-        ) : (
-          <ul className="mt-3 divide-y">
-            {me.links.map((l) => (
-              <li
-                key={l.clinicId}
-                className="flex flex-wrap items-center justify-between gap-2 py-2.5"
-              >
-                <span className="min-w-0 font-medium [overflow-wrap:anywhere]" dir="auto">
-                  {l.clinicName}
-                </span>
-                <LinkStatus state={l.state} active={l.active} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section aria-labelledby="doctor-upcoming">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="doctor-upcoming" className="min-w-0 font-semibold [overflow-wrap:anywhere]">
-            {t("doctorDashboard.upcoming")}
-          </h2>
-          <Button asChild variant="outline" size="sm" className="shrink-0">
-            <Link to="/doctor/appointments">{t("common.seeAll")}</Link>
-          </Button>
-        </div>
-        {appointments.isLoading ? (
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        ) : appointments.error ? (
-          isNotDeployed(appointments.error) ? (
-            <InfoNotice className="text-sm">{t("doctorPortal.notDeployed")}</InfoNotice>
-          ) : (
-            <ErrorState
-              title={t("doctorAppointments.loadError")}
-              message={t(describeDataError(appointments.error))}
-              onRetry={() => void appointments.refetch()}
-            />
-          )
-        ) : upcoming.length === 0 ? (
-          <EmptyState icon={CalendarDays} title={t("doctorAppointments.noneUpcoming")} />
-        ) : (
-          <ul className="space-y-2">
-            {upcoming.map((a) => (
-              <li
-                key={a.id}
-                className="surface-card flex flex-wrap items-center justify-between gap-2 p-4"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium [overflow-wrap:anywhere]" dir="auto">
-                    {a.patientName || t("common.unknownPatient")}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {fmt.longDate(a.date)} · {fmt.time(a.time)} ·{" "}
-                    <span dir="auto">{a.clinicName}</span>
-                  </p>
-                </div>
-                <StatusBadge status={a.status} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <DoctorOverview me={me} />
+      {tourOffer}
+      <DoctorSetup me={me} requests={requests} applications={applications} />
+      <DoctorClinicLinkRequests key={me.id} doctorId={me.id} query={requests} />
     </div>
   );
 }

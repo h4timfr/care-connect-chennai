@@ -20,17 +20,37 @@ const EXPECTED: Record<string, string[]> = {
   [`/clinics/${ids.clinicA}`]: SHARED,
   [`/book/${ids.doctorVerified}`]: [...SHARED, "rpc/get_doctor_slots"],
   "/appointments": [...SHARED, "appointments"],
-  [`/appointments/${ids.appointment}`]: [...SHARED, "appointments"],
-  "/messages": [...SHARED, "conversations"],
+  [`/appointments/${ids.appointment}`]: [
+    ...SHARED,
+    "appointments",
+    "rpc/can_message_assigned_doctor",
+  ],
+  "/messages": [...SHARED, "conversations", "rpc/doctor_message_inbox"],
   "/profile": SHARED,
   "/reset-password": ["patients", "clinic_memberships"],
-  "/clinic": [...SHARED, "appointments"],
+  "/clinic": [
+    ...SHARED,
+    "appointments",
+    "clinic_doctors",
+    "doctor_schedules",
+    "rpc/list_doctor_clinic_link_requests",
+  ],
   "/clinic/appointments": [...SHARED, "appointments"],
-  "/clinic/calendar": [...SHARED, "appointments"],
+  "/clinic/calendar": [...SHARED, "appointments", "clinic_doctors", "doctor_schedules"],
   "/clinic/patients": [...SHARED, "appointments"],
-  "/clinic/doctors": [...SHARED, "clinic_doctors", "doctor_schedules"],
+  "/clinic/doctors": [
+    ...SHARED,
+    "clinic_doctors",
+    "doctor_schedules",
+    "rpc/list_doctor_clinic_link_requests",
+  ],
   "/clinic/messages": [...SHARED, "conversations"],
-  "/clinic/profile": [...SHARED, "rpc/get_my_clinic_contacts"],
+  "/clinic/profile": [
+    ...SHARED,
+    "clinic_doctors",
+    "doctor_schedules",
+    "rpc/get_my_clinic_contacts",
+  ],
 };
 
 test("each route requests only what it shows, once", async ({ page }) => {

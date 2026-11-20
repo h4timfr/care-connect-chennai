@@ -104,17 +104,17 @@ export function AvatarEditor({ name }: { name: string }) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-3 sm:items-start">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
       <div className="relative">
         {preview ? (
           <img
             src={preview}
             alt=""
-            className="h-24 w-24 rounded-full object-cover opacity-70"
+            className="size-16 rounded-full object-cover opacity-70"
             aria-hidden
           />
         ) : (
-          <ProfileAvatar name={name} className="h-24 w-24 text-2xl" />
+          <ProfileAvatar name={name} className="size-16 text-lg" />
         )}
         {busy ? (
           <span className="absolute inset-0 grid place-items-center rounded-full bg-background/40">
@@ -123,89 +123,94 @@ export function AvatarEditor({ name }: { name: string }) {
         ) : null}
       </div>
 
-      {state === "unavailable" ? (
-        <p className="max-w-xs text-center text-xs text-muted-foreground sm:text-start">
-          {t("avatar.notAvailable")}
-        </p>
-      ) : (
-        <>
-          <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
-            <input
-              ref={inputRef}
-              id={inputId}
-              type="file"
-              accept={AVATAR_ACCEPTED_TYPES.join(",")}
-              className="sr-only"
-              tabIndex={-1}
-              // Opened by the button below, which is the one control assistive tech should see.
-              aria-hidden
-              aria-label={hasPhoto ? t("avatar.replace") : t("avatar.upload")}
-              onChange={onFile}
-              disabled={busy || avatar.isPending}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={busy || avatar.isPending}
-              onClick={() => inputRef.current?.click()}
-            >
-              {upload.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Camera className="h-4 w-4" aria-hidden />
-              )}
-              {upload.isPending
-                ? t("avatar.uploading")
-                : hasPhoto
-                  ? t("avatar.replace")
-                  : t("avatar.upload")}
-            </Button>
-            {hasPhoto ? (
-              <AlertDialog open={confirmOpen} onOpenChange={(o) => !busy && setConfirmOpen(o)}>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={busy}
-                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden />
-                    {t("avatar.remove")}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t("avatar.confirmRemoveTitle")}</AlertDialogTitle>
-                    <AlertDialogDescription>{t("avatar.confirmRemoveBody")}</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel disabled={busy}>{t("avatar.keep")}</AlertDialogCancel>
-                    <Button variant="destructive" onClick={onRemove} disabled={busy}>
-                      {remove.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      ) : null}
-                      {remove.isPending ? t("avatar.removing") : t("avatar.remove")}
+      <div className="min-w-0 space-y-2 self-center">
+        {state === "unavailable" ? (
+          <p className="max-w-xs text-xs text-muted-foreground">{t("avatar.notAvailable")}</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={inputRef}
+                id={inputId}
+                type="file"
+                accept={AVATAR_ACCEPTED_TYPES.join(",")}
+                className="sr-only"
+                tabIndex={-1}
+                // Opened by the button below, which is the one control assistive tech should see.
+                aria-hidden
+                aria-label={hasPhoto ? t("avatar.replace") : t("avatar.upload")}
+                onChange={onFile}
+                disabled={busy || avatar.isPending}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-auto min-h-8 max-w-full py-1.5 text-start whitespace-normal"
+                disabled={busy || avatar.isPending}
+                onClick={() => inputRef.current?.click()}
+              >
+                {upload.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Camera className="h-4 w-4" aria-hidden />
+                )}
+                <span className="min-w-0 [overflow-wrap:anywhere]">
+                  {upload.isPending
+                    ? t("avatar.uploading")
+                    : hasPhoto
+                      ? t("avatar.replace")
+                      : t("avatar.upload")}
+                </span>
+              </Button>
+              {hasPhoto ? (
+                <AlertDialog open={confirmOpen} onOpenChange={(o) => !busy && setConfirmOpen(o)}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      className="h-auto min-h-8 max-w-full py-1.5 text-start whitespace-normal text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                      <span className="min-w-0 [overflow-wrap:anywhere]">{t("avatar.remove")}</span>
                     </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : null}
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t("avatar.confirmRemoveTitle")}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t("avatar.confirmRemoveBody")}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={busy}>{t("avatar.keep")}</AlertDialogCancel>
+                      <Button variant="destructive" onClick={onRemove} disabled={busy}>
+                        {remove.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : null}
+                        {remove.isPending ? t("avatar.removing") : t("avatar.remove")}
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
+            </div>
+            <p className="max-w-xs text-xs text-muted-foreground">
+              {t("avatar.hint", { size: MAX_MB })}
+            </p>
+          </>
+        )}
+        {avatar.isError ? (
+          <p className="text-xs text-muted-foreground">{t("avatar.loadFailed")}</p>
+        ) : null}
+        {error ? (
+          <div className="w-full max-w-sm">
+            <FormAlert>{error}</FormAlert>
           </div>
-          <p className="max-w-xs text-center text-xs text-muted-foreground sm:text-start">
-            {t("avatar.hint", { size: MAX_MB })}
-          </p>
-        </>
-      )}
-      {avatar.isError ? (
-        <p className="text-xs text-muted-foreground">{t("avatar.loadFailed")}</p>
-      ) : null}
-      {error ? (
-        <div className="w-full max-w-sm">
-          <FormAlert>{error}</FormAlert>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

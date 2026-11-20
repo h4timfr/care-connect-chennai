@@ -1,6 +1,7 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Loader2, SearchX } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { PatientShell } from "@/components/layout/PatientShell";
 import {
@@ -49,7 +50,7 @@ export const Route = createFileRoute("/book/$doctorId")({
     time: typeof time === "string" && TIME_PATTERN.test(time) ? time : undefined,
     clinicId: typeof clinicId === "string" && clinicId ? clinicId : undefined,
   }),
-  head: () => ({ meta: [{ title: "Book an appointment — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.booking }] }),
   component: BookAppointment,
 });
 
@@ -144,7 +145,9 @@ function BookAppointment() {
         <section className="surface-card flex items-center gap-4 p-5">
           <Initials name={doctor.name} className="h-14 w-14 text-lg" />
           <div className="min-w-0">
-            <p className="truncate font-display text-lg font-semibold">{doctor.name}</p>
+            <h2 className="font-display text-lg font-semibold [overflow-wrap:anywhere]" dir="auto">
+              {doctor.name}
+            </h2>
             <p className="text-sm text-primary">{fmt.specialty(doctor.specialtyId)}</p>
             {doctor.isSample ? <SampleBadge className="mt-1" /> : null}
           </div>
@@ -206,25 +209,38 @@ function BookingForm({
   });
   const [time, setTime] = useState(() => {
     const now = new Date();
-    return !initial.date ||
-      (initial.date >= isoDate(now) && initial.date <= isoDate(addDays(now, 13)))
+    return (!initial.clinicId || initial.clinicId === clinicId) &&
+      (!initial.date || (initial.date >= isoDate(now) && initial.date <= isoDate(addDays(now, 13))))
       ? (initial.time ?? "")
       : "";
   });
   const [reason, setReason] = useState("");
+  const [editingSlot, setEditingSlot] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const timeHeading = useRef<HTMLHeadingElement>(null);
   const { t, fmt } = useI18n();
+  useEffect(() => {
+    if (editingSlot) timeHeading.current?.focus();
+  }, [editingSlot]);
 
   const clinic = clinics.find((c) => c.id === clinicId);
   const availability = useDoctorAvailability(doctorId, clinicId, date);
-  const selectedAvailable =
-    !availability.isFetching &&
-    !availability.isError &&
+  const slotAvailable =
     availability.data?.some(
       (slot) => slot.available && slot.slot_time === (time.length === 5 ? `${time}:00` : time),
     ) === true;
+  const selectedAvailable = !availability.isFetching && !availability.isError && slotAvailable;
+  const compactReview =
+    !editingSlot &&
+    !!initial.clinicId &&
+    !!initial.date &&
+    clinicId === initial.clinicId &&
+    date === initial.date &&
+    !!time &&
+    !availability.isError &&
+    (availability.isPending || slotAvailable);
 
   const selectClinic = (id: string) => {
     setClinicId(id);
@@ -273,7 +289,7 @@ function BookingForm({
 
   return (
     <>
-      {clinics.length > 1 ? (
+      {!compactReview && clinics.length > 1 ? (
         <section className="surface-card space-y-3 p-5" aria-labelledby="clinic-heading">
           <h2 id="clinic-heading" className="font-medium">
             {t("book.clinic")}
@@ -302,56 +318,70 @@ function BookingForm({
         </section>
       ) : null}
 
-      <section className="surface-card space-y-4 p-5" aria-labelledby="time-heading">
-        <div>
-          <h2 id="time-heading" className="font-medium">
-            {t("book.dateTime")}
+      {!compactReview ? (
+        <section
+          className="surface-card min-w-0 space-y-4 p-4 sm:p-5"
+          aria-labelledby="time-heading"
+        >
+          <div>
+            <h2 id="time-heading" className="font-medium" tabIndex={-1} ref={timeHeading}>
+              {t("book.dateTime")}
+            </h2>
+            {clinic && clinics.length === 1 ? (
+              <p className="text-sm text-muted-foreground">
+                {clinic.name} · {clinic.address}
+              </p>
+            ) : null}
+          </div>
+          <DateStrip value={date} onChange={selectDate} />
+          <SlotGrid
+            doctorId={doctorId}
+            clinicId={clinicId}
+            date={date}
+            value={time}
+            onChange={(t) => {
+              setTime(t);
+              setError(null);
+            }}
+          />
+        </section>
+      ) : null}
+
+      <section
+        className="surface-card min-w-0 space-y-4 p-4 sm:p-5"
+        aria-labelledby="summary-heading"
+        data-tour-target="patient-book"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="summary-heading" className="font-display font-semibold">
+            {t("book.review")}
           </h2>
-          {clinic && clinics.length === 1 ? (
-            <p className="text-sm text-muted-foreground">
-              {clinic.name} · {clinic.address}
-            </p>
+          {compactReview ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-auto min-h-9 whitespace-normal"
+              onClick={() => setEditingSlot(true)}
+            >
+              {t("book.changeSlot")}
+            </Button>
           ) : null}
         </div>
-        <DateStrip value={date} onChange={selectDate} />
-        <SlotGrid
-          doctorId={doctorId}
-          clinicId={clinicId}
-          date={date}
-          value={time}
-          onChange={(t) => {
-            setTime(t);
-            setError(null);
-          }}
-        />
-      </section>
-
-      <section className="surface-card space-y-2 p-5">
-        <Label htmlFor="reason">{t("book.reasonLabel")}</Label>
-        <Textarea
-          id="reason"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          maxLength={MAX_REASON_LENGTH}
-          rows={3}
-          placeholder={t("book.reasonPlaceholder")}
-          aria-describedby="reason-hint"
-        />
-        <p id="reason-hint" className="text-xs text-muted-foreground">
-          {t("book.reasonHint", { count: reason.length, max: MAX_REASON_LENGTH })}
-        </p>
-      </section>
-
-      <section className="surface-card space-y-4 p-5" aria-labelledby="summary-heading">
-        <h2 id="summary-heading" className="sr-only">
-          {t("book.summary")}
-        </h2>
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+        <dl className="grid gap-3 text-sm sm:grid-cols-3">
+          {clinic ? (
+            <div>
+              <dt className="text-muted-foreground">{t("book.clinic")}</dt>
+              <dd className="font-medium [overflow-wrap:anywhere]" dir="auto">
+                {clinic.name}
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-muted-foreground">{t("book.when")}</dt>
             <dd className="font-medium">
-              {time
-                ? t("common.dateAtTime", { date: fmt.longDate(date), time: fmt.time(time) })
+              {time && (selectedAvailable || compactReview)
+                ? t("common.dateAtTime", { date: fmt.longDate(date), time: fmt.timeIst(time) })
                 : t("book.chooseTime")}
             </dd>
           </div>
@@ -360,6 +390,27 @@ function BookingForm({
             <dd className="font-medium">{fmt.inr(fee)}</dd>
           </div>
         </dl>
+        {compactReview && availability.isFetching ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {t("slots.checking")}
+          </p>
+        ) : null}
+
+        <div className="space-y-2">
+          <Label htmlFor="reason">{t("book.reasonLabel")}</Label>
+          <Textarea
+            id="reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            maxLength={MAX_REASON_LENGTH}
+            rows={2}
+            placeholder={t("book.reasonPlaceholder")}
+            aria-describedby="reason-hint"
+          />
+          <p id="reason-hint" className="text-xs text-muted-foreground">
+            {t("book.reasonHint", { count: reason.length, max: MAX_REASON_LENGTH })}
+          </p>
+        </div>
 
         {error ? (
           <div

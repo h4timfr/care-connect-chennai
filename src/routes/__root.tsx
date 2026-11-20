@@ -18,15 +18,16 @@ import { isSupabaseConfigured, supabaseConfigMessage } from "@/lib/supabase/clie
 import { DeferredToaster } from "@/components/DeferredToaster";
 import { I18nProvider, languageInfo, loadMessages, useI18n } from "@/lib/i18n";
 import { resolveInitialLanguage } from "@/lib/i18n/initial";
+import { pageTitles } from "@/lib/page-titles";
 
-const SITE_TITLE = "CareConnect — Find doctors and book clinic appointments in Chennai";
+const SITE_TITLE = pageTitles.home;
 const SITE_DESCRIPTION =
   "Find doctors and clinics across Chennai, book appointments online and message your clinic — all in one place.";
 
 function NotFoundComponent() {
   const { t } = useI18n();
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">{t("notFound.title")}</h2>
@@ -50,7 +51,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const { t } = useI18n();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           {t("routeError.title")}
@@ -93,7 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       // No child route matched: the root renders the 404 page, so give it its own title.
-      { title: match._notFound ? "Page not found — CareConnect" : SITE_TITLE },
+      { title: match._notFound ? pageTitles.notFound : SITE_TITLE },
       { name: "description", content: SITE_DESCRIPTION },
       { name: "application-name", content: "CareConnect" },
       { name: "theme-color", content: "#047879" },

@@ -217,7 +217,6 @@ for (const [workflow, job, firstUnsafe] of [
     "node scripts/staging-reconciliation-rehearsal.mjs --execute",
   ],
   ["sql-tests.yml", "sql-tests", "supabase init --yes"],
-  ["real-service-integration.yml", "real-service-integration", "supabase init --yes"],
 ]) {
   test(`${workflow}: push and manual dispatch cannot bypass the required boundary`, () => {
     const source = readFileSync(path.join(root, ".github/workflows", workflow), "utf8").replaceAll(
@@ -242,6 +241,22 @@ for (const [workflow, job, firstUnsafe] of [
   });
 }
 
+test("real-service push and manual dispatch both require the same isolated runner", () => {
+  const workflow = readFileSync(
+    path.join(root, ".github/workflows/real-service-integration.yml"),
+    "utf8",
+  );
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /push:/);
+  assert.match(workflow, /RUNNER_ENVIRONMENT.*github-hosted/);
+  assert.ok(workflow.indexOf("RUNNER_ENVIRONMENT") < workflow.indexOf("actions/checkout"));
+  assert.match(workflow, /GITHUB_EVENT_NAME.*push.*workflow_dispatch/);
+  assert.match(workflow, /GITHUB_REF.*refs\/heads\/claude\/careconnect-frontend-repair/);
+  assert.match(workflow, /sudo -n \/bin\/bash scripts\/ci-isolated-docker\.sh/);
+  assert.match(workflow, /exit "\$status"/);
+  assert.doesNotMatch(workflow, /continue-on-error|\.raw\.log|supabase start/);
+});
+
 test("direct service entry points require prevention before preflight, spawn or traffic", () => {
   for (const [file, functionName] of [
     ["staging-reconciliation-rehearsal.mjs", "main()"],
@@ -265,13 +280,28 @@ test("direct service entry points require prevention before preflight, spawn or 
 // child-process transport. No Docker process or engine is invoked by these tests.
 const networkName = "careconnect-ci-123-1";
 const networkId = "a".repeat(64);
+const privateRoot = "/var/tmp/careconnect-ci.synth123";
+const privateEnv = {
+  CARECONNECT_ISOLATION_ROOT: privateRoot,
+  DOCKER_HOST: "unix://" + privateRoot + "/engine.sock",
+  DOCKER_CONFIG: privateRoot + "/docker-cli",
+  GITHUB_RUN_ID: "123",
+  GITHUB_RUN_ATTEMPT: "1",
+  CARECONNECT_DOCKER_NETWORK: networkName,
+  CARECONNECT_DOCKER_RUN_LABEL: "123-1",
+  GITHUB_ACTIONS: "true",
+  CI: "true",
+};
 const lsNetworks = ["network", "ls", "--format", "{{.Name}}"];
 const createNetwork = [
   "network",
   "create",
   "--driver",
   "bridge",
-  "--internal",
+  "--subnet",
+  "172.30.0.0/24",
+  "--gateway",
+  "172.30.0.1",
   "--label",
   "com.careconnect.disposable-real-service-run=123-1",
   "--opt",
@@ -283,8 +313,9 @@ const ownedNetwork = {
   Name: networkName,
   Id: networkId,
   Driver: "bridge",
-  Internal: true,
+  Internal: false,
   EnableIPv6: false,
+  IPAM: { Config: [{ Subnet: "172.30.0.0/24", Gateway: "172.30.0.1" }] },
   Labels: { "com.careconnect.disposable-real-service-run": "123-1" },
   Options: { "com.docker.network.bridge.host_binding_ipv4": "127.0.0.1" },
   Containers: {},
@@ -355,7 +386,7 @@ for (const scenario of [
           plan.push({
             args: inspectNetwork,
             status: 0,
-            stdout: JSON.stringify([{ ...ownedNetwork, Internal: false }]),
+            stdout: JSON.stringify([{ ...ownedNetwork, Internal: true }]),
           });
       }
       const trace = path.join(f.directory, "transport-trace.json");
@@ -366,9 +397,33 @@ for (const scenario of [
         import fs from 'node:fs';
         import cp from 'node:child_process';
         import { syncBuiltinESMExports } from 'node:module';
+        // Linux identity and transport are simulated in this subprocess only.
+        const privateRoot = ${JSON.stringify(privateRoot)};
+        const project = ${JSON.stringify(networkName)};
+        const engine = "fake-engine-id";
+        const namespace = "net:[1234]";
+        const read = fs.readFileSync.bind(fs);
+        const real = fs.realpathSync.bind(fs);
+        const stat = fs.lstatSync.bind(fs);
+        const link = fs.readlinkSync.bind(fs);
+        Object.defineProperty(process, "platform", { value: "linux" });
+        process.getuid = () => 1001;
+        fs.realpathSync = (file, ...args) => file === privateRoot ? privateRoot : real(file, ...args);
+        fs.lstatSync = (file, ...args) => {
+          if (!String(file).startsWith(privateRoot)) return stat(file, ...args);
+          return { uid: 0, mode: 0o440, size: 200, isDirectory: () => true,
+            isFile: () => true, isSocket: () => true };
+        };
+        fs.readFileSync = (file, ...args) => String(file).startsWith(privateRoot)
+          ? JSON.stringify({ project, engine, namespace, policy: "careconnect-ci-admission" }) : read(file, ...args);
+        fs.readlinkSync = (file, ...args) => file === "/proc/self/ns/net" ? namespace : link(file, ...args);
         const plan = ${JSON.stringify(plan)};
         const seen = [];
         cp.spawnSync = (command, args) => {
+          if (command === '/usr/bin/docker' && args.includes("info")) {
+            return { status: 0, stdout: JSON.stringify({ID: engine, DockerRootDir: privateRoot + "/data",
+              ServerVersion: "29.1.0", Plugins: { Authorization: ["careconnect-ci-admission"] } }) };
+          }
           seen.push({command,args});
           fs.writeFileSync(${JSON.stringify(trace)}, JSON.stringify(seen));
           const expected = plan[seen.length - 1];
@@ -387,7 +442,7 @@ for (const scenario of [
           path.join(root, "scripts/verify-disposable-docker-bindings.mjs"),
           ...args,
         ],
-        { cwd: f.directory, encoding: "utf8", timeout: 10000 },
+        { cwd: f.directory, env: privateEnv, encoding: "utf8", timeout: 10000 },
       );
       assert.notEqual(result.status, 0);
       const calls = readdirSync(f.directory).includes("transport-trace.json")

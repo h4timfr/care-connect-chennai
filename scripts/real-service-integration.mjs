@@ -10,6 +10,7 @@ import {
 } from "./service-execution-boundary.mjs";
 import {
   aliasFile,
+  sqlTestCount,
   targetVersions,
   validateInventory,
   validateTestInventory,
@@ -350,7 +351,23 @@ export function sanitizeRealtimeDiagnostics(diagnostics) {
   }));
 }
 
+export function isRealtimePermissionDenial(payload) {
+  return (
+    Array.isArray(payload?.errors) &&
+    payload.errors.length === 1 &&
+    payload.errors[0] === "Error 401: Unauthorized" &&
+    [payload.new, payload.old].every(
+      (row) =>
+        row == null || (typeof row === "object" && !Array.isArray(row) && !Object.keys(row).length),
+    )
+  );
+}
+
 export function recordRealtimePayload(state, payload) {
+  if (state.role === "anonymous" && isRealtimePermissionDenial(payload)) {
+    state.diagnostics.subscription.errorKinds.push("authorization-denied");
+    return;
+  }
   const body = payload.new?.body;
   const hasExpectedFields =
     typeof payload.new?.id === "string" &&
@@ -424,17 +441,21 @@ export function verifyRepositoryIntegrity() {
   return { files, tests };
 }
 
-function preflight({ stackStarted = false } = {}) {
+function preflight({ stackStarted = false, inputsOnly = false } = {}) {
   const environmentFiles = readdirSync(root).filter(
     (name) => /^\.env(?:\.|$)/.test(name) && name !== ".env.example",
   );
   const linked = [
     path.join(root, "supabase/.temp/linked-project.json"),
     ...environmentFiles.map((name) => path.join(root, name)),
+    ...readdirSync(path.join(root, "supabase"))
+      .filter((name) => /^\.env(?:\.|$)/.test(name))
+      .map((name) => path.join(root, "supabase", name)),
   ];
   const projectRef = path.join(root, "supabase/.temp/project-ref");
   if (!stackStarted) linked.push(projectRef);
   rejectRemoteConfiguration(process.env, linked);
+  if (inputsOnly) return;
   const cliVersion = spawnSyncBounded("supabase", ["--version"], {
     timeoutMs: 15_000,
     cwd: root,
@@ -444,9 +465,6 @@ function preflight({ stackStarted = false } = {}) {
   if (cliVersion.status !== 0) throw new Error("Supabase CLI version check failed");
   verifyPinnedCliVersion(cliVersion.stdout);
   const { files, tests } = verifyRepositoryIntegrity();
-  if (files.length !== 41 || files.at(-1)?.slice(0, 5) !== "00062" || tests.length !== 22) {
-    throw new Error("canonical migration or SQL test inventory differs from the reviewed baseline");
-  }
   const config = path.join(root, "supabase/config.toml");
   if (!existsSync(config))
     throw new Error("unlinked local Supabase configuration has not been initialized");
@@ -930,7 +948,7 @@ async function runIntegration() {
     assert(!recovery.error, "local password recovery request accepted");
     recoveryEmailAddress = users.patient.email;
     const recoveryMail = await measure("auth.password_recovery_complete", () =>
-      completePasswordRecovery(users.patient.email, patient, creds.url, creds.anonKey),
+      completePasswordRecovery(users.patient.email, patient),
     );
     assert(
       recoveryMail.completed,
@@ -1326,12 +1344,12 @@ async function runIntegration() {
         subscribed(clinicChannel),
         subscribed(doctorChannel),
         subscribed(outsiderChannel),
-        subscribed(anonChannel, { expectedStatus: "CHANNEL_ERROR" }),
+        subscribed(anonChannel),
       ]),
     );
     assert(
       readiness.every(Boolean),
-      "authorized Realtime clients are ready and anonymous subscription is denied",
+      "Realtime probes have server-confirmed subscription readiness",
     );
     const receivedByPatient = waitForInsert(patientChannel, patientMessage);
     const receivedByClinic = waitForInsert(clinicChannel, patientMessage);
@@ -1416,11 +1434,36 @@ async function runIntegration() {
       "doctor receives both message directions through the scoped inbox RPC",
     );
     await new Promise((resolve) => setTimeout(resolve, 500));
+    const anonymousRows = await anonClient
+      .from("messages")
+      .select("id")
+      .eq("conversation_id", conversationId);
+    assert(
+      anonymousRows.error?.code === "42501" ||
+        (!anonymousRows.error && anonymousRows.data.length === 0),
+      "anonymous client cannot read protected appointment messages",
+    );
+    const outsiderRows = await clients["other-patient"]
+      .from("messages")
+      .select("id")
+      .eq("conversation_id", conversationId);
+    assert(
+      !outsiderRows.error && outsiderRows.data.length === 0,
+      "unrelated patient cannot read protected appointment messages",
+    );
     const outsiderDelivery = await noInsert(outsiderChannel, patientMessage);
     const anonDelivery = await noInsert(anonChannel, patientMessage);
     const doctorRawDelivery = await noInsert(doctorChannel, patientMessage);
     assert(
-      !outsiderDelivery && !anonDelivery && !doctorRawDelivery,
+      !outsiderDelivery &&
+        !anonDelivery &&
+        !doctorRawDelivery &&
+        anonChannel.diagnostics.subscription.errorKinds.includes("authorization-denied") &&
+        [outsiderChannel, anonChannel, doctorChannel].every(
+          (probe) =>
+            probe.diagnostics.delivery.eventCount === 0 &&
+            probe.diagnostics.subscription.statuses.every((status) => status === "SUBSCRIBED"),
+        ),
       "unrelated, anonymous, and doctor raw-table subscribers receive no unauthorized events",
     );
     assert(
@@ -1732,8 +1775,8 @@ async function runIntegration() {
       JSON.stringify(
         {
           environment: "disposable-local-supabase",
-          migration_count: 41,
-          pg_tap_files: 22,
+          migration_count: targetVersions.length,
+          pg_tap_files: sqlTestCount,
           initial_counts: initialCounts,
           test_cases: { ...testCaseCounts, results: testCases },
           assertions: {
@@ -1779,7 +1822,7 @@ function createExpiredJwt(secret) {
   return `${input}.${signature}`;
 }
 
-async function completePasswordRecovery(email, client, serviceUrl, anonKey) {
+async function completePasswordRecovery(email, client) {
   const url = "http://127.0.0.1:54324";
   assertLoopbackUrl(url, 54324);
   const query = new URLSearchParams({ query: `to:"${email}"`, limit: "5" });
@@ -1827,14 +1870,12 @@ async function completePasswordRecovery(email, client, serviceUrl, anonKey) {
   const newPassword = password();
   const update = await client.auth.updateUser({ password: newPassword });
   if (update.error) throw new Error("local recovery session could not change the password");
-  const check = createClient(serviceUrl, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const login = await check.auth.signInWithPassword({ email, password: newPassword });
+  // Verify the new credential on the workflow client so it keeps an active
+  // password session for the later Auth API and Realtime checks.
+  const login = await client.auth.signInWithPassword({ email, password: newPassword });
   if (login.error || !login.data.session) {
     throw new Error("password recovery password was rejected on login");
   }
-  await check.auth.signOut();
   return { completed: true, newPassword };
 }
 
@@ -1844,6 +1885,17 @@ async function deleteRecoveryEmail(email) {
   const query = new URLSearchParams({ query: `to:"${email}"` });
   const response = await fetch(`${url}/api/v1/search?${query}`, { method: "DELETE" });
   if (!response.ok) throw new Error("runner-owned recovery email cleanup failed");
+}
+
+export function realtimeMessageBinding(role, conversationId) {
+  // A filter requires SELECT on its column. The anonymous probe must join
+  // without a filter so the server actually evaluates delivery permissions.
+  return {
+    event: "INSERT",
+    schema: "public",
+    table: "messages",
+    ...(role === "anonymous" ? {} : { filter: `conversation_id=eq.${conversationId}` }),
+  };
 }
 
 function realtimeChannel(client, role, conversationId, resources, diagnosticsCollection) {
@@ -1876,18 +1928,9 @@ function realtimeChannel(client, role, conversationId, resources, diagnosticsCol
   };
   const channel = client
     .channel(`careconnect-ci-${randomUUID()}`, realtimePostgresChangesOptions())
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `conversation_id=eq.${conversationId}`,
-      },
-      (payload) => {
-        recordRealtimePayload(state, payload);
-      },
-    );
+    .on("postgres_changes", realtimeMessageBinding(role, conversationId), (payload) => {
+      recordRealtimePayload(state, payload);
+    });
   state.channel = channel;
   resources.push({ client, channel, state });
   diagnosticsCollection.push(state.diagnostics);
@@ -2025,6 +2068,7 @@ async function runBrowserFlow({
   const env = {
     PATH: process.env.PATH,
     HOME: process.env.HOME,
+    PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH,
     RUNNER_TEMP: process.env.RUNNER_TEMP,
     CI: "true",
     CARECONNECT_REAL_SERVICE: "1",
@@ -2147,6 +2191,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const command = process.argv[2];
   try {
     if (command === "preflight") preflight();
+    else if (command === "preflight-inputs") preflight({ inputsOnly: true });
     else if (command === "verify-migrations") {
       const { files, tests } = verifyRepositoryIntegrity();
       console.log(

@@ -16,14 +16,25 @@ test("schedule loading is not empty and a failed load can be retried", async ({
   const mock = await backend({
     memberships: [membership(state.clinics[0]!)],
     failTables: ["doctor_schedules"],
-    delays: { doctor_schedules: 600 },
   });
-  await page.goto("/clinic/doctors");
+  let release!: () => void;
+  const responseGate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/rest/v1/doctor_schedules?*", async (route) => {
+    await responseGate;
+    await route.fallback();
+  });
   const card = page.getByRole("listitem").filter({ hasText: "Dr. Verified Tester" });
-  await expect(card.getByRole("status")).toBeVisible();
-  await expect(card.getByText("No hours set, so patients can't book this doctor yet.")).toHaveCount(
-    0,
-  );
+  try {
+    await page.goto("/clinic/doctors");
+    await expect(card.getByRole("status")).toBeVisible();
+    await expect(
+      card.getByText("No hours set, so patients can't book this doctor yet."),
+    ).toHaveCount(0);
+  } finally {
+    release();
+  }
   await expect(card.getByRole("alert")).toBeVisible();
   await expect(card.getByRole("button", { name: "Edit hours" })).toBeDisabled();
   mock.state.failTables = [];
@@ -232,6 +243,9 @@ test("a deleted schedule stays locked while the list refresh is pending", async 
   await card.getByRole("button", { name: "Edit hours" }).click();
   const remove = card.getByRole("button", { name: "Remove hours for Monday" });
   await remove.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  expect(mock.callsTo("DELETE", "/rest/v1/doctor_schedules")).toHaveLength(0);
+  await page.getByRole("dialog").getByRole("button", { name: "Remove hours", exact: true }).click();
   try {
     await expect.poll(() => gets).toBeGreaterThan(1);
     await expect(remove).toBeDisabled();

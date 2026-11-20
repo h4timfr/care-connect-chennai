@@ -63,6 +63,7 @@ export const ml: Messages = {
   "specialty.dermatology": "ചർമ്മരോഗ ചികിത്സ",
   "specialty.gynecology": "സ്ത്രീരോഗ ചികിത്സ",
   "specialty.neurology": "ന്യൂറോളജി",
+  "specialty.psychiatry": "മനോരോഗ ചികിത്സ",
   "specialty.ophthalmology": "നേത്രരോഗ ചികിത്സ",
   "specialty.dentistry": "ദന്തചികിത്സ",
   "specialty.ent": "ചെവി, മൂക്ക്, തൊണ്ട (ENT)",
@@ -343,9 +344,11 @@ export const ml: Messages = {
   "messages.loading": "സന്ദേശങ്ങൾ ലോഡ് ചെയ്യുന്നു…",
   "messages.loadError": "നിങ്ങളുടെ സന്ദേശങ്ങൾ ലോഡ് ചെയ്യാനായില്ല",
   "messages.notSent": "സന്ദേശം അയച്ചില്ല. {reason}",
+  "messages.deliveryUnconfirmed":
+    "സന്ദേശം എത്തിയെന്ന് സ്ഥിരീകരിക്കാനായില്ല. അതേ സന്ദേശം വീണ്ടും അയയ്ക്കുക.",
   "messages.emptyTitle": "ഇതുവരെ സംഭാഷണങ്ങളില്ല",
   "messages.emptyBody":
-    "ഒരു അപ്പോയിന്റ്മെന്റിനെക്കുറിച്ച് ക്ലിനിക്കിനോട് ചോദിക്കാൻ, ഡോക്ടറുടെയോ ക്ലിനിക്കിന്റെയോ പേജ് അല്ലെങ്കിൽ നിങ്ങളുടെ ഒരു അപ്പോയിന്റ്മെന്റ് തുറന്ന് “ക്ലിനിക്കിന് സന്ദേശം അയയ്ക്കുക” തിരഞ്ഞെടുക്കുക.",
+    "സൗകര്യം ലഭ്യമെങ്കിൽ ഡോക്ടർക്കോ ക്ലിനിക്കിനോ സന്ദേശമയയ്ക്കാൻ നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് തുറക്കുക. പൊതുവായ ചോദ്യത്തിന് ഡോക്ടറുടെയോ ക്ലിനിക്കിന്റെയോ പേജിൽ “ക്ലിനിക്കിന് സന്ദേശം അയയ്ക്കുക” തിരഞ്ഞെടുക്കുക.",
   "messages.conversations": "സംഭാഷണങ്ങൾ",
   "messages.noMessages": "ഇതുവരെ സന്ദേശങ്ങളില്ല",
   "messages.back": "സംഭാഷണങ്ങളിലേക്ക് മടങ്ങുക",
@@ -555,6 +558,33 @@ export const ml: Messages = {
   "clinicShell.role.other": "ക്ലിനിക് അംഗം",
 
   // ---- Clinic dashboard
+  "clinicWorkspace.history": "ചരിത്രം",
+  "clinicWorkspace.details": "അപ്പോയിന്റ്മെന്റ് വിവരങ്ങൾ",
+  "clinicWorkspace.doctorUnavailable": "ഡോക്ടറുടെ വിവരങ്ങൾ ലഭ്യമല്ല",
+  "clinicWorkspace.clearFilters": "ഫിൽട്ടറുകൾ നീക്കുക",
+  "clinicWorkspace.statusReview": "നില മാറ്റുന്നതിന് മുമ്പ് അപ്പോയിന്റ്മെന്റ് പരിശോധിക്കുക.",
+  "clinicWorkspace.applyChange": "നില മാറ്റുക",
+  "clinicWorkspace.upcomingBookings": "വരാനിരിക്കുന്ന ബുക്കിംഗുകൾ",
+  "clinicWorkspace.rosterSummary":
+    "{verified} സ്ഥിരീകരിച്ചത് · {scheduled} പേർക്ക് സമയം നിശ്ചയിച്ചു",
+  "clinicWorkspace.viewAppointments": "അപ്പോയിന്റ്മെന്റുകൾ കാണുക",
+  "clinicWorkspace.removeHours": "സമയം നീക്കുക",
+  "clinicWorkspace.unpublished": "ഡയറക്ടറിയിൽ പ്രസിദ്ധീകരിച്ചിട്ടില്ല",
+  "clinicWorkspace.unavailable": "പരിശോധിക്കാനായില്ല",
+  "clinicWorkspace.bookingConfigured": "ബുക്കിംഗ് സമയം നിശ്ചയിച്ചു",
+  "clinicWorkspace.bookingPermission": "ഓൺലൈൻ ബുക്കിംഗ് അനുമതി",
+  "clinicWorkspace.enabled": "പ്രവർത്തനക്ഷമം",
+  "clinicWorkspace.disabled": "പ്രവർത്തനരഹിതം",
+  "clinicWorkspace.patientContact": "രോഗികളുടെ അന്വേഷണങ്ങൾക്കുള്ള അനുമതി",
+  "clinicWorkspace.roster": "ഡോക്ടർമാരുടെ പട്ടിക",
+  "clinicWorkspace.rosterCount": "{total} ബന്ധങ്ങൾ · {verified} സജീവവും സ്ഥിരീകരിച്ചതും",
+  "clinicWorkspace.noDayVisits": "ഈ ദിവസം അപ്പോയിന്റ്മെന്റുകളില്ല.",
+  "clinicWorkspace.weeklyHoursNote":
+    "ആവർത്തിക്കുന്ന പരിശോധനാ സമയം. നിലവിലെ ബുക്കിംഗുകൾ അപ്പോയിന്റ്മെന്റുകളിൽ കാണുക.",
+  "clinicWorkspace.noDayHours": "ഈ ദിവസം സ്ഥിരീകരിച്ച ഡോക്ടർമാർക്ക് നിശ്ചിത സമയമില്ല.",
+  "clinicWorkspace.needsReplyFilter": "മറുപടി വേണം",
+  "clinicWorkspace.noRepliesNeeded": "മറുപടി കാത്തിരിക്കുന്ന സംഭാഷണങ്ങളില്ല.",
+  "clinicWorkspace.sending": "മറുപടി അയയ്ക്കുന്നു…",
   "clinicDashboard.title": "ഡാഷ്‌ബോർഡ്",
   "clinicDashboard.overview": "{date}-ലെ അവലോകനം",
   "clinicDashboard.loading": "ഡാഷ്‌ബോർഡ് ലോഡ് ചെയ്യുന്നു…",
@@ -655,7 +685,7 @@ export const ml: Messages = {
   "clinicProfile.title": "ക്ലിനിക് പ്രൊഫൈൽ",
   "clinicProfile.subtitle": "രോഗികൾക്ക് നിങ്ങളുടെ ക്ലിനിക് എങ്ങനെ കാണപ്പെടുന്നു",
   "clinicProfile.readOnly":
-    "പോർട്ടലിൽ ക്ലിനിക് വിവരങ്ങൾ തിരുത്തുന്നത് ഇതുവരെ ലഭ്യമല്ല. രോഗികൾ ഇപ്പോൾ കാണുന്ന വിവരങ്ങൾ ഇതാണ്.",
+    "ക്ലിനിക് വിവരങ്ങൾ പുതുക്കാൻ CareConnect-നെ ബന്ധപ്പെടുക. ഡയറക്ടറി പ്രസിദ്ധീകരണം, ഓൺലൈൻ ബുക്കിംഗ്, രോഗികളുടെ അന്വേഷണം എന്നിവ വെവ്വേറെ നിയന്ത്രിക്കുന്നു.",
   "clinicProfile.name": "ക്ലിനിക്കിന്റെ പേര്",
   "clinicProfile.description": "വിവരണം",
 
@@ -707,6 +737,12 @@ export const ml: Messages = {
   "admin.tab.doctors": "ഡോക്ടർ പരിശോധന",
   "admin.tab.publication": "പ്രൊവൈഡർ പ്രസിദ്ധീകരണം",
   "admin.tab.teams": "ക്ലിനിക് ടീമുകൾ",
+  "admin.confirmPublicationAction":
+    "{clinic} എന്ന ക്ലിനിക്കിനായി {action} സ്ഥിരീകരിക്കുക. മാറ്റം നടപ്പാക്കുന്നതിന് മുമ്പ് അനുമതികൾ പരിശോധിക്കുക.",
+  "admin.acknowledgeContactConsent":
+    "രോഗികളുടെ അന്വേഷണങ്ങൾ സ്വീകരിക്കാൻ ക്ലിനിക്ക് വ്യക്തമായി അനുമതി നൽകിയതായി ഞാൻ സ്ഥിരീകരിക്കുന്നു.",
+  "admin.publicationChanged":
+    "ക്ലിനിക്കിന്റെ പ്രസിദ്ധീകരണ ക്രമീകരണങ്ങൾ മാറി. ഈ ജാലകം അടച്ച് വീണ്ടും ശ്രമിക്കുന്നതിന് മുമ്പ് നിലവിലെ ക്രമീകരണങ്ങൾ പരിശോധിക്കുക.",
   "admin.publicationHelp":
     "പരിശോധന, ഡയറക്ടറി പ്രസിദ്ധീകരണം, രോഗി സന്ദേശ അനുമതി, ഓൺലൈൻ ബുക്കിംഗ് എന്നിവ വ്യത്യസ്ത നിയന്ത്രണങ്ങളാണ്. രോഗി ബന്ധം അനുവദിക്കുന്നതിന് മുമ്പ് ക്ലിനിക്കിന്റെ വ്യക്തമായ സമ്മതം ഉറപ്പാക്കുക. സാമ്പിൾ ക്ലിനിക്കുകൾ പ്രവർത്തനക്ഷമമാക്കാനാവില്ല.",
   "admin.noPublicationClinics": "പരിശോധിക്കാൻ യഥാർത്ഥ ക്ലിനിക് രേഖകളില്ല.",
@@ -897,6 +933,28 @@ export const ml: Messages = {
   "admin.doctorVerifyReminder":
     "മെഡിക്കൽ കൗൺസിലുമായി രജിസ്ട്രേഷൻ നമ്പറും അപേക്ഷകന്റെ ഐഡന്റിറ്റിയും സ്ഥിരീകരിച്ച ശേഷം മാത്രം അംഗീകരിക്കുക.",
   "admin.tab.doctorApplications": "ഡോക്ടർ അപേക്ഷകൾ",
+  "doctorWorkspace.allAppointments": "എല്ലാ അപ്പോയിന്റ്മെന്റുകളും",
+  "doctorWorkspace.period": "അപ്പോയിന്റ്മെന്റ് കാലയളവ്",
+  "doctorWorkspace.status": "നില",
+  "doctorWorkspace.allStatuses": "എല്ലാ നിലകളും",
+  "doctorWorkspace.date": "തീയതി",
+  "doctorWorkspace.noMatches": "ഈ ഫിൽട്ടറുകൾക്ക് ചേരുന്ന അപ്പോയിന്റ്മെന്റുകളില്ല",
+  "doctorWorkspace.todayAppointments": "ഇന്നത്തെ അപ്പോയിന്റ്മെന്റുകൾ",
+  "doctorWorkspace.quickLinks": "ദ്രുത പ്രവേശനം",
+  "doctorWorkspace.viewToday": "ഇന്നത്തെ അപ്പോയിന്റ്മെന്റുകൾ കാണുക",
+  "doctorWorkspace.todayQueue": "ഇന്ന് ബാക്കിയുള്ള അപ്പോയിന്റ്മെന്റുകൾ",
+  "doctorWorkspace.noTodayQueue": "ഇന്ന് ഇനി അപ്പോയിന്റ്മെന്റുകളില്ല",
+  "doctorWorkspace.noHours": "സമയം നിശ്ചയിച്ചിട്ടില്ല",
+  "doctorWorkspace.editDay": "{day} സമയക്രമം തിരുത്തുക",
+  "doctorWorkspace.scheduleLocked":
+    "വരാനിരിക്കുന്ന അപ്പോയിന്റ്മെന്റുകൾ ഉള്ളതിനാൽ ഈ സമയം മാറ്റാനാവില്ല.",
+  "doctorWorkspace.scheduleLoadError": "പ്രവർത്തന സമയം ലഭ്യമാക്കാനായില്ല",
+  "doctorWorkspace.slotTooLong": "പ്രവർത്തന സമയത്തിൽ ഒരു അപ്പോയിന്റ്മെന്റിനെങ്കിലും ഇടമുണ്ടാകണം.",
+  "doctorWorkspace.removeHoursBody":
+    "ഈ പ്രതിവാര സമയം നീക്കണോ? നിലവിലെ ബുക്കിംഗുകൾ നീക്കം തടഞ്ഞേക്കാം.",
+  "doctorWorkspace.allThreads": "എല്ലാ സംഭാഷണങ്ങളും",
+  "doctorWorkspace.refreshInbox": "ഇൻബോക്സ് പുതുക്കുക",
+  "doctorWorkspace.privateUnavailable": "സ്വകാര്യ അപ്പോയിന്റ്മെന്റ് സന്ദേശങ്ങൾ ഇപ്പോൾ ലഭ്യമല്ല.",
   "doctorAppointments.loadError": "നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റുകൾ ലോഡ് ചെയ്യാനായില്ല",
   "doctorAppointments.nonePast": "മുൻ അപ്പോയിന്റ്മെന്റുകളില്ല",
   "doctorAppointments.noneUpcoming": "വരാനിരിക്കുന്ന അപ്പോയിന്റ്മെന്റുകളില്ല",
@@ -1181,6 +1239,32 @@ export const ml: Messages = {
   "candidates.title": "ദാതാ സ്ഥാനാർത്ഥികൾ",
 
   // ---- Portal status (link state, clinic profile)
+
+  "linkRequest.linkDoctor": "നിലവിലുള്ള ഡോക്ടറെ ബന്ധിപ്പിക്കുക",
+  "linkRequest.linkClinic": "ക്ലിനിക്കുമായി ബന്ധിപ്പിക്കുക",
+  "linkRequest.title": "ബന്ധിപ്പിക്കാനുള്ള അഭ്യർത്ഥനകൾ",
+  "linkRequest.profileId": "ഡോക്ടറുടെ പ്രൊഫൈൽ ഐഡി",
+  "linkRequest.clinicHelp":
+    "ഡോക്ടറുടെ പ്രൊഫൈൽ ഐഡി ചോദിക്കുക. CareConnect ബന്ധം പരിശോധിക്കുന്നതിന് മുമ്പ് ഡോക്ടർ അഭ്യർത്ഥന സ്വീകരിക്കണം.",
+  "linkRequest.doctorHelp":
+    "നിങ്ങളുടെ പ്രൊഫൈൽ ഐഡി ക്ലിനിക് അഡ്മിനുമായി പങ്കിടുക. ആ ക്ലിനിക്കിൽ നിങ്ങൾ ചികിത്സ നൽകുന്നുണ്ടെങ്കിൽ മാത്രം അഭ്യർത്ഥന സ്വീകരിക്കുക.",
+  "linkRequest.send": "ബന്ധിപ്പിക്കാനുള്ള അഭ്യർത്ഥന അയയ്ക്കുക",
+  "linkRequest.refresh": "അഭ്യർത്ഥനകൾ പുതുക്കുക",
+  "linkRequest.waiting": "ഡോക്ടറുടെ അനുമതിക്കായി കാത്തിരിക്കുന്നു",
+  "linkRequest.declined": "ഡോക്ടർ നിരസിച്ചു",
+  "linkRequest.withdrawn": "ക്ലിനിക് പിൻവലിച്ചു",
+  "linkRequest.accept": "അഭ്യർത്ഥന സ്വീകരിക്കുക",
+  "linkRequest.decline": "അഭ്യർത്ഥന നിരസിക്കുക",
+  "linkRequest.withdraw": "അഭ്യർത്ഥന പിൻവലിക്കുക",
+  "linkRequest.empty": "ഇതുവരെ ബന്ധിപ്പിക്കാനുള്ള അഭ്യർത്ഥനകളില്ല.",
+  "linkRequest.loadError": "ബന്ധിപ്പിക്കാനുള്ള അഭ്യർത്ഥനകൾ ലോഡ് ചെയ്യാനായില്ല",
+  "linkRequest.unavailable": "ബന്ധിപ്പിക്കാനുള്ള അഭ്യർത്ഥനകൾ ലഭ്യമല്ല.",
+  "linkRequest.invalidId": "ഡോക്ടർ പങ്കിട്ട പ്രൊഫൈൽ ഐഡി നൽകുക.",
+  "linkRequest.invalidDoctor": "ഈ ഡോക്ടറുടെ പ്രൊഫൈൽ ബന്ധിപ്പിക്കാനാവില്ല.",
+  "linkRequest.duplicate": "ഈ ബന്ധം അല്ലെങ്കിൽ തീർപ്പാകാത്ത അഭ്യർത്ഥന നിലവിലുണ്ട്.",
+  "linkRequest.answered":
+    "ഈ അഭ്യർത്ഥനയ്ക്ക് ഇതിനകം മറുപടി നൽകിയിട്ടുണ്ട്. നിലവിലെ സ്ഥിതി കാണാൻ പുതുക്കുക.",
+
   "verification.inactive": "നിഷ്ക്രിയം",
   "doctorSchedule.inactive":
     "ഈ ക്ലിനിക്കുമായുള്ള നിങ്ങളുടെ ലിങ്ക് നിഷ്ക്രിയമാണ്, അതിനാൽ ഇവിടെ സമയം സജ്ജമാക്കാനാവില്ല.",
@@ -1206,4 +1290,96 @@ export const ml: Messages = {
     "വിട്ടുപോയ വിവരങ്ങൾ ചേർക്കാൻ CareConnect-നെ ബന്ധപ്പെടുക. പോർട്ടലിൽ തിരുത്തൽ ഇതുവരെ ലഭ്യമല്ല.",
   // Inbox: the patient wrote last (derived from the messages, not a stored counter).
   "messages.awaitingReply": "മറുപടി കാത്തിരിക്കുന്നു",
+  "messageDoctor.button": "ഡോക്ടർക്ക് സന്ദേശം അയയ്ക്കുക",
+  "messages.appointmentOn": "അപ്പോയിന്റ്മെന്റ് {date}",
+  "messages.privateDoctor": "ഡോക്ടറുമായുള്ള സ്വകാര്യ സംഭാഷണം",
+  "messages.doctorWriteBelow": "സന്ദേശങ്ങളൊന്നുമില്ല. താഴെ ഡോക്ടർക്ക് എഴുതുക.",
+  "messages.doctorNonEmergency": "സ്വകാര്യ സന്ദേശങ്ങൾ അടിയന്തരമല്ലാത്ത ആശയവിനിമയത്തിന് മാത്രമാണ്.",
+  "messages.doctorClosed":
+    "ഈ അപ്പോയിന്റ്മെന്റിന്റെ ഡോക്ടർ സംഭാഷണത്തിൽ പുതിയ സന്ദേശങ്ങൾ അയയ്ക്കാനാവില്ല.",
+  "messages.senderDoctor": "ഡോക്ടർ:",
+  "messages.doctorLoadError": "ഡോക്ടറുടെ സ്വകാര്യ സന്ദേശങ്ങൾ ലോഡ് ചെയ്യാനായില്ല",
+  "setup.doctorTitle": "ഡോക്ടർ സജ്ജീകരണം",
+  "setup.clinicTitle": "ക്ലിനിക് സജ്ജീകരണം",
+  "setup.done": "പൂർത്തിയായി",
+  "setup.pending": "തീർപ്പാകാനുണ്ട്",
+  "setup.action": "അടുത്ത നടപടി",
+  "setup.blocked": "മുൻ ഘട്ടങ്ങൾ പൂർത്തിയാക്കാനുണ്ട്",
+  "setup.unavailable": "നില ലഭ്യമല്ല",
+  "setup.application": "അപേക്ഷ സമർപ്പിച്ചു",
+  "setup.profile": "പ്രൊഫൈൽ അംഗീകരിച്ചു",
+  "setup.connectionAccepted": "ക്ലിനിക്കുമായി ബന്ധിപ്പിക്കാനുള്ള അഭ്യർത്ഥന സ്വീകരിച്ചു",
+  "setup.relationshipVerified": "ക്ലിനിക് ബന്ധം സ്ഥിരീകരിച്ചു",
+  "setup.hours": "കൺസൾട്ടേഷൻ സമയം സജ്ജമാക്കി",
+  "setup.ready": "അപ്പോയിന്റ്മെന്റുകൾ സ്വീകരിക്കാൻ തയ്യാറാണ്",
+  "setup.viewApplication": "അപേക്ഷ കാണുക",
+  "setup.noApplication": "ഈ പ്രൊഫൈലിന് അപേക്ഷ രേഖപ്പെടുത്തിയിട്ടില്ല.",
+  "setup.doctorRespond": "തുടരാൻ ക്ലിനിക്കിന്റെ അഭ്യർത്ഥന സ്വീകരിക്കുക.",
+  "setup.doctorRequest": "ക്ലിനിക്കിന് അഭ്യർത്ഥന അയയ്ക്കാൻ നിങ്ങളുടെ പ്രൊഫൈൽ ഐഡി പങ്കിടുക.",
+  "setup.viewRequests": "ബന്ധിപ്പിക്കാനുള്ള അഭ്യർത്ഥനകൾ കാണുക",
+  "setup.clinicVerification": "ക്ലിനിക് സ്ഥിരീകരിച്ചു",
+  "setup.linkDoctor": "ഡോക്ടറെ ക്ഷണിച്ചു അല്ലെങ്കിൽ ബന്ധിപ്പിച്ചു",
+  "setup.doctorConsent": "ഡോക്ടറുടെ സമ്മതവും സ്ഥിരീകരണവും",
+  "setup.manageHours": "കൺസൾട്ടേഷൻ സമയം ക്രമീകരിക്കുക",
+  "setup.onlineBooking": "ഓൺലൈൻ ബുക്കിങ് സജ്ജമാക്കി",
+  "setup.patientContact": "രോഗികൾക്ക് ബന്ധപ്പെടാൻ അനുമതി",
+  "setup.publishingHelp":
+    "പ്രസിദ്ധീകരണവും ഓൺലൈൻ ബുക്കിങ്ങും CareConnect പരിശോധിക്കും. നടപടി വൈകുകയാണെങ്കിൽ ക്ലിനിക്കുമായോ CareConnect-മായോ ബന്ധപ്പെടുക.",
+  "setup.contactHelp": "രോഗികൾക്ക് ബന്ധപ്പെടാൻ CareConnect-ന്റെ പ്രത്യേക അനുമതി വേണം.",
+  "book.review": "നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് പരിശോധിക്കുക",
+  "book.changeSlot": "ക്ലിനിക്കോ തീയതിയോ സമയമോ മാറ്റുക",
+  "messages.clinicThread": "ക്ലിനിക്കുമായുള്ള സംഭാഷണം",
+  "admin.reviewNavigation": "പരിശോധനാ പട്ടികകൾ",
+  "setup.consentNotRecorded": "സ്ഥിരീകരിച്ച ബന്ധത്തിന് പ്രത്യേക സമ്മതരേഖ കണ്ടെത്തിയില്ല.",
+  "setup.hoursTooShort": "ഒരു അപ്പോയിന്റ്മെന്റിനെങ്കിലും മതിയായ കൺസൾട്ടേഷൻ സമയം ക്രമീകരിക്കുക.",
+  "admin.awaitingLoaded": "ഈ പട്ടികയിൽ പരിശോധന കാത്തിരിക്കുന്നവ: {count}",
+  "welcome.title": "CareConnect-ലേക്ക് സ്വാഗതം",
+  "welcome.language":
+    "നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക. ഗ്ലോബ് മെനുവിലൂടെ എപ്പോൾ വേണമെങ്കിലും മാറ്റാം.",
+  "welcome.languageError": "ആ ഭാഷ ലഭ്യമാക്കാൻ കഴിഞ്ഞില്ല. വീണ്ടും ശ്രമിക്കുക അല്ലെങ്കിൽ തുടരുക.",
+  "tour.help": "സഹായവും പരിചയവും",
+  "welcome.tourOffer": "ചെറിയൊരു പരിചയം കാണണോ?",
+  "welcome.startTour": "ചെറിയ പരിചയം തുടങ്ങുക",
+  "welcome.skipTour": "ഇപ്പോൾ ഒഴിവാക്കുക",
+  "welcome.getStarted": "തുടങ്ങുക",
+  "welcome.tourHint": "ഐച്ഛിക വഴികാട്ടി സഹായത്തിൽ നിന്ന് എപ്പോൾ വേണമെങ്കിലും തുറക്കാം.",
+  "tour.restart": "പരിചയം വീണ്ടും തുടങ്ങുക",
+  "tour.skip": "ഒഴിവാക്കുക",
+  "tour.back": "പിന്നോട്ട്",
+  "tour.next": "അടുത്തത്",
+  "tour.finish": "പൂർത്തിയാക്കുക",
+  "tour.progress": "ഘട്ടം {step} / {total}",
+  "tour.title.patient": "രോഗികൾക്കുള്ള വഴികാട്ടി",
+  "tour.title.doctor": "ഡോക്ടർ പോർട്ടൽ വഴികാട്ടി",
+  "tour.title.clinic": "ക്ലിനിക് പോർട്ടൽ വഴികാട്ടി",
+  "tour.title.admin": "അഡ്മിൻ വഴികാട്ടി",
+  "tour.patient.find":
+    "പേര്, സ്പെഷ്യാലിറ്റി, പ്രദേശം എന്നിവ ഉപയോഗിച്ച് ഡോക്ടർമാരെയും ക്ലിനിക്കുകളെയും കണ്ടെത്താൻ ഡോക്ടർ തിരച്ചിൽ തുറക്കുക.",
+  "tour.patient.book":
+    "ഡോക്ടറുടെ പ്രൊഫൈലിൽ ലഭ്യമായ സമയങ്ങൾ പരിശോധിക്കുക. സമയം തിരഞ്ഞെടുത്ത് അഭ്യർത്ഥന അയയ്ക്കുന്നതിന് മുമ്പ് ക്ലിനിക്, തീയതി, സമയം എന്നിവ ഉറപ്പാക്കുക.",
+  "tour.patient.track":
+    "ക്ലിനിക് നിങ്ങളുടെ അഭ്യർത്ഥന സ്ഥിരീകരിച്ചോ എന്നും ഇനി എന്തു ചെയ്യാമെന്നും അറിയാൻ അപ്പോയിന്റ്മെന്റുകൾ തുറക്കുക.",
+  "tour.patient.message":
+    "സൗകര്യം ലഭ്യമെങ്കിൽ അപ്പോയിന്റ്മെന്റ് തുറന്ന് ഡോക്ടർക്കോ ക്ലിനിക്കിനോ സന്ദേശമയയ്ക്കുക. ഡോക്ടറുമായുള്ള സ്വകാര്യ സംഭാഷണം ക്ലിനിക് സന്ദേശങ്ങളിൽ നിന്ന് വേറെയാണ്.",
+  "tour.doctor.verify":
+    "അപേക്ഷ, പ്രൊഫൈൽ അംഗീകാരം, ക്ലിനിക് ബന്ധത്തിന്റെ സ്ഥിരീകരണം എന്നിവയുടെ നില ഡാഷ്‌ബോർഡിലെ പട്ടികയിൽ കാണാം.",
+  "tour.doctor.accept":
+    "ഡാഷ്‌ബോർഡിൽ ക്ലിനിക് അഭ്യർത്ഥനകൾ കാണുക. ജോലി ചെയ്യാൻ ഉദ്ദേശിക്കുന്ന ക്ലിനിക്കിന്റെ അഭ്യർത്ഥന മാത്രം സ്വീകരിക്കുക. ബന്ധം CareConnect പ്രത്യേകം സ്ഥിരീകരിക്കും.",
+  "tour.doctor.hours":
+    "ബന്ധം സ്ഥിരീകരിച്ച ക്ലിനിക്കിൽ കൺസൾട്ടേഷൻ സമയം ക്രമീകരിക്കാൻ ഷെഡ്യൂൾ തുറക്കുക.",
+  "tour.doctor.manage":
+    "സന്ദർശനങ്ങൾ കാണാൻ അപ്പോയിന്റ്മെന്റുകൾ തുറക്കുക. അപ്പോയിന്റ്മെന്റുമായി ബന്ധപ്പെട്ട സ്വകാര്യ സംഭാഷണങ്ങൾ സന്ദേശങ്ങളിൽ കാണാം.",
+  "tour.clinic.verify": "ക്ലിനിക്കിന്റെ സ്ഥിരീകരണവും സജ്ജീകരണ നിലയും ഡാഷ്‌ബോർഡിലെ പട്ടികയിൽ കാണാം.",
+  "tour.clinic.link":
+    "നിലവിലുള്ള പ്രൊഫൈലുമായി ബന്ധിപ്പിക്കാൻ ഡോക്ടർമാർ എന്ന പേജിൽ അഭ്യർത്ഥിക്കുക. ഡോക്ടർ സമ്മതം നൽകും. CareConnect ബന്ധം സ്ഥിരീകരിക്കും.",
+  "tour.clinic.schedule":
+    "ഡോക്ടർമാർ എന്ന പേജിൽ കൺസൾട്ടേഷൻ സമയം ക്രമീകരിച്ച് കലണ്ടറിൽ കാണുക. ഓൺലൈൻ ബുക്കിങ്ങും രോഗികളുടെ ബന്ധപ്പെടൽ അനുമതിയും CareConnect പ്രത്യേകം നിയന്ത്രിക്കും.",
+  "tour.clinic.manage":
+    "ബുക്കിങ് അഭ്യർത്ഥനകൾ കൈകാര്യം ചെയ്യാൻ അപ്പോയിന്റ്മെന്റുകളും ക്ലിനിക് സംഭാഷണങ്ങൾക്ക് മറുപടി നൽകാൻ സന്ദേശങ്ങളും തുറക്കുക.",
+  "tour.admin.review":
+    "തീരുമാനം കാത്തിരിക്കുന്ന അപേക്ഷകൾ ക്ലിനിക് അപേക്ഷകളും ഡോക്ടർ അപേക്ഷകളും എന്ന വിഭാഗങ്ങളിൽ കാണാം.",
+  "tour.admin.verify":
+    "ക്ലിനിക് ബന്ധങ്ങൾ പരിശോധിക്കാൻ ഡോക്ടർ സ്ഥിരീകരണം തുറക്കുക. സ്ഥിരീകരണം ഡോക്ടറുടെ സമ്മതത്തിൽ നിന്ന് വേറെയാണ്.",
+  "tour.admin.publish":
+    "പട്ടികയിൽ കാണിക്കൽ, ഓൺലൈൻ ബുക്കിങ്, രോഗികളുടെ ബന്ധപ്പെടൽ അനുമതികൾ എന്നിവ നിയന്ത്രിക്കാൻ സേവനദാതാക്കളുടെ പ്രസിദ്ധീകരണം തുറക്കുക.",
 };

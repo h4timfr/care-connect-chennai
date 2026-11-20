@@ -62,6 +62,7 @@ export const te: Messages = {
   "specialty.dermatology": "చర్మ వైద్యం",
   "specialty.gynecology": "స్త్రీ వైద్యం",
   "specialty.neurology": "నాడీ వైద్యం",
+  "specialty.psychiatry": "మానసిక వైద్యం",
   "specialty.ophthalmology": "కంటి వైద్యం",
   "specialty.dentistry": "దంత వైద్యం",
   "specialty.ent": "చెవి, ముక్కు, గొంతు (ENT)",
@@ -334,9 +335,11 @@ export const te: Messages = {
   "messages.loading": "సందేశాలు లోడ్ అవుతున్నాయి…",
   "messages.loadError": "మీ సందేశాలను లోడ్ చేయలేకపోయాం",
   "messages.notSent": "సందేశం పంపబడలేదు. {reason}",
+  "messages.deliveryUnconfirmed":
+    "సందేశం చేరిందని నిర్ధారించలేకపోయాం. అదే సందేశాన్ని మళ్లీ పంపండి.",
   "messages.emptyTitle": "ఇంకా సంభాషణలు లేవు",
   "messages.emptyBody":
-    "ఒక అపాయింట్‌మెంట్ గురించి క్లినిక్‌ను అడగడానికి, డాక్టర్ లేదా క్లినిక్ పేజీని లేదా మీ అపాయింట్‌మెంట్లలో ఒకదాన్ని తెరిచి “క్లినిక్‌కు సందేశం పంపండి” ఎంచుకోండి.",
+    "అందుబాటులో ఉన్నప్పుడు మీ వైద్యుడికి లేదా క్లినిక్‌కు సందేశం పంపడానికి అపాయింట్‌మెంట్‌ను తెరవండి. సాధారణ విచారణ కోసం వైద్యుడు లేదా క్లినిక్ పేజీలో “క్లినిక్‌కు సందేశం పంపండి” ఎంచుకోండి.",
   "messages.conversations": "సంభాషణలు",
   "messages.noMessages": "ఇంకా సందేశాలు లేవు",
   "messages.back": "సంభాషణలకు తిరిగి వెళ్లండి",
@@ -542,6 +545,32 @@ export const te: Messages = {
   "clinicShell.role.other": "క్లినిక్ సభ్యుడు",
 
   // ---- Clinic dashboard
+  "clinicWorkspace.history": "చరిత్ర",
+  "clinicWorkspace.details": "అపాయింట్‌మెంట్ వివరాలు",
+  "clinicWorkspace.doctorUnavailable": "డాక్టర్ వివరాలు అందుబాటులో లేవు",
+  "clinicWorkspace.clearFilters": "ఫిల్టర్లను తీసివేయండి",
+  "clinicWorkspace.statusReview": "స్థితిని మార్చే ముందు అపాయింట్‌మెంట్ వివరాలు చూడండి.",
+  "clinicWorkspace.applyChange": "స్థితిని మార్చండి",
+  "clinicWorkspace.upcomingBookings": "రాబోయే బుకింగ్‌లు",
+  "clinicWorkspace.rosterSummary": "{verified} ధృవీకరించారు · {scheduled} మందికి సమయాలు ఉన్నాయి",
+  "clinicWorkspace.viewAppointments": "అపాయింట్‌మెంట్‌లను చూడండి",
+  "clinicWorkspace.removeHours": "సమయాలను తీసివేయండి",
+  "clinicWorkspace.unpublished": "డైరెక్టరీలో ప్రచురించలేదు",
+  "clinicWorkspace.unavailable": "తనిఖీ చేయలేకపోయాము",
+  "clinicWorkspace.bookingConfigured": "బుకింగ్ సమయాలు సెట్ చేశారు",
+  "clinicWorkspace.bookingPermission": "ఆన్‌లైన్ బుకింగ్ అనుమతి",
+  "clinicWorkspace.enabled": "ప్రారంభించబడింది",
+  "clinicWorkspace.disabled": "నిలిపివేయబడింది",
+  "clinicWorkspace.patientContact": "రోగుల విచారణలకు అనుమతి",
+  "clinicWorkspace.roster": "డాక్టర్ల జాబితా",
+  "clinicWorkspace.rosterCount": "{total} అనుబంధాలు · {verified} క్రియాశీలంగా, ధృవీకరించారు",
+  "clinicWorkspace.noDayVisits": "ఈ రోజు అపాయింట్‌మెంట్‌లు లేవు.",
+  "clinicWorkspace.weeklyHoursNote":
+    "వారపు సంప్రదింపు సమయాలు. ఇప్పటికే ఉన్న బుకింగ్‌ల కోసం అపాయింట్‌మెంట్‌లు చూడండి.",
+  "clinicWorkspace.noDayHours": "ఈ రోజు ధృవీకరించిన డాక్టర్లకు వారపు సమయాలు లేవు.",
+  "clinicWorkspace.needsReplyFilter": "సమాధానం అవసరం",
+  "clinicWorkspace.noRepliesNeeded": "సమాధానం కోసం ఎదురుచూస్తున్న సంభాషణలు లేవు.",
+  "clinicWorkspace.sending": "సమాధానం పంపుతోంది…",
   "clinicDashboard.title": "డ్యాష్‌బోర్డ్",
   "clinicDashboard.overview": "{date} అవలోకనం",
   "clinicDashboard.loading": "డ్యాష్‌బోర్డ్ లోడ్ అవుతోంది…",
@@ -642,7 +671,7 @@ export const te: Messages = {
   "clinicProfile.title": "క్లినిక్ ప్రొఫైల్",
   "clinicProfile.subtitle": "రోగులకు మీ క్లినిక్ ఎలా కనిపిస్తుంది",
   "clinicProfile.readOnly":
-    "పోర్టల్‌లో క్లినిక్ వివరాలను సవరించడం ఇంకా అందుబాటులో లేదు. రోగులు ప్రస్తుతం చూసే సమాచారం ఇదే.",
+    "క్లినిక్ వివరాలను మార్చడానికి CareConnectను సంప్రదించండి. డైరెక్టరీ ప్రచురణ, ఆన్‌లైన్ బుకింగ్, రోగుల విచారణలను విడివిడిగా నిర్వహిస్తారు.",
   "clinicProfile.name": "క్లినిక్ పేరు",
   "clinicProfile.description": "వివరణ",
 
@@ -693,6 +722,12 @@ export const te: Messages = {
   "admin.tab.doctors": "వైద్యుల ధృవీకరణ",
   "admin.tab.publication": "ప్రొవైడర్ ప్రచురణ",
   "admin.tab.teams": "క్లినిక్ బృందాలు",
+  "admin.confirmPublicationAction":
+    "{clinic} కోసం {action} నిర్ధారించండి. మార్పును వర్తింపజేసే ముందు అనుమతులను పరిశీలించండి.",
+  "admin.acknowledgeContactConsent":
+    "రోగుల విచారణలను స్వీకరించడానికి క్లినిక్ స్పష్టంగా అనుమతి ఇచ్చిందని నేను నిర్ధారిస్తున్నాను.",
+  "admin.publicationChanged":
+    "క్లినిక్ ప్రచురణ సెట్టింగ్‌లు మారాయి. ఈ విండోను మూసి, మళ్లీ ప్రయత్నించే ముందు ప్రస్తుత సెట్టింగ్‌లను సమీక్షించండి.",
   "admin.publicationHelp":
     "ధృవీకరణ, డైరెక్టరీ ప్రచురణ, రోగి సందేశ అనుమతి, ఆన్‌లైన్ బుకింగ్ వేర్వేరు నియంత్రణలు. రోగి సంప్రదింపును అనుమతించే ముందు క్లినిక్ స్పష్టమైన సమ్మతిని నిర్ధారించండి. నమూనా క్లినిక్‌లను ప్రారంభించలేరు.",
   "admin.noPublicationClinics": "సమీక్షించడానికి నిజమైన క్లినిక్ రికార్డులు లేవు.",
@@ -880,6 +915,28 @@ export const te: Messages = {
   "admin.doctorVerifyReminder":
     "మెడికల్ కౌన్సిల్‌తో రిజిస్ట్రేషన్ నంబర్‌ను, దరఖాస్తుదారు గుర్తింపును నిర్ధారించిన తర్వాతే ఆమోదించండి.",
   "admin.tab.doctorApplications": "వైద్యుల దరఖాస్తులు",
+  "doctorWorkspace.allAppointments": "అన్ని అపాయింట్‌మెంట్‌లు",
+  "doctorWorkspace.period": "అపాయింట్‌మెంట్ కాలం",
+  "doctorWorkspace.status": "స్థితి",
+  "doctorWorkspace.allStatuses": "అన్ని స్థితులు",
+  "doctorWorkspace.date": "తేదీ",
+  "doctorWorkspace.noMatches": "ఈ ఫిల్టర్‌లకు సరిపోలే అపాయింట్‌మెంట్‌లు లేవు",
+  "doctorWorkspace.todayAppointments": "నేటి అపాయింట్‌మెంట్‌లు",
+  "doctorWorkspace.quickLinks": "త్వరిత ప్రాప్యత",
+  "doctorWorkspace.viewToday": "నేటి అపాయింట్‌మెంట్‌లను చూడండి",
+  "doctorWorkspace.todayQueue": "ఈ రోజు మిగిలిన అపాయింట్‌మెంట్‌లు",
+  "doctorWorkspace.noTodayQueue": "ఈ రోజు ఇక అపాయింట్‌మెంట్‌లు లేవు",
+  "doctorWorkspace.noHours": "సమయాలు సెట్ చేయలేదు",
+  "doctorWorkspace.editDay": "{day} సమయాలను సవరించండి",
+  "doctorWorkspace.scheduleLocked": "రాబోయే అపాయింట్‌మెంట్‌లు ఉన్నందున ఈ సమయాలను మార్చలేరు.",
+  "doctorWorkspace.scheduleLoadError": "మీ పని వేళలను లోడ్ చేయలేకపోయాం",
+  "doctorWorkspace.slotTooLong": "పని వేళల్లో కనీసం ఒక అపాయింట్‌మెంట్‌కు సమయం ఉండాలి.",
+  "doctorWorkspace.removeHoursBody":
+    "ఈ వారపు సమయాన్ని తొలగించాలా? ఇప్పటికే ఉన్న బుకింగ్‌లు తొలగింపును నిరోధించవచ్చు.",
+  "doctorWorkspace.allThreads": "అన్ని సంభాషణలు",
+  "doctorWorkspace.refreshInbox": "ఇన్‌బాక్స్‌ను రిఫ్రెష్ చేయండి",
+  "doctorWorkspace.privateUnavailable":
+    "అపాయింట్‌మెంట్‌లకు సంబంధించిన వ్యక్తిగత సందేశాలు ప్రస్తుతం అందుబాటులో లేవు.",
   "doctorAppointments.loadError": "మీ అపాయింట్‌మెంట్‌లను లోడ్ చేయలేకపోయాం",
   "doctorAppointments.nonePast": "గత అపాయింట్‌మెంట్‌లు లేవు",
   "doctorAppointments.noneUpcoming": "రాబోయే అపాయింట్‌మెంట్‌లు లేవు",
@@ -1159,6 +1216,32 @@ export const te: Messages = {
   "candidates.title": "ప్రొవైడర్ అభ్యర్థులు",
 
   // ---- Portal status (link state, clinic profile)
+
+  "linkRequest.linkDoctor": "ఇప్పటికే ఉన్న వైద్యుడిని అనుసంధానించండి",
+  "linkRequest.linkClinic": "క్లినిక్‌తో అనుసంధానం",
+  "linkRequest.title": "అనుసంధాన అభ్యర్థనలు",
+  "linkRequest.profileId": "వైద్యుడి ప్రొఫైల్ ఐడీ",
+  "linkRequest.clinicHelp":
+    "వైద్యుడి ప్రొఫైల్ ఐడీని అడగండి. CareConnect అనుసంధానాన్ని ధృవీకరించే ముందు వైద్యుడు అభ్యర్థనను అంగీకరించాలి.",
+  "linkRequest.doctorHelp":
+    "మీ ప్రొఫైల్ ఐడీని క్లినిక్ నిర్వాహకుడికి ఇవ్వండి. మీరు ఆ క్లినిక్‌లో వైద్యం చేస్తేనే అభ్యర్థనను అంగీకరించండి.",
+  "linkRequest.send": "అనుసంధాన అభ్యర్థన పంపండి",
+  "linkRequest.refresh": "అభ్యర్థనలను రిఫ్రెష్ చేయండి",
+  "linkRequest.waiting": "వైద్యుడి ఆమోదం కోసం వేచి ఉంది",
+  "linkRequest.declined": "వైద్యుడు తిరస్కరించారు",
+  "linkRequest.withdrawn": "క్లినిక్ ఉపసంహరించుకుంది",
+  "linkRequest.accept": "అభ్యర్థనను అంగీకరించండి",
+  "linkRequest.decline": "అభ్యర్థనను తిరస్కరించండి",
+  "linkRequest.withdraw": "అభ్యర్థనను ఉపసంహరించండి",
+  "linkRequest.empty": "ఇంకా అనుసంధాన అభ్యర్థనలు లేవు.",
+  "linkRequest.loadError": "అనుసంధాన అభ్యర్థనలను లోడ్ చేయలేకపోయాం",
+  "linkRequest.unavailable": "అనుసంధాన అభ్యర్థనలు అందుబాటులో లేవు.",
+  "linkRequest.invalidId": "వైద్యుడు పంచుకున్న ప్రొఫైల్ ఐడీని నమోదు చేయండి.",
+  "linkRequest.invalidDoctor": "ఈ వైద్యుడి ప్రొఫైల్‌ను అనుసంధానించలేరు.",
+  "linkRequest.duplicate": "ఈ అనుసంధానం లేదా పెండింగ్ అభ్యర్థన ఇప్పటికే ఉంది.",
+  "linkRequest.answered":
+    "ఈ అభ్యర్థనకు ఇప్పటికే స్పందించారు. ప్రస్తుత స్థితి కోసం రిఫ్రెష్ చేయండి.",
+
   "verification.inactive": "నిష్క్రియం",
   "doctorSchedule.inactive":
     "ఈ క్లినిక్‌తో మీ లింక్ నిష్క్రియంగా ఉంది, కాబట్టి ఇక్కడ సమయాలు సెట్ చేయలేరు.",
@@ -1184,4 +1267,95 @@ export const te: Messages = {
     "లేని వివరాలను జోడించడానికి CareConnectను సంప్రదించండి. పోర్టల్‌లో సవరణ ఇంకా అందుబాటులో లేదు.",
   // Inbox: the patient wrote last (derived from the messages, not a stored counter).
   "messages.awaitingReply": "సమాధానం కోసం వేచి ఉంది",
+  "messageDoctor.button": "వైద్యుడికి సందేశం పంపండి",
+  "messages.appointmentOn": "అపాయింట్‌మెంట్ {date}",
+  "messages.privateDoctor": "వైద్యుడితో వ్యక్తిగత సంభాషణ",
+  "messages.doctorWriteBelow": "ఇంకా సందేశాలు లేవు. కింద మీ వైద్యుడికి రాయండి.",
+  "messages.doctorNonEmergency": "వ్యక్తిగత సందేశాలు అత్యవసరం కాని సంభాషణలకు మాత్రమే.",
+  "messages.doctorClosed":
+    "ఈ అపాయింట్‌మెంట్‌కి సంబంధించిన వైద్యుడి సంభాషణలో కొత్త సందేశాలు పంపలేరు.",
+  "messages.senderDoctor": "వైద్యుడు:",
+  "messages.doctorLoadError": "వైద్యుడి వ్యక్తిగత సందేశాలను లోడ్ చేయలేకపోయాము",
+  "setup.doctorTitle": "వైద్యుడి సెటప్",
+  "setup.clinicTitle": "క్లినిక్ సెటప్",
+  "setup.done": "పూర్తయింది",
+  "setup.pending": "పెండింగ్‌లో ఉంది",
+  "setup.action": "తదుపరి చర్య",
+  "setup.blocked": "మునుపటి దశలు ఇంకా పూర్తికాలేదు",
+  "setup.unavailable": "స్థితి అందుబాటులో లేదు",
+  "setup.application": "దరఖాస్తు సమర్పించబడింది",
+  "setup.profile": "ప్రొఫైల్ ఆమోదించబడింది",
+  "setup.connectionAccepted": "క్లినిక్ అనుసంధాన అభ్యర్థన అంగీకరించబడింది",
+  "setup.relationshipVerified": "క్లినిక్ అనుసంధానం ధృవీకరించబడింది",
+  "setup.hours": "సంప్రదింపు వేళలు నిర్ణయించబడ్డాయి",
+  "setup.ready": "అపాయింట్‌మెంట్లు స్వీకరించడానికి సిద్ధం",
+  "setup.viewApplication": "దరఖాస్తును చూడండి",
+  "setup.noApplication": "ఈ ప్రొఫైల్‌కు దరఖాస్తు నమోదు కాలేదు.",
+  "setup.doctorRespond": "కొనసాగడానికి క్లినిక్ అభ్యర్థనను అంగీకరించండి.",
+  "setup.doctorRequest": "క్లినిక్ అభ్యర్థన పంపడానికి మీ ప్రొఫైల్ ఐడీని వారితో పంచుకోండి.",
+  "setup.viewRequests": "అనుసంధాన అభ్యర్థనలను చూడండి",
+  "setup.clinicVerification": "క్లినిక్ ధృవీకరించబడింది",
+  "setup.linkDoctor": "వైద్యుడు ఆహ్వానించబడ్డారు లేదా అనుసంధానించబడ్డారు",
+  "setup.doctorConsent": "వైద్యుడి సమ్మతి, ధృవీకరణ",
+  "setup.manageHours": "సంప్రదింపు వేళలను నిర్వహించండి",
+  "setup.onlineBooking": "ఆన్‌లైన్ బుకింగ్ ప్రారంభమైంది",
+  "setup.patientContact": "రోగుల సంప్రదింపులకు అనుమతి",
+  "setup.publishingHelp":
+    "ప్రచురణ, ఆన్‌లైన్ బుకింగ్‌ను CareConnect సమీక్షిస్తుంది. ఇంకా పెండింగ్‌లో ఉంటే మీ క్లినిక్‌ను లేదా CareConnectను సంప్రదించండి.",
+  "setup.contactHelp": "రోగుల సంప్రదింపులకు CareConnect నుంచి ప్రత్యేక అనుమతి అవసరం.",
+  "book.review": "మీ అపాయింట్‌మెంట్‌ను సమీక్షించండి",
+  "book.changeSlot": "క్లినిక్, తేదీ లేదా సమయాన్ని మార్చండి",
+  "messages.clinicThread": "క్లినిక్ సంభాషణ",
+  "admin.reviewNavigation": "సమీక్ష జాబితాలు",
+  "setup.consentNotRecorded": "ధృవీకరించిన అనుసంధానానికి ప్రత్యేక సమ్మతి నమోదు కనిపించలేదు.",
+  "setup.hoursTooShort": "కనీసం ఒక అపాయింట్‌మెంట్‌కు సరిపడేలా సంప్రదింపు సమయాన్ని సెట్ చేయండి.",
+  "admin.awaitingLoaded": "ఈ జాబితాలో సమీక్ష కోసం వేచి ఉన్నవి: {count}",
+  "welcome.title": "CareConnect కు స్వాగతం",
+  "welcome.language": "మీ భాషను ఎంచుకోండి. గ్లోబ్ మెనూ ద్వారా ఎప్పుడైనా మార్చుకోవచ్చు.",
+  "welcome.languageError": "ఆ భాషను లోడ్ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి లేదా ముందుకు వెళ్లండి.",
+  "tour.help": "సహాయం, పరిచయం",
+  "welcome.tourOffer": "చిన్న పరిచయాన్ని చూడాలనుకుంటున్నారా?",
+  "welcome.startTour": "చిన్న పరిచయాన్ని ప్రారంభించండి",
+  "welcome.skipTour": "ఇప్పటికి దాటవేయండి",
+  "welcome.getStarted": "ప్రారంభించండి",
+  "welcome.tourHint": "ఐచ్ఛిక మార్గదర్శిని సహాయం నుంచి ఎప్పుడైనా తెరవవచ్చు.",
+  "tour.restart": "పరిచయాన్ని మళ్లీ ప్రారంభించండి",
+  "tour.skip": "దాటవేయండి",
+  "tour.back": "వెనుకకు",
+  "tour.next": "తదుపరి",
+  "tour.finish": "ముగించండి",
+  "tour.progress": "దశ {step} / {total}",
+  "tour.title.patient": "రోగి మార్గదర్శిని",
+  "tour.title.doctor": "వైద్యుల పోర్టల్ మార్గదర్శిని",
+  "tour.title.clinic": "క్లినిక్ పోర్టల్ మార్గదర్శిని",
+  "tour.title.admin": "పరిపాలన మార్గదర్శిని",
+  "tour.patient.find":
+    "పేరు, ప్రత్యేకత లేదా ప్రాంతం ఆధారంగా వైద్యులు, క్లినిక్‌లను వెతకడానికి వైద్యుల శోధన పేజీని తెరవండి.",
+  "tour.patient.book":
+    "వైద్యుడి ప్రొఫైల్‌లో అందుబాటులో ఉన్న సమయాలను చూడండి. సమయాన్ని ఎంచుకుని, అభ్యర్థన పంపే ముందు క్లినిక్, తేదీ, సమయాన్ని సరిచూసుకోండి.",
+  "tour.patient.track":
+    "క్లినిక్ మీ అభ్యర్థనను నిర్ధారించిందో లేదో, తర్వాత ఏం చేయాలో అపాయింట్‌మెంట్లలో చూడండి.",
+  "tour.patient.message":
+    "సదుపాయం ఉంటే అపాయింట్‌మెంట్ తెరిచి వైద్యుడికి లేదా క్లినిక్‌కు సందేశం పంపండి. వైద్యుడితో ప్రైవేట్ సంభాషణ క్లినిక్ సందేశాలకు వేరుగా ఉంటుంది.",
+  "tour.doctor.verify":
+    "మీ దరఖాస్తు, ప్రొఫైల్ ఆమోదం, క్లినిక్ ధృవీకరణ స్థితిని డ్యాష్‌బోర్డ్ జాబితాలో చూడండి.",
+  "tour.doctor.accept":
+    "డ్యాష్‌బోర్డ్‌లో క్లినిక్ అభ్యర్థనలను చూడండి. మీరు పనిచేయాలనుకునే క్లినిక్ అభ్యర్థననే అంగీకరించండి. CareConnect అనుసంధానాన్ని విడిగా ధృవీకరిస్తుంది.",
+  "tour.doctor.hours":
+    "ధృవీకరించిన క్లినిక్‌లో సంప్రదింపు వేళలను నిర్ణయించడానికి షెడ్యూల్ తెరవండి.",
+  "tour.doctor.manage":
+    "సందర్శనలను చూడటానికి అపాయింట్‌మెంట్లను తెరవండి. అపాయింట్‌మెంట్‌కు సంబంధించిన ప్రైవేట్ సంభాషణలను సందేశాల్లో చూడండి.",
+  "tour.clinic.verify": "క్లినిక్ ధృవీకరణ, సెటప్ స్థితిని డ్యాష్‌బోర్డ్ జాబితాలో చూడండి.",
+  "tour.clinic.link":
+    "ఇప్పటికే ఉన్న ప్రొఫైల్‌ను అనుసంధానించడానికి వైద్యుల పేజీలో అభ్యర్థించండి. వైద్యుడు సమ్మతి ఇస్తారు. CareConnect అనుసంధానాన్ని ధృవీకరిస్తుంది.",
+  "tour.clinic.schedule":
+    "వైద్యుల పేజీలో సంప్రదింపు వేళలను నిర్ణయించి క్యాలెండర్‌లో చూడండి. ఆన్‌లైన్ బుకింగ్, రోగుల సంప్రదింపులను CareConnect విడివిడిగా నియంత్రిస్తుంది.",
+  "tour.clinic.manage":
+    "బుకింగ్ అభ్యర్థనల కోసం అపాయింట్‌మెంట్లను, క్లినిక్ సంభాషణలకు జవాబివ్వడానికి సందేశాలను తెరవండి.",
+  "tour.admin.review":
+    "నిర్ణయం కోసం వేచి ఉన్న దరఖాస్తులను క్లినిక్ దరఖాస్తులు, వైద్యుల దరఖాస్తులలో చూడండి.",
+  "tour.admin.verify":
+    "క్లినిక్ అనుసంధానాలను సమీక్షించడానికి వైద్యుల ధృవీకరణను తెరవండి. ధృవీకరణ వైద్యుడి సమ్మతికి వేరైన ప్రక్రియ.",
+  "tour.admin.publish":
+    "జాబితాలో కనిపించడం, ఆన్‌లైన్ బుకింగ్, రోగుల సంప్రదింపు అనుమతులను నిర్వహించడానికి ప్రొవైడర్ ప్రచురణను తెరవండి.",
 };

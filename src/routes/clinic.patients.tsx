@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute } from "@tanstack/react-router";
 import { Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -5,12 +6,14 @@ import { ClinicShell } from "@/components/layout/ClinicShell";
 import { EmptyState, ErrorState, Initials, PageLoader } from "@/components/common";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/lib/store";
-import { isoDate } from "@/lib/format";
+import { isPastAppointment } from "@/lib/supabase/appointments";
+import { useAuth } from "@/lib/supabase/auth";
 import { useI18n } from "@/lib/i18n";
 import { describeStatusError } from "@/lib/supabase/appointments";
 import type { Appointment } from "@/lib/types";
 
 export const Route = createFileRoute("/clinic/patients")({
+  head: () => ({ meta: [{ title: pageTitles.clinic }] }),
   component: ClinicPatients,
 });
 
@@ -23,6 +26,7 @@ interface PatientSummary {
 function ClinicPatients() {
   const { activeClinic, clinicAppointmentsStatus: status } = useApp();
   const { t } = useI18n();
+  const { user } = useAuth();
 
   let body;
   if (!activeClinic) {
@@ -38,7 +42,7 @@ function ClinicPatients() {
       />
     );
   } else {
-    body = <PatientList clinicId={activeClinic.id} />;
+    body = <PatientList key={[user?.id, activeClinic.id].join(":")} clinicId={activeClinic.id} />;
   }
 
   return (
@@ -68,7 +72,6 @@ function PatientList({ clinicId }: { clinicId: string }) {
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [clinicAppointments, clinicId, t]);
 
-  const today = isoDate(new Date());
   const needle = search.trim().toLowerCase();
   const filtered = needle
     ? patients.filter((p) => p.name.toLowerCase().includes(needle))
@@ -84,7 +87,7 @@ function PatientList({ clinicId }: { clinicId: string }) {
       .sort()
       .at(-1),
     next: p.appointments
-      .filter((a) => (a.status === "pending" || a.status === "confirmed") && a.date >= today)
+      .filter((a) => (a.status === "pending" || a.status === "confirmed") && !isPastAppointment(a))
       .map((a) => a.date)
       .sort()[0],
   }));

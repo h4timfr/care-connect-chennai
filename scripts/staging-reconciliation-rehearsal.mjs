@@ -31,7 +31,11 @@ export const targetVersions = [
   ...Array.from({ length: 23 }, (_, i) => String(i + 1).padStart(5, "0")),
   ...Array.from({ length: 17 }, (_, i) => String(i + 45).padStart(5, "0")),
   "00062",
+  "00063",
+  "00064",
+  "00065",
 ];
+export const sqlTestCount = 24;
 export const aliasFile = "20261009041700_00001_initial_schema.sql";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -41,7 +45,7 @@ function check(condition) {
 
 export function validateInventory(files) {
   const sql = files.filter((f) => f.endsWith(".sql")).sort();
-  check(sql.length === 41);
+  check(sql.length === targetVersions.length);
   check(
     sql.every((f, i) => /^\d{5}_[a-z0-9_]+\.sql$/.test(f) && f.slice(0, 5) === targetVersions[i]),
   );
@@ -50,7 +54,7 @@ export function validateInventory(files) {
 
 export function validateTestInventory(files) {
   const tests = files.filter((f) => f.endsWith(".test.sql")).sort();
-  check(tests.length === 22);
+  check(tests.length === sqlTestCount);
   check(
     tests.every(
       (f, i) =>
@@ -551,7 +555,7 @@ async function main() {
     );
     check(JSON.stringify(actualPending) === JSON.stringify(pendingVersions(["00001"])));
     report(
-      "Normalization PASS: schema/data/ownership/grants unchanged; exactly 40 pending versions (00002–00023, 00045–00062).",
+      `Normalization PASS: schema/data/ownership/grants unchanged; exactly ${targetVersions.length - 1} pending versions (00002–00023, 00045–${targetVersions.at(-1)}).`,
     );
   }
   function push(file, mayFail = false) {
@@ -818,7 +822,7 @@ async function main() {
   try {
     verifyPinnedCliVersion(cli(["--version"], "cli-version").raw);
     report(
-      "Migration integrity PASS: all 40 filenames and LF-normalized source hashes match the reviewed manifest.",
+      `Migration integrity PASS: all ${targetVersions.length} filenames and LF-normalized source hashes match the reviewed manifest.`,
     );
     for (const args of [
       ["db", "push", "--help"],
@@ -923,7 +927,7 @@ async function main() {
     checkpoint("00059");
     success = true;
     report(
-      "Staging-state rehearsal PASS: exact normalization, 40 pending migrations, all SQL plans, nine concurrency checks, owned fixture cleanup and recovery cases A–J.",
+      `Staging-state rehearsal PASS: exact normalization, ${targetVersions.length - 1} pending migrations, all SQL plans, nine concurrency checks, owned fixture cleanup and recovery cases A–J.`,
     );
   } catch {
     report(

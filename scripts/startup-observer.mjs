@@ -560,10 +560,21 @@ async function runStartup(projectId, networkName) {
 
     if (signalReceived) throw new Error("startup cancelled before launch");
     cliStartedAt = Date.now();
-    cli = spawn("supabase", ["--debug", "--network-id", networkName, "start"], {
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: process.platform !== "win32",
-    });
+    cli = spawn(
+      "supabase",
+      [
+        "--debug",
+        "--network-id",
+        networkName,
+        "start",
+        "--exclude",
+        "vector,edge-runtime,imgproxy,studio",
+      ],
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: process.platform !== "win32",
+      },
+    );
     cli.stdout.on("data", appendRaw);
     cli.stderr.on("data", appendRaw);
     const closePromise = new Promise((resolve, reject) => {
@@ -644,7 +655,10 @@ async function runStartup(projectId, networkName) {
 
 async function main() {
   const [mode, projectId, networkName] = process.argv.slice(2);
-  if (mode === "reap") return reapObserver(projectId);
+  if (mode === "reap") {
+    requireServicePreExposureIsolation();
+    return reapObserver(projectId);
+  }
   if (mode !== "run") throw new Error("invalid observer mode");
   return runStartup(projectId, networkName);
 }

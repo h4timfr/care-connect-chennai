@@ -35,7 +35,8 @@ VITE_SUPABASE_STAGING_PUBLISHABLE_KEY=your-staging-publishable-key
 The application validates the staging URL against the approved CareConnect staging project. Use
 the publishable key from that same project. Preview builds fail when either staging value is
 missing, the URL points elsewhere, or the staging key matches the configured Production key.
-Production continues to use `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Never use a
+Production requires `VITE_SUPABASE_TARGET=production` in addition to `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY`, including when the Vercel environment marker is absent. Never use a
 secret or `service_role` key in any `VITE_` variable.
 
 ## 3. Apply Migrations

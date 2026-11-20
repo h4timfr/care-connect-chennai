@@ -509,21 +509,22 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       startup: ["supabase", ["start"]],
       ledger: ["supabase", ["migration", "list", "--local"]],
       pgtap: [
-        "supabase",
+        "/bin/bash",
         [
-          "test",
-          "db",
+          "scripts/ci-real-service-phase.sh",
+          "pgtap-run",
           ...readdirSync(path.join(root, "supabase/tests"))
             .filter((file) => /^\d{3}_[a-z0-9_]+\.test\.sql$/.test(file))
             .sort()
             .map((file) => `supabase/tests/${file}`),
-          "--local",
         ],
       ],
       concurrency: [process.execPath, ["scripts/test-booking-concurrency.mjs"]],
     };
     if (!commands[kind] || !process.env.RUNNER_TEMP) throw new Error("CI-only command.");
     const [command, args] = commands[kind];
+    if (command === "supabase")
+      args.unshift("--network-id", process.env.CARECONNECT_DOCKER_NETWORK);
     const result = runCapturedStep({
       kind,
       command,

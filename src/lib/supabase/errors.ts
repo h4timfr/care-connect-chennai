@@ -68,6 +68,9 @@ export function describeDataError(error: unknown): MessageKey {
   if (isNetworkError(error)) return "error.connection";
 
   const code = codeOf(error);
+  // A missing column indicates that this client and the server schema are incompatible.
+  // Keep the result as an error: treating it as an empty catalogue could hide providers.
+  if (code === "42703") return "error.unavailable";
   if (code === "PGRST301" || code === "PGRST303" || messageOf(error).includes("JWT expired")) {
     return "error.sessionExpired";
   }

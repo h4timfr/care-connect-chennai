@@ -948,6 +948,24 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      request_doctor_clinic_link: {
+        Args: { p_clinic_id: string; p_doctor_id: string };
+        Returns: string;
+      };
+      respond_doctor_clinic_link: {
+        Args: { p_request_id: string; p_action: "accept" | "decline" | "withdraw" };
+        Returns: undefined;
+      };
+      list_doctor_clinic_link_requests: {
+        Args: { p_clinic_id?: string };
+        Returns: {
+          id: string;
+          clinic_name: string;
+          doctor_id: string;
+          doctor_name: string | null;
+          status: string;
+        }[];
+      };
       book_appointment: {
         Args: {
           p_clinic_id: string;
@@ -1043,6 +1061,26 @@ export type Database = {
           id: string;
           messages: Json;
           patient_name: string;
+        }[];
+      };
+      can_message_assigned_doctor: { Args: { p_appointment_id: string }; Returns: boolean };
+      open_doctor_message_thread: { Args: { p_appointment_id: string }; Returns: string };
+      send_doctor_message: {
+        Args: { p_appointment_id: string; p_message_id: string; p_body: string };
+        Returns: undefined;
+      };
+      doctor_message_inbox: {
+        Args: { p_as_doctor: boolean };
+        Returns: {
+          appointment_id: string;
+          appointment_date: string;
+          clinic_id: string;
+          clinic_name: string;
+          patient_id: string;
+          patient_name: string;
+          doctor_name: string;
+          can_send: boolean;
+          messages: Json;
         }[];
       };
       withdraw_doctor_application: { Args: { p_application_id: string }; Returns: undefined };

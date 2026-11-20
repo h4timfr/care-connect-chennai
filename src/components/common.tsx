@@ -170,14 +170,16 @@ export function SectionHeader({
   subtitle,
   action,
   id,
+  className,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
   id?: string;
+  className?: string;
 }) {
   return (
-    <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+    <div className={cn("mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3", className)}>
       <div className="min-w-0">
         <h2 id={id} className="text-lg font-semibold [overflow-wrap:anywhere] sm:text-xl">
           {title}
@@ -194,21 +196,43 @@ export function EmptyState({
   title,
   description,
   action,
+  compact = false,
 }: {
   icon: LucideIcon;
   title: string;
   description?: string;
   action?: ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <div className="surface-card flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary-soft text-primary">
-        <Icon className="h-5 w-5" aria-hidden />
+    <div
+      className={cn(
+        compact
+          ? "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border bg-card px-3.5 py-3 text-start sm:px-4"
+          : "surface-card flex flex-col items-center gap-3 px-6 py-12 text-center",
+      )}
+    >
+      <span
+        className={cn(
+          "grid shrink-0 place-items-center bg-primary-soft text-primary",
+          compact ? "size-9 self-start rounded-lg" : "size-12 rounded-2xl",
+        )}
+      >
+        <Icon className={compact ? "size-4" : "size-5"} aria-hidden />
       </span>
-      <div>
-        <h3 className="font-semibold">{title}</h3>
+      <div className={compact ? "min-w-0 flex-[1_1_12rem]" : undefined}>
+        <h3 className={cn("font-semibold", compact && "text-sm [overflow-wrap:anywhere]")}>
+          {title}
+        </h3>
         {description ? (
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+          <p
+            className={cn(
+              "text-sm text-muted-foreground",
+              compact ? "mt-0.5 [overflow-wrap:anywhere]" : "mx-auto mt-1 max-w-sm",
+            )}
+          >
+            {description}
+          </p>
         ) : null}
       </div>
       {action}
@@ -221,23 +245,43 @@ export function ErrorState({
   title,
   message,
   onRetry,
+  compact = false,
 }: {
   title: string;
   message: string;
   onRetry?: () => void;
+  compact?: boolean;
 }) {
   const { t } = useI18n();
   return (
     <div
       role="alert"
-      className="surface-card flex flex-col items-center gap-3 border-destructive/30 px-6 py-12 text-center"
+      className={cn(
+        compact
+          ? "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-start sm:px-4"
+          : "surface-card flex flex-col items-center gap-3 border-destructive/30 px-6 py-12 text-center",
+      )}
     >
-      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
-        <AlertTriangle className="h-5 w-5" aria-hidden />
+      <span
+        className={cn(
+          "grid shrink-0 place-items-center bg-destructive/10 text-destructive",
+          compact ? "size-9 self-start rounded-lg" : "size-12 rounded-2xl",
+        )}
+      >
+        <AlertTriangle className={compact ? "size-4" : "size-5"} aria-hidden />
       </span>
-      <div>
-        <h3 className="font-semibold">{title}</h3>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{message}</p>
+      <div className={compact ? "min-w-0 flex-[1_1_12rem]" : undefined}>
+        <h3 className={cn("font-semibold", compact && "text-sm [overflow-wrap:anywhere]")}>
+          {title}
+        </h3>
+        <p
+          className={cn(
+            "text-sm text-muted-foreground",
+            compact ? "mt-0.5 [overflow-wrap:anywhere]" : "mx-auto mt-1 max-w-sm",
+          )}
+        >
+          {message}
+        </p>
       </div>
       {onRetry ? (
         <Button variant="outline" size="sm" onClick={onRetry}>
@@ -248,12 +292,21 @@ export function ErrorState({
   );
 }
 
-export function PageLoader({ label }: { label?: string | undefined }) {
+export function PageLoader({
+  label,
+  compact = false,
+}: {
+  label?: string | undefined;
+  compact?: boolean;
+}) {
   const { t } = useI18n();
   return (
     <div
       role="status"
-      className="flex min-h-[40vh] items-center justify-center gap-2 text-sm text-muted-foreground"
+      className={cn(
+        "flex items-center gap-2 text-sm text-muted-foreground",
+        compact ? "rounded-xl border bg-card px-4 py-4" : "min-h-[40vh] justify-center",
+      )}
     >
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
       {label ?? t("common.loading")}

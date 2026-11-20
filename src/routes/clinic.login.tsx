@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { PortalAuthCard, ProviderSignIn, type PortalAccess } from "@/components/ProviderAuth";
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/clinic/login")({
     // Still checked by safeRedirect() before use.
     redirect: typeof redirect === "string" ? redirect : undefined,
   }),
-  head: () => ({ meta: [{ title: "Clinic Portal sign in — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.clinic }] }),
   component: ClinicLogin,
 });
 

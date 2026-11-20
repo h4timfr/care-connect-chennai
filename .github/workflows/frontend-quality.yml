@@ -9,6 +9,7 @@ on:
       - "scripts/**"
       - "package*.json"
       - "*.config.*"
+      - "vercel.json"
       - "tsconfig*.json"
       - ".github/workflows/frontend-quality.yml"
   push:
@@ -19,6 +20,7 @@ on:
       - "scripts/**"
       - "package*.json"
       - "*.config.*"
+      - "vercel.json"
       - "tsconfig*.json"
       - ".github/workflows/frontend-quality.yml"
 
@@ -45,7 +47,7 @@ jobs:
         run: npm ci
       - name: Check types and lint
         run: npm run typecheck && npm run typecheck:tests && npm run lint
-      - name: Run safe unit and harness tests
+      - name: Run unit, harness, and compiled bundle isolation tests
         run: npm run test:unit && node --test scripts/*.test.mjs
       - name: Install test browser
         run: npx playwright install --with-deps chromium

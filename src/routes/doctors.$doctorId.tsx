@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, CalendarX, GraduationCap, Languages, MapPin, SearchX } from "lucide-react";
 import { useState } from "react";
@@ -21,7 +22,7 @@ import { describeDataError } from "@/lib/supabase/errors";
 import { bookableClinicIds, doctorCanPatientContact } from "@/lib/supabase/queries";
 
 export const Route = createFileRoute("/doctors/$doctorId")({
-  head: () => ({ meta: [{ title: "Doctor profile — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.doctor }] }),
   component: DoctorProfile,
 });
 
@@ -77,9 +78,12 @@ function DoctorProfile() {
         </Link>
 
         <section className="surface-card p-5 sm:p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-            <Initials name={doctor.name} className="h-20 w-20 shrink-0 text-2xl" />
-            <div className="min-w-0 flex-1 space-y-3">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:gap-5 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
+            <Initials
+              name={doctor.name}
+              className="size-14 shrink-0 text-xl sm:size-20 sm:text-2xl"
+            />
+            <div className="min-w-0 space-y-3">
               <div>
                 <h1 className="font-display text-2xl font-bold [overflow-wrap:anywhere]">
                   {doctor.name}
@@ -116,8 +120,16 @@ function DoctorProfile() {
               </div>
             </div>
             {bookable.size ? (
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link to="/book/$doctorId" params={{ doctorId: doctor.id }}>
+              <Button
+                asChild
+                size="lg"
+                className="col-span-full h-auto min-h-11 w-full whitespace-normal lg:col-span-1"
+              >
+                <Link
+                  to="/book/$doctorId"
+                  params={{ doctorId: doctor.id }}
+                  data-tour-target="patient-book"
+                >
                   {t("doctor.bookAppointment")}
                 </Link>
               </Button>

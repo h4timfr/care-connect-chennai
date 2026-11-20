@@ -1,8 +1,10 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarClock, Loader2, UserPlus } from "lucide-react";
+import { CalendarClock, Loader2, Stethoscope, UserPlus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
+import { DoctorClinicLinkRequests } from "@/components/DoctorClinicLinkRequests";
 import { FormAlert } from "@/components/AuthCard";
 import { EmptyState, ErrorState, InfoNotice, Initials, PageLoader } from "@/components/common";
 import { LinkStatus } from "@/components/ProviderStatus";
@@ -17,7 +19,9 @@ import { useAuth } from "@/lib/supabase/auth";
 import { SPECIALTIES } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { codeOf, describeDataError, isNotDeployed, messageOf } from "@/lib/supabase/errors";
+import { useDoctorClinicLinkRequests } from "@/lib/supabase/doctor-clinic-links";
 import {
+  scheduleHasBookableWindow,
   useClinicDoctorLinks,
   useClinicSchedules,
   useProposeDoctor,
@@ -26,6 +30,7 @@ import {
 } from "@/lib/supabase/providers";
 
 export const Route = createFileRoute("/clinic/doctors")({
+  head: () => ({ meta: [{ title: pageTitles.clinic }] }),
   component: ClinicDoctors,
 });
 
@@ -37,11 +42,14 @@ function ClinicDoctors() {
   const subtitle = t("clinicDoctors.subtitle");
   const links = useClinicDoctorLinks(activeClinic?.id);
   const schedules = useClinicSchedules(activeClinic?.id);
-  const [proposing, setProposing] = useState(false);
+  const isAdmin = activeClinic?.memberRole === "clinic_admin";
+  const requests = useDoctorClinicLinkRequests(activeClinic?.id, isAdmin && !activeClinic.isSample);
+  const [proposedScope, setProposedScope] = useState("");
+  const scope = [user?.id, activeClinic?.id].join(":");
+  const proposing = proposedScope === scope;
 
   // ClinicShell shows the loading / no-access states until a clinic is active.
   if (!activeClinic) return <ClinicShell title={title}>{null}</ClinicShell>;
-  const isAdmin = activeClinic.memberRole === "clinic_admin";
 
   let content;
   if (links.isLoading) {
@@ -55,9 +63,24 @@ function ClinicDoctors() {
       />
     );
   } else {
-    const list = links.data ?? [];
+    const list = (links.data ?? [])
+      .slice()
+      .sort(
+        (a, b) =>
+          Number(b.active && b.state === "verified") - Number(a.active && a.state === "verified"),
+      );
+    const verified = list.filter((link) => link.active && link.state === "verified").length;
     content = (
-      <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="surface-card flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <Stethoscope className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+            <h2 className="font-display font-semibold">{t("clinicWorkspace.roster")}</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t("clinicWorkspace.rosterCount", { verified, total: list.length })}
+          </p>
+        </div>
         <InfoNotice className="text-sm">{t("clinicDoctors.verificationNote")}</InfoNotice>
         {list.length === 0 ? (
           <EmptyState
@@ -66,7 +89,7 @@ function ClinicDoctors() {
             {...(isAdmin ? { description: t("clinicDoctors.noneAdmin") } : {})}
           />
         ) : (
-          <ul className="grid gap-4 lg:grid-cols-2">
+          <ul className="grid items-start gap-4 xl:grid-cols-2">
             {list.map((link) => (
               <DoctorLinkCard
                 key={`${user?.id}:${activeClinic.id}:${link.doctorId}`}
@@ -89,9 +112,17 @@ function ClinicDoctors() {
         )}
         {isAdmin ? (
           proposing ? (
-            <ProposeDoctorForm clinicId={activeClinic.id} onDone={() => setProposing(false)} />
+            <ProposeDoctorForm
+              key={scope}
+              clinicId={activeClinic.id}
+              onDone={() => setProposedScope("")}
+            />
           ) : (
-            <Button variant="highlight" onClick={() => setProposing(true)}>
+            <Button
+              variant="highlight"
+              onClick={() => setProposedScope(scope)}
+              className="h-auto min-h-10 whitespace-normal"
+            >
               <UserPlus aria-hidden />
               {t("clinicDoctors.propose")}
             </Button>
@@ -105,7 +136,18 @@ function ClinicDoctors() {
 
   return (
     <ClinicShell title={title} description={subtitle}>
-      {content}
+      <div className="space-y-5">
+        {isAdmin && !activeClinic.isSample ? (
+          <DoctorClinicLinkRequests
+            key={`${user?.id}:${activeClinic.id}`}
+            clinicId={activeClinic.id}
+            query={requests}
+          />
+        ) : null}
+        <div id="clinic-consultation-hours" tabIndex={-1} className="scroll-mt-28">
+          {content}
+        </div>
+      </div>
     </ClinicShell>
   );
 }
@@ -132,7 +174,15 @@ function DoctorLinkCard({
   const { t, fmt } = useI18n();
   const [editingHours, setEditingHours] = useState(false);
   const canEditHours = link.active && link.state === "verified";
-  const onlineBooking = canEditHours && clinicBookingEnabled && !link.isSample;
+  const hoursKnown = !schedulesLoading && !schedulesError;
+  const onlineBooking =
+    canEditHours &&
+    clinicBookingEnabled &&
+    !link.isSample &&
+    hoursKnown &&
+    schedules.some((schedule) =>
+      scheduleHasBookableWindow(schedule.startTime, schedule.endTime, schedule.slotMinutes),
+    );
 
   return (
     <li className="surface-card p-5">
@@ -146,6 +196,11 @@ function DoctorLinkCard({
             <LinkStatus state={link.state} active={link.active} />
           </div>
           <p className="text-sm text-primary">{fmt.specialty(link.specialtyId)}</p>
+          {link.qualifications.length > 0 ? (
+            <p dir="auto" className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+              {link.qualifications.join(" · ")}
+            </p>
+          ) : null}
           {fee !== undefined ? (
             <p className="text-sm text-muted-foreground">
               {t("common.consultationFee", { fee: fmt.inr(fee) })}
@@ -157,17 +212,19 @@ function DoctorLinkCard({
       <p className="mt-3 text-sm">
         <span className="font-semibold">{t("clinicDoctors.onlineBooking")}: </span>
         {onlineBooking
-          ? t("clinicDoctors.enabled")
-          : link.state === "rejected"
-            ? t("clinicDoctors.rejectedNote")
-            : link.state !== "verified"
-              ? t("clinicDoctors.pending")
-              : t("doctor.bookingUnavailable")}
+          ? t("clinicWorkspace.bookingConfigured")
+          : canEditHours && clinicBookingEnabled && !hoursKnown
+            ? t(schedulesLoading ? "common.loading" : "clinicWorkspace.unavailable")
+            : link.state === "rejected"
+              ? t("clinicDoctors.rejectedNote")
+              : link.state !== "verified"
+                ? t("clinicDoctors.pending")
+                : t("doctor.bookingUnavailable")}
       </p>
 
       {canEditHours ? (
         <div className="mt-4 border-t pt-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="flex items-center gap-1.5 text-sm font-semibold">
               <CalendarClock className="h-4 w-4 text-primary" aria-hidden />
               {t("schedule.title")}
@@ -177,6 +234,7 @@ function DoctorLinkCard({
               variant="outline"
               onClick={() => setEditingHours((v) => !v)}
               aria-expanded={editingHours}
+              className="h-auto min-h-9 whitespace-normal"
               disabled={schedulesLoading || !!schedulesError}
             >
               {editingHours ? t("schedule.done") : t("schedule.edit")}

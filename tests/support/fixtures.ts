@@ -38,6 +38,11 @@ export const test = base.extend<{
       const hostedSupabaseHttp = /^https?:\/\/[^/]+\.supabase\.co(?:\/|$)/i;
       const hostedSupabaseSocket = /^wss:\/\/[^/]+\.supabase\.co(?:\/|$)/i;
 
+      // Exercise the app's fallback fonts without making mock tests depend on a live font CDN.
+      await context.route(/^https:\/\/fonts\.googleapis\.com\//, (route) =>
+        route.fulfill({ contentType: "text/css", body: "" }),
+      );
+      await context.route(/^https:\/\/fonts\.gstatic\.com\//, (route) => route.abort());
       await context.route(hostedSupabaseHttp, async (route) => {
         attempted.push(route.request().url());
         await route.abort();

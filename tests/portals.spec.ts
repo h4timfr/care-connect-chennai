@@ -344,7 +344,10 @@ test.describe("Doctor portal", () => {
     const mock = await backend();
     makeDoctor(mock, "pending");
     await page.goto("/doctor");
-    await expect(page.getByText("isn't verified at any clinic yet")).toBeVisible();
+    const setup = page.getByRole("region", { name: "Doctor setup" });
+    await expect(
+      setup.getByRole("listitem").filter({ hasText: "Clinic relationship verified" }),
+    ).toContainText("Pending");
     await page.goto("/doctor/schedule");
     await expect(page.getByText("can be set once CareConnect verifies you")).toBeVisible();
     await expect(page.getByRole("button", { name: "Save hours" })).toHaveCount(0);
@@ -487,8 +490,12 @@ test.describe("Provider registration", () => {
     for (const forbidden of ["status", "applicant_id", "doctor_id"]) {
       expect(Object.keys(sent)).not.toContain(forbidden);
     }
-    // Pending application: still no doctor portal.
+    // Applicants can track progress, but protected doctor tools still require an approved profile.
     await page.goto("/doctor");
+    await expect(
+      page.getByRole("region", { name: "Doctor setup" }).getByText("Under review"),
+    ).toBeVisible();
+    await page.goto("/doctor/messages");
     await expect(
       page.getByRole("heading", { name: "Doctor access isn't enabled for this account" }),
     ).toBeVisible();
@@ -701,7 +708,15 @@ test.describe("Clinic appointment recovery", () => {
     const confirm = page.getByRole("button", { name: "Confirm", exact: true });
     await expect(confirm).toBeVisible();
     const before = mock.callsTo("GET", "/rest/v1/appointments").length;
-    await confirm.dblclick({ force: true });
+    await confirm.click();
+    const dialog = page.getByRole("dialog");
+    const apply = dialog.getByRole("button", { name: "Apply status change" });
+    await apply.evaluate((button: HTMLButtonElement) => {
+      button.click();
+      button.click();
+    });
+    await expect(dialog.getByRole("alert")).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect
       .poll(() => mock.callsTo("GET", "/rest/v1/appointments").length)
       .toBeGreaterThan(before);
@@ -736,6 +751,9 @@ test("mobile appointment actions remain keyboard accessible when the doctor is u
   const confirm = page.getByRole("button", { name: "Confirm", exact: true });
   await expect(confirm).toBeVisible();
   await confirm.focus();
+  await page.keyboard.press("Enter");
+  const apply = page.getByRole("dialog").getByRole("button", { name: "Apply status change" });
+  await apply.focus();
   await page.keyboard.press("Enter");
   await expect.poll(() => mock.callsTo("PATCH", "/rest/v1/appointments").length).toBe(1);
   expect(

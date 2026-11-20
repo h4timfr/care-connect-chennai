@@ -12,7 +12,12 @@
 
 ### Users & Patients
 
-- **Read/Update**: `auth.uid() = id` / `user_id`. Cannot read other users.
+- Accounts can read and update their own profile. Active clinic members can read patient rows
+  linked to their clinics through appointments or conversations. The clinic UI requests patient
+  names for appointments, and names and account IDs for messaging and sender labeling. This
+  patient-row policy also permits staff to read linked patients' demographic fields at the API.
+- Phone and email are stored on `users`. A clinic booking or message does not grant read access to
+  another user's `users` row. That table has separate self and platform-admin read policies.
 
 ### Appointments
 
@@ -26,7 +31,17 @@
   patient-contact permission, plus a real active verified doctor–clinic relationship. A supplied
   appointment must match the same patient, clinic and doctor. Existing participant reads remain
   available after future contact is revoked.
-- **Staff/Doctor**: Can only read/insert if authorized on the specific clinic/doctor relationship.
+- **Clinic members**: Active membership permits reading and replying in that clinic's
+  conversations. The participant policies require the authenticated sender's own account ID.
+- **Doctors**: Read via `doctor_conversations()` for their own active, verified clinic
+  relationships and conversations assigned to them. The RPC returns the patient's name,
+  message text and sender labels, without patient phone, email or sender account IDs. Doctors
+  can insert a reply under a scoped policy. The doctor role alone does not grant direct message
+  reads or Postgres Changes delivery.
+- **Identity and consent**: Patients are identified by name in the authorized clinic and doctor
+  inboxes. Message bodies can contain sensitive information and are stored with a sender account
+  ID. Patient-contact permission governs starting a conversation, separately from booking and
+  existing participant access. A platform-admin role alone does not grant inbox participation.
 
 ### Provider publication and capabilities
 

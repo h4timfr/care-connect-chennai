@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { InfoNotice } from "@/components/common";
 import { ApplicationStatusPill } from "@/components/ProviderStatus";
@@ -19,7 +20,7 @@ import { isNotDeployed } from "@/lib/supabase/errors";
 import { useClinics } from "@/lib/supabase/queries";
 
 export const Route = createFileRoute("/doctor/signup")({
-  head: () => ({ meta: [{ title: "Register as a doctor — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.doctor }] }),
   component: DoctorSignup,
 });
 

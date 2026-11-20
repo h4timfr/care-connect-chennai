@@ -121,12 +121,12 @@ export interface Appointment {
   createdAt: string;
 }
 
-export type ConversationKind = "appointment" | "general";
+export type ConversationKind = "appointment" | "general" | "doctor_appointment";
 
 export interface Message {
   id: string;
   conversationId: string;
-  sender: "patient" | "clinic";
+  sender: "patient" | "clinic" | "doctor";
   body: string;
   sentAt: string;
 }
@@ -139,6 +139,9 @@ export interface Conversation {
   patientName: string;
   kind: ConversationKind;
   appointmentId?: string | undefined;
+  appointmentDate?: string | undefined;
+  doctorName?: string | undefined;
+  canSend?: boolean | undefined;
   messages: Message[];
 }
 

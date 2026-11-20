@@ -211,7 +211,7 @@ export function persistLanguage(lang: Language) {
   }
 }
 
-function readStoredLanguage(): Language | null {
+export function readStoredLanguage(): Language | null {
   try {
     return normalizeLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY));
   } catch {
@@ -219,9 +219,13 @@ function readStoredLanguage(): Language | null {
   }
 }
 
-function hasLanguageCookie() {
+export function hasLanguageCookie() {
   try {
-    return document.cookie.split(/;\s*/).some((c) => c.startsWith(`${LANGUAGE_COOKIE}=`));
+    const value = document.cookie
+      .split(/;\s*/)
+      .find((cookie) => cookie.startsWith(`${LANGUAGE_COOKIE}=`))
+      ?.slice(LANGUAGE_COOKIE.length + 1);
+    return normalizeLanguage(value) !== null;
   } catch {
     return false;
   }
@@ -243,17 +247,19 @@ export function I18nProvider({
 
   const setLanguage = useCallback(async (lang: Language) => {
     requested.current = lang;
-    persistLanguage(lang);
     const messages = await loadMessages(lang);
     // A later choice made while this dictionary was loading wins.
-    if (requested.current === lang) setState({ lang, messages });
+    if (requested.current === lang) {
+      persistLanguage(lang);
+      setState({ lang, messages });
+    }
   }, []);
 
   // A choice stored on this device but missing from the cookie (cleared cookies) still applies.
   useEffect(() => {
     if (hasLanguageCookie()) return;
     const stored = readStoredLanguage();
-    if (stored && stored !== requested.current) void setLanguage(stored);
+    if (stored && stored !== requested.current) void setLanguage(stored).catch(() => {});
   }, [setLanguage]);
 
   const value = useMemo(

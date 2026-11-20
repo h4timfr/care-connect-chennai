@@ -293,6 +293,8 @@ export function useSetLinkState() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["clinic_doctors"] });
       queryClient.invalidateQueries({ queryKey: ["doctors"] });
+      queryClient.invalidateQueries({ queryKey: ["doctor_clinic_link_requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my_doctor"] });
     },
   });
 }
@@ -320,6 +322,8 @@ export function useSetClinicPublicationState() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ["clinics"] }),
         queryClient.invalidateQueries({ queryKey: ["admin", "clinics"] }),
+        queryClient.invalidateQueries({ queryKey: ["authorized_clinics"] }),
+        queryClient.invalidateQueries({ queryKey: ["my_doctor"] }),
         queryClient.invalidateQueries({ queryKey: ["doctors"] }),
         queryClient.invalidateQueries({ queryKey: ["doctor-search"] }),
         queryClient.invalidateQueries({ queryKey: ["clinic-search"] }),
@@ -465,6 +469,12 @@ export interface Schedule {
   slotMinutes: number;
 }
 
+/** Match the slot picker: an opening window must fit at least one whole slot. */
+export function scheduleHasBookableWindow(startTime: string, endTime: string, slotMinutes: number) {
+  const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+  return slotMinutes > 0 && minutes(endTime) - minutes(startTime) >= slotMinutes;
+}
+
 export function useClinicSchedules(clinicId: string | undefined) {
   const { user } = useAuth();
   return useQuery({
@@ -523,6 +533,7 @@ export function useSaveSchedule() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ["doctor_schedules", s.clinicId] }),
         queryClient.invalidateQueries({ queryKey: ["availability", s.doctorId] }),
+        queryClient.invalidateQueries({ queryKey: ["my_doctor"] }),
       ]),
   });
 }
@@ -542,6 +553,7 @@ export function useDeleteSchedule() {
     onSettled: (_d, _e, s) => {
       queryClient.invalidateQueries({ queryKey: ["doctor_schedules", s.clinicId] });
       queryClient.invalidateQueries({ queryKey: ["availability", s.doctorId] });
+      queryClient.invalidateQueries({ queryKey: ["my_doctor"] });
     },
   });
 }

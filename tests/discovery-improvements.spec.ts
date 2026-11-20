@@ -111,10 +111,10 @@ test("discovery slot selection preserves doctor, clinic and date through booking
   await page.getByRole("link", { name: "Dr. Verified Tester", exact: true }).click();
   await page.getByRole("button", { name: "9:30 AM", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/book/${ids.doctorVerified}`));
-  await expect(page.getByRole("button", { name: "9:30 AM", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  const review = page.getByRole("region", { name: "Review your appointment" });
+  await expect(review.getByText("Test Clinic A")).toBeVisible();
+  await expect(review.getByText(/9:30 AM.*IST/)).toBeVisible();
+  await expect(page.getByRole("group", { name: "Choose a date" })).toHaveCount(0);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   await page.getByRole("button", { name: "Request appointment" }).dblclick();
   await expect(page).toHaveURL(new RegExp(`/appointments/${ids.appointment}$`));
@@ -128,4 +128,25 @@ test("discovery slot selection preserves doctor, clinic and date through booking
   });
   await page.goBack();
   await expect(page).toHaveURL(new RegExp(`/doctors/${ids.doctorVerified}`));
+});
+
+test("a patient can change a preselected time by keyboard on a narrow screen", async ({
+  page,
+  backend,
+}) => {
+  const state = defaultState();
+  enablePatientContact(state, ids.clinicA, true);
+  const mock = await backend(state);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(`/doctors/${ids.doctorVerified}`);
+  await page.getByRole("button", { name: "9:30 AM", exact: true }).click();
+  const change = page.getByRole("button", { name: "Change clinic, date or time" });
+  await change.focus();
+  await change.press("Enter");
+  await expect(page.getByRole("heading", { name: "Date & time" })).toBeFocused();
+  await page.getByRole("button", { name: "6:30 PM", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Review your appointment" }).getByText(/6:30 PM.*IST/),
+  ).toBeVisible();
+  expect(mock.callsTo("POST", "/rpc/book_appointment")).toHaveLength(0);
 });

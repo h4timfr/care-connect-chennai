@@ -39,7 +39,10 @@ export function PersonalDetailsCard({ patient }: { patient: Patient }) {
   ];
 
   return (
-    <section className="surface-card space-y-4 p-6" aria-labelledby="details-heading">
+    <section
+      className="space-y-3 rounded-xl border bg-card p-4 sm:p-5"
+      aria-labelledby="details-heading"
+    >
       <div className="flex items-center justify-between gap-3">
         <h2 id="details-heading" className="flex items-center gap-2 font-medium">
           <User className="h-4 w-4" aria-hidden /> {t("details.heading")}
@@ -53,7 +56,7 @@ export function PersonalDetailsCard({ patient }: { patient: Patient }) {
       {editing ? (
         <DetailsForm patient={patient} onDone={() => setEditing(false)} />
       ) : (
-        <dl className="grid gap-4 text-sm sm:grid-cols-2">
+        <dl className="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
           {rows.map((d) => (
             <div key={d.label} className="min-w-0">
               <dt className="text-muted-foreground">{d.label}</dt>

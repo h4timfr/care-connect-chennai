@@ -1,172 +1,190 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { CalendarDays, SlidersHorizontal } from "lucide-react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { toast } from "@/lib/toast";
 import { ClinicShell } from "@/components/layout/ClinicShell";
-import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
+import { EmptyState, ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { useApp } from "@/lib/store";
 import { useAuth } from "@/lib/supabase/auth";
 import { useI18n, type MessageKey } from "@/lib/i18n";
-import { describeStatusError, isPastAppointment } from "@/lib/supabase/appointments";
-import { cn } from "@/lib/utils";
+import { describeStatusError } from "@/lib/supabase/appointments";
+import { useClinicDoctorLinks } from "@/lib/supabase/providers";
+import {
+  appointmentActions,
+  clinicAgenda,
+  isAgendaView,
+  type AgendaView,
+  type AppointmentAction,
+} from "@/lib/clinic-workspace";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/clinic/appointments")({
+  head: () => ({ meta: [{ title: pageTitles.appointments }] }),
+  validateSearch: ({ view }: Record<string, unknown>): { view?: AgendaView } =>
+    isAgendaView(view) ? { view } : {},
   component: ClinicAppointments,
 });
 
-type Filter = "all" | "upcoming" | "pending";
-
-const FILTERS: { value: Filter; label: MessageKey }[] = [
+const VIEWS: { value: AgendaView; label: MessageKey }[] = [
   { value: "all", label: "clinicAppointments.filter.all" },
+  { value: "today", label: "common.today" },
   { value: "upcoming", label: "clinicAppointments.filter.upcoming" },
+  { value: "history", label: "clinicWorkspace.history" },
   { value: "pending", label: "clinicAppointments.filter.pending" },
 ];
-
-/** Transitions the check_appointment_update trigger allows clinic staff to make. */
-const ACTIONS: Partial<
-  Record<
-    AppointmentStatus,
-    { status: AppointmentStatus; label: MessageKey; done: MessageKey; danger?: boolean }[]
-  >
-> = {
-  pending: [
-    {
-      status: "confirmed",
-      label: "clinicAppointments.action.confirm",
-      done: "clinicAppointments.done.confirmed",
-    },
-    {
-      status: "cancelled",
-      label: "clinicAppointments.action.decline",
-      done: "clinicAppointments.done.declined",
-      danger: true,
-    },
-  ],
-  confirmed: [
-    {
-      status: "arrived",
-      label: "clinicAppointments.action.arrived",
-      done: "clinicAppointments.done.arrived",
-    },
-    {
-      status: "cancelled",
-      label: "clinicAppointments.action.cancel",
-      done: "clinicAppointments.done.cancelled",
-      danger: true,
-    },
-  ],
-  arrived: [
-    {
-      status: "completed",
-      label: "clinicAppointments.action.completed",
-      done: "clinicAppointments.done.completed",
-    },
-  ],
-};
+const STATUSES = Object.keys(appointmentActions) as AppointmentStatus[];
 
 function ClinicAppointments() {
   const { clinicAppointments, clinicAppointmentsStatus: status, activeClinic } = useApp();
   const { user } = useAuth();
-  const [filter, setFilter] = useState<Filter>("all");
   const { t } = useI18n();
-
-  let body;
-  if (!activeClinic) {
-    body = null;
-  } else if (status.isLoading) {
-    body = <PageLoader label={t("clinicAppointments.loading")} />;
-  } else if (status.error) {
-    body = (
-      <ErrorState
-        title={t("clinicAppointments.loadError")}
-        message={t(describeStatusError(status.error))}
-        onRetry={status.refetch}
-      />
-    );
-  } else {
-    const rows = clinicAppointments
-      .filter((a) => a.clinicId === activeClinic.id)
-      .filter((a) => {
-        if (filter === "upcoming")
-          return (a.status === "confirmed" || a.status === "pending") && !isPastAppointment(a);
-        if (filter === "pending") return a.status === "pending";
-        return true;
-      })
-      .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`));
-    body = (
-      <div className="space-y-4">
-        <div
-          className="flex flex-wrap gap-2"
-          role="group"
-          aria-label={t("clinicAppointments.filterLabel")}
-        >
-          {FILTERS.map((f) => (
-            <Button
-              key={f.value}
-              variant={filter === f.value ? "default" : "outline"}
-              size="sm"
-              className="h-auto min-h-8 whitespace-normal py-1 text-center"
-              aria-pressed={filter === f.value}
-              onClick={() => setFilter(f.value)}
-            >
-              {t(f.label)}
-            </Button>
-          ))}
-        </div>
-        <AppointmentTable key={`${user?.id}:${activeClinic.id}`} rows={rows} />
-      </div>
-    );
-  }
-
   return (
     <ClinicShell
       title={t("clinicAppointments.title")}
       description={t("clinicAppointments.subtitle")}
     >
-      {body}
+      {activeClinic &&
+        (status.isLoading ? (
+          <PageLoader label={t("clinicAppointments.loading")} />
+        ) : status.error ? (
+          <ErrorState
+            title={t("clinicAppointments.loadError")}
+            message={t(describeStatusError(status.error))}
+            onRetry={status.refetch}
+          />
+        ) : (
+          <AppointmentWorkspace
+            key={[user?.id, activeClinic.id].join(":")}
+            clinicId={activeClinic.id}
+            clinicName={activeClinic.name}
+            appointments={clinicAppointments}
+          />
+        ))}
     </ClinicShell>
   );
 }
 
-function AppointmentTable({ rows }: { rows: Appointment[] }) {
-  const { setAppointmentStatus, doctorById } = useApp();
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const updating = useRef(false);
+function AppointmentWorkspace({
+  clinicId,
+  clinicName,
+  appointments,
+}: {
+  clinicId: string;
+  clinicName: string;
+  appointments: Appointment[];
+}) {
+  const { t, fmt } = useI18n();
+  const { catalog, doctorById, setAppointmentStatus } = useApp();
+  const { view = "all" } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [date, setDate] = useState("");
+  const [doctor, setDoctor] = useState("");
+  const [status, setStatus] = useState<AppointmentStatus | "">("");
+  const [selectedId, setSelectedId] = useState<string>();
+  const [choice, setChoice] = useState<{
+    action: AppointmentAction;
+    previous: AppointmentStatus;
+  }>();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<MessageKey>();
+  const inFlight = useRef(false);
   const mounted = useRef(true);
+  const trigger = useRef<HTMLButtonElement | null>(null);
+  const filters = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
     };
   }, []);
-  const { t, fmt } = useI18n();
 
-  const update = async (id: string, next: AppointmentStatus, done: MessageKey) => {
-    if (updating.current) return;
-    updating.current = true;
-    setUpdatingId(id);
+  const clinicRows = appointments.filter((row) => row.clinicId === clinicId);
+  const doctorIds = [...new Set(clinicRows.map((row) => row.doctorId))];
+  const needsRoster = doctorIds.some((id) => !doctorById(id));
+  const roster = useClinicDoctorLinks(needsRoster && !catalog.isLoading ? clinicId : undefined);
+  const doctorName = (id: string) =>
+    doctorById(id)?.name ??
+    (roster.error ? undefined : roster.data?.find((link) => link.doctorId === id)?.doctorName) ??
+    t("clinicWorkspace.doctorUnavailable");
+  const rows = clinicAgenda(clinicRows, clinicId, {
+    view,
+    ...(date && { date }),
+    ...(doctor && { doctorId: doctor }),
+    ...(status && { status }),
+  });
+  const selected = selectedId ? clinicRows.find((row) => row.id === selectedId) : undefined;
+  const changed = !!choice && choice.previous !== selected?.status;
+  const patientName = (row: Appointment) => row.patientName || t("common.unknownPatient");
+  const showAppointment = (
+    button: HTMLButtonElement,
+    row: Appointment,
+    action?: AppointmentAction,
+  ) => {
+    trigger.current = button;
+    setSelectedId(row.id);
+    setChoice(action ? { action, previous: row.status } : undefined);
+    setError(undefined);
+  };
+  const close = () => {
+    if (inFlight.current) return;
+    setSelectedId(undefined);
+    setChoice(undefined);
+    setError(undefined);
+  };
+  const apply = async () => {
+    if (inFlight.current || !selected || !choice || changed) return;
+    inFlight.current = true;
+    setPending(true);
+    setError(undefined);
     try {
-      await setAppointmentStatus(id, next);
-      if (mounted.current) toast.success(t(done));
-    } catch (err) {
-      if (mounted.current) toast.error(t(describeStatusError(err)));
+      await setAppointmentStatus(selected.id, choice.action.status);
+      if (!mounted.current) return;
+      toast.success(t(choice.action.done));
+      setSelectedId(undefined);
+      setChoice(undefined);
+    } catch (problem) {
+      if (mounted.current) setError(describeStatusError(problem));
     } finally {
-      updating.current = false;
-      if (mounted.current) setUpdatingId(null);
+      inFlight.current = false;
+      if (mounted.current) setPending(false);
     }
   };
 
-  const actionsFor = (a: Appointment) => (
-    <div className="flex flex-wrap gap-2">
-      {(ACTIONS[a.status] ?? []).map((action) => (
+  const rowActions = (row: Appointment) => (
+    <div className="flex flex-wrap gap-1.5">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-auto min-h-9 whitespace-normal"
+        onClick={(event) => showAppointment(event.currentTarget, row)}
+      >
+        {t("clinicWorkspace.details")}
+      </Button>
+      {appointmentActions[row.status].map((action) => (
         <Button
           key={action.status}
+          type="button"
           size="sm"
-          variant="outline"
-          disabled={updatingId !== null}
-          className={cn("h-8 text-xs", action.danger && "text-destructive hover:bg-destructive/10")}
-          onClick={() => update(a.id, action.status, action.done)}
+          variant={action.danger ? "ghost" : "secondary"}
+          className={
+            "h-auto min-h-9 whitespace-normal " + (action.danger ? "text-destructive" : "")
+          }
+          onClick={(event: MouseEvent<HTMLButtonElement>) =>
+            showAppointment(event.currentTarget, row, action)
+          }
         >
           {t(action.label)}
         </Button>
@@ -174,84 +192,245 @@ function AppointmentTable({ rows }: { rows: Appointment[] }) {
     </div>
   );
 
-  if (rows.length === 0) {
-    return (
-      <p className="surface-card p-8 text-center text-muted-foreground">
-        {t("clinicAppointments.none")}
-      </p>
-    );
-  }
-
   return (
-    <>
-      {/* Phones: one card per appointment so status and actions stay visible. */}
-      <ul className="space-y-3 md:hidden">
-        {rows.map((a) => (
-          <li key={a.id} className="surface-card space-y-3 p-4 text-sm">
-            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-              <div className="min-w-0">
-                <p className="truncate font-medium">
-                  {a.patientName || t("common.unknownPatient")}
-                </p>
-                <p className="text-muted-foreground">
-                  {fmt.shortDate(a.date)} · {fmt.timeIst(a.time)}
-                </p>
-              </div>
-              <StatusBadge status={a.status} />
-            </div>
-            <p className="text-muted-foreground">
-              {[doctorById(a.doctorId)?.name, a.reason].filter(Boolean).join(" · ")}
-            </p>
-            {actionsFor(a)}
-          </li>
-        ))}
-      </ul>
+    <div className="space-y-4">
+      <section
+        className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4"
+        aria-label={t("clinicAppointments.filterLabel")}
+      >
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="group"
+          aria-label={t("clinicAppointments.filterLabel")}
+        >
+          {VIEWS.map(({ value, label }) => (
+            <Button
+              key={value}
+              ref={value === "all" ? filters : undefined}
+              variant={view === value ? "default" : "ghost"}
+              size="sm"
+              className="h-auto min-h-9 whitespace-normal text-start"
+              aria-pressed={view === value}
+              onClick={() =>
+                void navigate({ search: value === "all" ? {} : { view: value }, replace: true })
+              }
+            >
+              {t(label)}
+            </Button>
+          ))}
+        </div>
+        <div className="mt-3 grid gap-3 border-t pt-3 sm:grid-cols-3">
+          <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+            <span>{t("doctorWorkspace.date")}</span>
+            <Input
+              type="date"
+              className="min-w-0"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+            />
+          </label>
+          <div className="grid min-w-0 gap-1.5 text-sm font-medium">
+            <label htmlFor="clinic-agenda-doctor">{t("clinicAppointments.col.doctor")}</label>
+            <NativeSelect
+              id="clinic-agenda-doctor"
+              value={doctor}
+              onChange={(event) => setDoctor(event.target.value)}
+            >
+              <option value="">{t("clinicCalendar.allDoctors")}</option>
+              {doctorIds.map((id) => (
+                <option key={id} value={id}>
+                  {doctorName(id)}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="grid min-w-0 gap-1.5 text-sm font-medium">
+            <label htmlFor="clinic-agenda-status">{t("common.status")}</label>
+            <NativeSelect
+              id="clinic-agenda-status"
+              value={status}
+              onChange={(event) => setStatus(event.target.value as AppointmentStatus | "")}
+            >
+              <option value="">{t("clinicAppointments.filter.all")}</option>
+              {STATUSES.map((state) => (
+                <option key={state} value={state}>
+                  {t(("status." + state) as MessageKey)}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        </div>
+      </section>
 
-      <div className="surface-card hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[680px] text-start text-sm">
-          <thead className="bg-muted/50 text-muted-foreground">
-            <tr>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicAppointments.col.patient")}
-              </th>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicAppointments.col.dateTime")}
-              </th>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicAppointments.col.doctor")}
-              </th>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicAppointments.col.reason")}
-              </th>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicAppointments.col.status")}
-              </th>
-              <th scope="col" className="p-4 text-start font-medium">
-                {t("clinicAppointments.col.actions")}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {rows.map((a) => (
-              <tr key={a.id} className="align-top transition-colors hover:bg-muted/30">
-                <td className="p-4 font-medium">{a.patientName || t("common.unknownPatient")}</td>
-                <td className="whitespace-nowrap p-4">
-                  {fmt.shortDate(a.date)}
-                  <span className="block text-xs text-muted-foreground">{fmt.time(a.time)}</span>
-                </td>
-                <td className="p-4">{doctorById(a.doctorId)?.name ?? "—"}</td>
-                <td className="max-w-[180px] truncate p-4" title={a.reason || undefined}>
-                  {a.reason || <span className="text-muted-foreground">—</span>}
-                </td>
-                <td className="p-4">
-                  <StatusBadge status={a.status} />
-                </td>
-                <td className="p-4">{actionsFor(a)}</td>
-              </tr>
+      {!rows.length ? (
+        <div className="surface-card">
+          <EmptyState icon={CalendarDays} title={t("clinicAppointments.none")} />
+          {date || doctor || status ? (
+            <div className="flex justify-center px-4 pb-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDate("");
+                  setDoctor("");
+                  setStatus("");
+                }}
+              >
+                <SlidersHorizontal aria-hidden /> {t("clinicWorkspace.clearFilters")}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <ul className="space-y-2 lg:hidden">
+            {rows.map((row) => (
+              <li key={row.id} className="surface-card space-y-2.5 p-4 text-sm">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p dir="auto" className="font-semibold [overflow-wrap:anywhere]">
+                    {patientName(row)}
+                  </p>
+                  <StatusBadge status={row.status} />
+                </div>
+                <p className="text-muted-foreground">
+                  {fmt.shortDate(row.date)} · {fmt.timeIst(row.time)} ·{" "}
+                  <bdi>{doctorName(row.doctorId)}</bdi>
+                </p>
+                {rowActions(row)}
+              </li>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </>
+          </ul>
+          <div className="surface-card hidden overflow-hidden lg:block">
+            <table className="w-full table-fixed text-start text-sm [overflow-wrap:anywhere]">
+              <thead className="bg-muted/60 text-muted-foreground">
+                <tr>
+                  {(["patient", "dateTime", "doctor", "status", "actions"] as const).map((col) => (
+                    <th
+                      key={col}
+                      scope="col"
+                      className={col === "actions" ? "w-[29%] p-3 text-start" : "p-3 text-start"}
+                    >
+                      {t(("clinicAppointments.col." + col) as MessageKey)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.map((row) => (
+                  <tr key={row.id} className="align-top">
+                    <td className="p-3 font-medium">
+                      <bdi>{patientName(row)}</bdi>
+                    </td>
+                    <td className="p-3">
+                      {fmt.shortDate(row.date)}
+                      <span className="block text-muted-foreground">{fmt.timeIst(row.time)}</span>
+                    </td>
+                    <td className="p-3">
+                      <bdi>{doctorName(row.doctorId)}</bdi>
+                    </td>
+                    <td className="p-3">
+                      <StatusBadge status={row.status} />
+                    </td>
+                    <td className="p-3">{rowActions(row)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <Dialog
+        open={!!selectedId}
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <DialogContent
+          showClose={false}
+          className="rounded-xl motion-reduce:animate-none"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            (trigger.current?.isConnected ? trigger.current : filters.current)?.focus();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (pending) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (pending) event.preventDefault();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {choice ? t(choice.action.label) : t("clinicWorkspace.details")}
+            </DialogTitle>
+            <DialogDescription>
+              {choice ? t("clinicWorkspace.statusReview") : clinicName}
+            </DialogDescription>
+          </DialogHeader>
+          {selected ? (
+            <dl className="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-2 [overflow-wrap:anywhere]">
+              <div>
+                <dt className="text-muted-foreground">{t("clinicAppointments.col.patient")}</dt>
+                <dd dir="auto" className="font-medium">
+                  {patientName(selected)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">{t("clinicAppointments.col.doctor")}</dt>
+                <dd dir="auto" className="font-medium">
+                  {doctorName(selected.doctorId)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">{t("clinicAppointments.col.dateTime")}</dt>
+                <dd className="font-medium">
+                  {fmt.shortDate(selected.date)} · {fmt.timeIst(selected.time)}
+                </dd>
+              </div>
+              <div>
+                <dt className="mb-1 text-muted-foreground">{t("common.status")}</dt>
+                <dd>
+                  <StatusBadge status={selected.status} />
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">{t("clinicAppointments.col.reason")}</dt>
+                <dd dir="auto">{selected.reason || t("common.notProvided")}</dd>
+              </div>
+            </dl>
+          ) : null}
+          {error || changed || !selected ? (
+            <p role="alert" className="text-sm text-destructive">
+              {t(error ?? "clinicAppointments.statusChanged")}
+            </p>
+          ) : null}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" disabled={pending} onClick={close}>
+              {t("common.cancel")}
+            </Button>
+            {choice ? (
+              <Button
+                variant={choice.action.danger ? "destructive" : "default"}
+                disabled={pending || changed || !selected}
+                onClick={() => void apply()}
+                className="h-auto min-h-10 whitespace-normal"
+              >
+                {t(pending ? "common.saving" : "clinicWorkspace.applyChange")}
+              </Button>
+            ) : selected ? (
+              appointmentActions[selected.status].map((action) => (
+                <Button
+                  key={action.status}
+                  variant={action.danger ? "outline" : "default"}
+                  onClick={() => setChoice({ action, previous: selected.status })}
+                >
+                  {t(action.label)}
+                </Button>
+              ))
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

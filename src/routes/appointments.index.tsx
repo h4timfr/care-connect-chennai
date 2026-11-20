@@ -1,7 +1,8 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarX, SearchX } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
-import { PatientShell } from "@/components/layout/PatientShell";
+import { PatientPageHeading, PatientShell } from "@/components/layout/PatientShell";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { EmptyState, ErrorState, PageLoader } from "@/components/common";
 import { MissingProfile } from "@/components/MissingProfile";
@@ -16,7 +17,7 @@ import { useI18n } from "@/lib/i18n";
 import type { Appointment } from "@/lib/types";
 
 export const Route = createFileRoute("/appointments/")({
-  head: () => ({ meta: [{ title: "Your appointments — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.appointments }] }),
   component: AppointmentsList,
 });
 
@@ -56,10 +57,11 @@ function AppointmentsList() {
 
   let body;
   if (loading || !user || isLoadingPatient || status.isLoading) {
-    body = <PageLoader label={t("appointments.loading")} />;
+    body = <PageLoader compact label={t("appointments.loading")} />;
   } else if (patientError || status.error) {
     body = (
       <ErrorState
+        compact
         title={t("appointments.loadError")}
         message={t(describeDataError(patientError ?? status.error))}
         onRetry={patientError ? refetchPatient : status.refetch}
@@ -70,7 +72,7 @@ function AppointmentsList() {
   } else {
     body = (
       <Tabs defaultValue="upcoming">
-        <TabsList className="h-auto w-full flex-wrap justify-start">
+        <TabsList className="h-auto">
           <TabsTrigger value="upcoming">
             {t("appointments.upcoming", { count: upcoming.length })}
           </TabsTrigger>
@@ -80,11 +82,12 @@ function AppointmentsList() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upcoming" className="mt-4">
+        <TabsContent value="upcoming" className="mt-3">
           <AppointmentList
             items={upcoming}
             empty={
               <EmptyState
+                compact
                 icon={CalendarX}
                 title={t("appointments.noUpcomingTitle")}
                 description={t("appointments.noUpcomingBody")}
@@ -97,16 +100,16 @@ function AppointmentsList() {
             }
           />
         </TabsContent>
-        <TabsContent value="past" className="mt-4">
+        <TabsContent value="past" className="mt-3">
           <AppointmentList
             items={past}
-            empty={<EmptyState icon={SearchX} title={t("appointments.noPast")} />}
+            empty={<EmptyState compact icon={SearchX} title={t("appointments.noPast")} />}
           />
         </TabsContent>
-        <TabsContent value="cancelled" className="mt-4">
+        <TabsContent value="cancelled" className="mt-3">
           <AppointmentList
             items={cancelled}
-            empty={<EmptyState icon={SearchX} title={t("appointments.noCancelled")} />}
+            empty={<EmptyState compact icon={SearchX} title={t("appointments.noCancelled")} />}
           />
         </TabsContent>
       </Tabs>
@@ -114,12 +117,12 @@ function AppointmentsList() {
   }
 
   return (
-    <PatientShell>
-      <div className="space-y-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold">{t("appointments.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("appointments.subtitle")}</p>
-        </div>
+    <PatientShell compact>
+      <div className="mx-auto max-w-4xl space-y-4">
+        <PatientPageHeading
+          title={t("appointments.title")}
+          description={t("appointments.subtitle")}
+        />
         <CatalogNotice />
         {body}
       </div>
@@ -130,7 +133,7 @@ function AppointmentsList() {
 function AppointmentList({ items, empty }: { items: Appointment[]; empty: ReactNode }) {
   if (!items.length) return <>{empty}</>;
   return (
-    <ul className="space-y-4">
+    <ul className="space-y-3">
       {items.map((a) => (
         <li key={a.id}>
           <AppointmentCard appointment={a} />

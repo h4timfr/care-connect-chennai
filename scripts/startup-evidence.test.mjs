@@ -178,14 +178,14 @@ test("CI captures evidence before binding verification and preserves cleanup ord
     path.join(root, ".github/workflows/real-service-integration.yml"),
     "utf8",
   );
-  const configure = workflow.indexOf("startup-evidence.mjs configure");
-  const before = workflow.indexOf("startup-evidence.mjs before");
-  const start = workflow.indexOf("Start a fresh disposable Supabase stack");
-  const after = workflow.indexOf("Capture sanitized startup evidence before cleanup");
-  const binding = workflow.indexOf(
-    "Verify actual Docker bindings before application service requests",
-  );
-  const cleanup = workflow.indexOf("Stop the disposable Supabase stack");
+  const phase = readFileSync(path.join(root, "scripts/ci-real-service-phase.sh"), "utf8");
+  const supervisor = readFileSync(path.join(root, "scripts/ci-isolated-docker.sh"), "utf8");
+  const configure = phase.indexOf("startup-evidence.mjs configure");
+  const before = phase.indexOf("startup-evidence.mjs before");
+  const start = phase.indexOf("startup-observer.mjs run");
+  const after = phase.indexOf("startup-evidence.mjs after");
+  const binding = phase.indexOf("docker-bindings.mjs verify");
+  const cleanup = phase.indexOf("startup-observer.mjs reap");
   assert.ok(
     configure >= 0 &&
       configure < before &&
@@ -194,10 +194,9 @@ test("CI captures evidence before binding verification and preserves cleanup ord
       after < binding &&
       binding < cleanup,
   );
-  assert.match(
-    workflow,
-    /Capture sanitized startup evidence before cleanup\s+if: \$\{\{ always\(\)/,
-  );
+  assert.match(phase, /outcome=failure[^]*?startup-evidence\.mjs after/);
+  assert.match(supervisor, /user_phase start \|\| rc=\$\?/);
+  assert.match(supervisor, /if ! user_phase cleanup; then rc=1; fi/);
   assert.match(workflow, /test-artifacts\/startup-evidence\.json/);
   const upload = workflow.slice(workflow.indexOf("Upload sanitized integration evidence"));
   assert.doesNotMatch(upload, /\.raw\.log/);

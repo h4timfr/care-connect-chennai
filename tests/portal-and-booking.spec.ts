@@ -54,11 +54,26 @@ test.describe("Provider publication controls", () => {
     await expect(row).toContainText("Not granted");
     await expect(row).toContainText("Disabled");
 
-    await row.getByRole("button", { name: "Verify clinic" }).click();
+    const dialog = page.getByRole("alertdialog");
+    const confirm = dialog.getByRole("button", { name: "Confirm", exact: true });
+    const writes = () => mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state");
+    const verify = row.getByRole("button", { name: "Verify clinic" });
+    await verify.focus();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toContainText("Test Clinic A");
+    await expect(dialog).toContainText("Verified");
+    await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+    expect(writes()).toHaveLength(0);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(verify).toBeFocused();
+    expect(writes()).toHaveLength(0);
+
+    await verify.click();
+    await confirm.click();
     await expect(row).toContainText("Verified");
-    expect(
-      mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state").at(-1)?.body,
-    ).toMatchObject({
+    expect(writes().at(-1)?.body).toMatchObject({
+      p_clinic_id: ids.clinicA,
       p_verification_state: "verified",
       p_is_published: false,
       p_contact_permission: "not_granted",
@@ -66,10 +81,51 @@ test.describe("Provider publication controls", () => {
     });
 
     await row.getByRole("button", { name: "Publish listing" }).click();
-    expect(
-      mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state").at(-1)?.body,
-    ).toMatchObject({
+    await expect(dialog).toContainText("Not granted");
+    await confirm.click();
+    await expect(row.getByRole("button", { name: "Unpublish listing" })).toBeEnabled();
+    expect(writes().at(-1)?.body).toMatchObject({
       p_is_published: true,
+      p_contact_permission: "not_granted",
+      p_booking_enabled: false,
+    });
+
+    const grant = row.getByRole("button", { name: "Grant patient contact" });
+    const acknowledgment = dialog.getByRole("checkbox", { name: /explicitly authorized/ });
+    await grant.click();
+    await expect(confirm).toBeDisabled();
+    await acknowledgment.check();
+    await expect(confirm).toBeEnabled();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await grant.click();
+    await expect(acknowledgment).not.toBeChecked();
+    await expect(confirm).toBeDisabled();
+    expect(writes()).toHaveLength(2);
+    await acknowledgment.check();
+    await confirm.click();
+    await expect(row.getByRole("button", { name: "Revoke patient contact" })).toBeEnabled();
+    expect(writes().at(-1)?.body).toMatchObject({
+      p_contact_permission: "granted",
+      p_booking_enabled: false,
+    });
+
+    await row.getByRole("button", { name: "Enable online booking" }).click();
+    await expect(dialog.getByRole("checkbox")).toHaveCount(0);
+    await confirm.click();
+    await expect(row.getByRole("button", { name: "Disable online booking" })).toBeEnabled();
+    expect(writes().at(-1)?.body).toMatchObject({
+      p_contact_permission: "granted",
+      p_booking_enabled: true,
+    });
+
+    await row.getByRole("button", { name: "Unpublish listing" }).click();
+    await expect(dialog.getByText("Disabled", { exact: true })).toHaveCount(2);
+    await expect(dialog.getByText("Not granted", { exact: true })).toBeVisible();
+    await confirm.click();
+    await expect(row.getByRole("button", { name: "Publish listing" })).toBeEnabled();
+    expect(writes()).toHaveLength(5);
+    expect(writes().at(-1)?.body).toMatchObject({
+      p_is_published: false,
       p_contact_permission: "not_granted",
       p_booking_enabled: false,
     });
@@ -282,7 +338,10 @@ test("failed publication does not claim success or change the displayed state", 
   await page.getByRole("tab", { name: "Provider publishing" }).click();
   const row = page.locator("li").filter({ hasText: "Test Clinic A" });
   await row.getByRole("button", { name: "Verify clinic" }).click();
-  await expect(row.getByRole("button", { name: "Verify clinic" })).toBeEnabled();
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("You don't have permission to do that.");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(row).toContainText("Pending");
   await expect(page.getByText("Provider state updated.")).toHaveCount(0);
   expect(attempts).toBe(1);
@@ -341,11 +400,41 @@ test("publication controls stay locked until refreshed clinic state arrives", as
   const row = page.locator("li").filter({ hasText: "Test Clinic A" });
   const verify = row.getByRole("button", { name: "Verify clinic" });
   await verify.click();
-  await expect.poll(() => listCalls).toBeGreaterThan(1);
-  await expect(verify).toBeDisabled();
-  expect(mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state")).toHaveLength(1);
-  release();
+  const dialog = page.getByRole("alertdialog");
+  const confirm = dialog.getByRole("button", { name: "Confirm", exact: true });
+  try {
+    await confirm.evaluate((button: HTMLButtonElement) => {
+      button.click();
+      button.click();
+    });
+    await expect.poll(() => listCalls).toBeGreaterThan(1);
+    await expect(confirm).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+    expect(mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state")).toHaveLength(1);
+  } finally {
+    release();
+  }
+  await expect(dialog).toBeHidden();
   await expect(row.getByRole("button", { name: "Publish listing" })).toBeEnabled();
+});
+
+test("a refreshed clinic state requires a new publication preview", async ({ page, backend }) => {
+  const mock = await backend({ platformAdmin: true });
+  mock.state.clinics[0]!["is_demo"] = false;
+  await page.clock.install();
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Provider publishing" }).click();
+  await page.getByRole("button", { name: "Verify clinic" }).click();
+  const dialog = page.getByRole("alertdialog");
+  const confirm = dialog.getByRole("button", { name: "Confirm", exact: true });
+  await expect(confirm).toBeEnabled();
+  mock.state.clinics[0]!["clinic_verification_state"] = "verified";
+  await page.clock.fastForward(6 * 60 * 1000);
+  await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
+  await expect(dialog.getByRole("alert")).toContainText("publication settings changed");
+  await expect(confirm).toBeDisabled();
+  expect(mock.callsTo("POST", "/rpc/admin_set_clinic_publication_state")).toHaveLength(0);
 });
 
 test("publication cards with long clinic names fit and support keyboard actions", async ({
@@ -363,7 +452,15 @@ test("publication cards with long clinic names fit and support keyboard actions"
     await tab.focus();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("heading", { name })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Verify clinic" })).toBeVisible();
+    await page.getByRole("button", { name: "Verify clinic" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText(name);
+    const { clientWidth, scrollWidth } = await dialog.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(scrollWidth - clientWidth).toBeLessThanOrEqual(1);
+    await page.keyboard.press("Escape");
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

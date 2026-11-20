@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Building2, CalendarDays, Compass, Home, MessageCircle, User } from "lucide-react";
-import { useRef, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useFocusMainOnNavigate } from "@/hooks/useFocusMainOnNavigate";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/lib/store";
@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/supabase/auth";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { LanguageSelect } from "@/components/LanguageSelect";
+import { FirstVisitLanguage } from "@/components/FirstVisitLanguage";
+import { GuidedTour } from "@/components/GuidedTour";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { BrandMark, SkipToContent } from "@/components/BrandMark";
@@ -44,13 +46,41 @@ const NAV: {
   { to: "/profile", label: "nav.profile", mobileLabel: "nav.profile", icon: User, exact: false },
 ];
 
-export function PatientShell({ children }: { children: ReactNode }) {
+export function PatientPageHeading({
+  title,
+  description,
+}: {
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <h1 className="font-display text-2xl leading-tight font-bold tracking-tight [overflow-wrap:anywhere] sm:text-3xl">
+        {title}
+      </h1>
+      {description ? (
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">{description}</p>
+      ) : null}
+    </div>
+  );
+}
+
+export function PatientShell({
+  children,
+  compact = false,
+}: {
+  children: ReactNode;
+  compact?: boolean;
+}) {
   const mainRef = useRef<HTMLElement>(null);
+  const [startTour, setStartTour] = useState(0);
+  const focusMain = useCallback(() => mainRef.current?.focus({ preventScroll: true }), []);
   useFocusMainOnNavigate(mainRef);
   const { patient, activeClinic, isLoadingClinicAccess, clinicAccessError } = useApp();
   const { user, loading } = useAuth();
   const { t } = useI18n();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAdministration = pathname === "/admin" || pathname.startsWith("/admin/");
 
   const isActive = (to: string, exact: boolean) =>
     (to === "/discover" &&
@@ -58,10 +88,20 @@ export function PatientShell({ children }: { children: ReactNode }) {
     (exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`));
 
   return (
-    <div className="flex min-h-screen flex-col bg-background pb-32 lg:pb-0">
+    <div
+      className={cn(
+        "flex min-h-screen flex-col lg:pb-0",
+        compact ? "pb-[calc(4.75rem+env(safe-area-inset-bottom))]" : "pb-32",
+      )}
+    >
       <SkipToContent />
       <header className="sticky top-0 z-40 border-b bg-card/85 shadow-xs backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+        <div
+          className={cn(
+            "mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6",
+            compact ? "py-2.5" : "py-3",
+          )}
+        >
           <div className="flex min-w-0 items-center gap-6">
             <Link
               to="/"
@@ -80,6 +120,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
                   <Link
                     key={item.to}
                     to={item.to}
+                    data-tour-target={item.to}
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -140,26 +181,48 @@ export function PatientShell({ children }: { children: ReactNode }) {
         ref={mainRef}
         id="main-content"
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 outline-none sm:px-6 sm:py-8"
+        className={cn(
+          "mx-auto w-full max-w-6xl flex-1 px-4 outline-none sm:px-6",
+          compact ? "py-4 sm:py-6" : "py-6 sm:py-8",
+        )}
       >
+        {pathname === "/" || pathname === "/discover" ? (
+          <FirstVisitLanguage
+            onDismiss={focusMain}
+            onStartTour={() => setStartTour((value) => value + 1)}
+          />
+        ) : null}
         {children}
       </main>
 
       <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div
+          className={cn(
+            "mx-auto flex max-w-6xl flex-col gap-1 px-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6",
+            compact ? "py-3" : "py-5",
+          )}
+        >
           <p>{t("footer.copyright", { year: new Date().getFullYear() })}</p>
-          <Link
-            to="/providers"
-            className="font-medium text-primary underline-offset-2 hover:underline"
-          >
-            {t("nav.forClinics")}
-          </Link>
+          <div className="flex flex-wrap items-center gap-x-3">
+            <Link
+              to="/providers"
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {t("nav.forClinics")}
+            </Link>
+            {!isAdministration ? (
+              <GuidedTour role="patient" compact startRequested={startTour} />
+            ) : null}
+          </div>
           <p>{t("footer.emergency")}</p>
         </div>
       </footer>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden"
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden",
+          compact && "pb-[env(safe-area-inset-bottom)]",
+        )}
         aria-label={t("nav.primaryMobile")}
       >
         <ul className="mx-auto grid max-w-md grid-cols-5">
@@ -169,6 +232,7 @@ export function PatientShell({ children }: { children: ReactNode }) {
               <li key={item.to} className="min-w-0">
                 <Link
                   to={item.to}
+                  data-tour-target={item.to}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-md px-0.5 py-2.5 text-[11px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

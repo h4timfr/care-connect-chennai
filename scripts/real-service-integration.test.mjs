@@ -16,6 +16,8 @@ import {
   prepareRealtimeAuth,
   recordRealtimePayload,
   realtimePostgresChangesOptions,
+  realtimeMessageBinding,
+  isRealtimePermissionDenial,
   sanitizeRealtimeDiagnostics,
   sanitizeStartupProcess,
   countOwnedRecords,
@@ -316,6 +318,25 @@ test("Postgres Changes readiness waits for server-side subscription confirmation
   });
 });
 
+test("an empty unauthorized notification is a denial and never masks row data", () => {
+  const denial = { errors: ["Error 401: Unauthorized"], new: {}, old: {} };
+  assert.equal(isRealtimePermissionDenial(denial), true);
+  assert.equal(isRealtimePermissionDenial({ ...denial, new: { id: "unexpected" } }), false);
+  assert.equal(isRealtimePermissionDenial({ ...denial, old: { id: "unexpected" } }), false);
+  assert.equal(isRealtimePermissionDenial({ ...denial, errors: ["Error 500"] }), false);
+  assert.equal(isRealtimePermissionDenial({ new: {}, old: {} }), false);
+});
+
+test("anonymous Realtime probe can register without selecting the filter column", () => {
+  const testId = "synthetic-conversation";
+  const base = { event: "INSERT", schema: "public", table: "messages" };
+  assert.deepEqual(realtimeMessageBinding("anonymous", testId), base);
+  assert.deepEqual(realtimeMessageBinding("unrelated_patient", testId), {
+    ...base,
+    filter: "conversation_id=eq.synthetic-conversation",
+  });
+});
+
 test("Realtime readiness accepts only authenticated subscriptions and an anonymous auth denial", async () => {
   const makeState = (subscribe) => ({
     pending: new Set(),
@@ -512,9 +533,9 @@ test("hosted project variables and linked metadata fail closed without echoing v
 
 test("repository migration and SQL test inventories match the integrity manifest", () => {
   const result = verifyRepositoryIntegrity();
-  assert.equal(result.files.length, 41);
-  assert.equal(result.files.at(-1)?.slice(0, 5), "00062");
-  assert.equal(result.tests.length, 22);
+  assert.equal(result.files.length, 44);
+  assert.equal(result.files.at(-1)?.slice(0, 5), "00065");
+  assert.equal(result.tests.length, 24);
 });
 
 test("real-service startup accepts only the exact canonical disposable baseline", () => {
@@ -688,36 +709,44 @@ test("the workflow provisions only local Supabase services and never links a rem
   );
   assert.match(workflow, /runs-on:\s*ubuntu-24\.04/);
   assert.match(workflow, /version:\s*2\.117\.0/);
-  assert.match(workflow, /startup-observer\.mjs run/);
+  const phase = readFileSync(path.join(root, "scripts/ci-real-service-phase.sh"), "utf8");
+  const supervisor = readFileSync(path.join(root, "scripts/ci-isolated-docker.sh"), "utf8");
+  assert.match(phase, /startup-observer\.mjs run/);
   const startupObserver = readFileSync(path.join(root, "scripts/startup-observer.mjs"), "utf8");
-  assert.match(
-    startupObserver,
-    /spawn\("supabase", \["--debug", "--network-id", networkName, "start"\]/,
-  );
+  assert.match(startupObserver, /spawn\(\s*"supabase",[\s\S]*?"--network-id"[\s\S]*?"start"/);
   assert.match(dockerGate, /com\.docker\.network\.bridge\.host_binding_ipv4/);
   assert.match(dockerGate, /127\.0\.0\.1/);
-  assert.match(dockerGate, /"--internal"/);
   assert.match(dockerGate, /"::1"/);
-  assert.match(workflow, /docker-bindings\.mjs verify/);
-  assert.match(workflow, /"\$\{\{ steps\.start_supabase\.outcome \}\}"/);
-  const bindingGate = workflow.indexOf(
-    "Verify actual Docker bindings before application service requests",
-  );
-  const migrations = workflow.indexOf("Verify migration ledger and reviewed SQL integrity");
-  const integration = workflow.indexOf(
-    "Exercise real Auth, PostgREST, Storage, Realtime, and browser workflows",
-  );
-  assert.ok(bindingGate >= 0 && bindingGate < migrations && bindingGate < integration);
-  assert.match(
-    workflow,
-    /Verify actual Docker bindings before application service requests\s+if: \$\{\{ always\(\) && steps\.start_supabase\.outcome != 'skipped' \}\}/,
-  );
+  assert.match(dockerGate, /privateDockerIdentity/);
+  assert.match(supervisor, /NetworkNamespacePath/);
+  assert.match(supervisor, /--authorization-plugin=careconnect-ci-admission/);
+  const binding = phase.indexOf("docker-bindings.mjs verify");
+  const migrations = phase.indexOf("real-service-integration.mjs verify-migrations");
+  const integration = phase.lastIndexOf("real-service-integration.mjs run");
+  assert.ok(binding >= 0 && binding < migrations && migrations < integration);
+  assert.match(phase, /outcome=failure/);
+  assert.match(phase, /preflight-inputs[^]*?supabase init --yes/);
   assert.doesNotMatch(
-    workflow,
+    workflow + phase + supervisor,
     /supabase\s+(?:link|db\s+push|migration\s+up\s+--linked|db\s+reset\s+--linked)/,
   );
-  assert.match(workflow, /supabase --network-id "\$CARECONNECT_DOCKER_NETWORK" stop --no-backup/);
+  assert.match(phase, /if ! remove_owned_containers/);
+  assert.match(
+    phase,
+    /container inspect --format[^]*?\[\[ "\$mode" == "\$network" \]\][^]*?rm -f -v/,
+  );
+  assert.doesNotMatch(phase, /docker\s+(?:system\s+)?prune/);
   assert.match(workflow, /docker-network-cleanup-summary\.json/);
+});
+
+test("password recovery verifies the changed credential on the active workflow client", () => {
+  const runner = readFileSync(path.join(root, "scripts/real-service-integration.mjs"), "utf8");
+  const helper = runner.slice(
+    runner.indexOf("async function completePasswordRecovery("),
+    runner.indexOf("async function deleteRecoveryEmail("),
+  );
+  assert.match(helper, /client\.auth\.updateUser[\s\S]*client\.auth\.signInWithPassword/);
+  assert.doesNotMatch(helper, /signOut\(/);
 });
 
 test("Realtime checks follow the message RLS contract and close bounded runner resources", () => {
@@ -764,15 +793,15 @@ test("Realtime checks follow the message RLS contract and close bounded runner r
   assert.match(runner, /client\.auth\.stopAutoRefresh\(\)/);
   assert.match(runner, /client\.auth\.dispose\(\)/);
   assert.match(runner, /timeoutMs: 15 \* 60 \* 1000/);
-  assert.match(workflow, /Exercise real Auth,[\s\S]*?timeout-minutes: 35/);
+  const phase = readFileSync(path.join(root, "scripts/ci-real-service-phase.sh"), "utf8");
+  const supervisor = readFileSync(path.join(root, "scripts/ci-isolated-docker.sh"), "utf8");
   assert.match(
-    workflow,
-    /Stop the disposable Supabase stack\s+if: always\(\)[\s\S]*?timeout-minutes: 5/,
+    phase,
+    /timeout --signal=TERM --kill-after=15s 35m node scripts\/real-service-integration.mjs run/,
   );
-  assert.match(
-    workflow,
-    /timeout --signal=TERM --kill-after=15s 180s supabase --network-id "\$CARECONNECT_DOCKER_NETWORK" stop/,
-  );
+  assert.match(phase, /timeout --signal=TERM --kill-after=5s 20s docker/);
+  assert.match(supervisor, /if ! user_phase cleanup; then rc=1; fi/);
+  assert.match(supervisor, /trap stop_units EXIT/);
   assert.match(
     workflow,
     /Upload sanitized integration evidence\s+if: always\(\)[\s\S]*?timeout-minutes: 5/,
@@ -831,14 +860,28 @@ test("browser evidence counts test cases, assertions, and observed HTTP operatio
 test("browser workflow scenarios use UI actions and run independently", () => {
   const spec = readFileSync(path.join(root, "tests/real-service/workflows.spec.ts"), "utf8");
   const config = readFileSync(path.join(root, "playwright.config.ts"), "utf8");
-  for (const title of [
-    "patient books and cancels an appointment through the interface",
-    "clinic staff sees the created appointment in the clinic portal",
-    "doctor sees the appointment, receives a patient message, and replies in the portals",
-    "administrator reviews the clinic and changes publication through the interface",
+  for (const [id, title] of [
+    ["patient", "patient books and cancels an appointment through the interface"],
+    ["clinic", "clinic staff sees the created appointment in the clinic portal"],
+    [
+      "doctor",
+      "doctor sees the appointment, receives a patient message, and replies in the portals",
+    ],
+    [
+      "administrator",
+      "administrator reviews the clinic and changes publication through the interface",
+    ],
   ]) {
-    assert.ok(spec.includes(`test("${title}"`), `missing independent scenario: ${title}`);
+    const declaration = 'test("' + title + '", { tag: "@workflow-' + id + '" }, async';
+    assert.ok(
+      spec
+        .replace(/\s+/g, " ")
+        .replace(/test\( /g, "test(")
+        .includes(declaration),
+      "missing tagged independent scenario: " + id,
+    );
   }
+  assert.match(spec, /testInfo\.tags\.includes/);
   assert.doesNotMatch(spec, /createClient|fetch\(|page\.request\.|\.rpc\(/);
   assert.match(spec, /getByRole\("button", \{ name: "Request appointment" \}\)/);
   assert.match(spec, /getByRole\("button", \{ name: "Send reply" \}\)/);

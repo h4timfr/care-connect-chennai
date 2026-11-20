@@ -207,6 +207,21 @@
       "version": "00062",
       "file": "00062_explicit_application_acl_baseline.sql",
       "sha256_lf": "d78f669c167ad921b608efb56fd8aa35711803a7b1b5d59604b7b1d9f2d077f4"
+    },
+    {
+      "version": "00063",
+      "file": "00063_existing_doctor_clinic_links.sql",
+      "sha256_lf": "52782316aeba6005324928a6c88404c66923014a022a48139cab55973ad1ac0b"
+    },
+    {
+      "version": "00064",
+      "file": "00064_unique_appointment_conversation.sql",
+      "sha256_lf": "598d7a899573a34a4e6c50b5afd374b411be742d5ff280c3245cf54f80ac71a3"
+    },
+    {
+      "version": "00065",
+      "file": "00065_private_doctor_messaging.sql",
+      "sha256_lf": "b23a6ded5bfca8fab13fc0c15bd820be40382f7a80651b8691d618556bbdbb15"
     }
   ]
 }

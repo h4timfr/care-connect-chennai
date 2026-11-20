@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Loader2, MailCheck } from "lucide-react";
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/login")({
     if (portal === "clinic" || portal === "doctor") throw redirect({ to: `/${portal}/login` });
   },
   head: () => ({
-    meta: [{ title: "Sign in — CareConnect" }],
+    meta: [{ title: pageTitles.patient }],
   }),
   component: LoginPage,
 });

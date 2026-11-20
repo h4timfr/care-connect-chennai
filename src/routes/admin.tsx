@@ -1,3 +1,4 @@
+import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -5,15 +6,30 @@ import { toast } from "@/lib/toast";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { FormAlert } from "@/components/AuthCard";
 import { AdminGate } from "@/components/AdminGate";
+import { GuidedTour } from "@/components/GuidedTour";
+import { RoleTourOffer } from "@/components/RoleTourOffer";
 import { EmptyState, ErrorState, InfoNotice, PageLoader } from "@/components/common";
 import { ApplicationStatusPill, VerificationPill } from "@/components/ProviderStatus";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useI18n } from "@/lib/i18n";
+import {
+  calculateClinicPublicationState,
+  type ClinicPublicationPatch,
+} from "@/lib/admin-publication";
+import { useI18n, type MessageKey } from "@/lib/i18n";
 import { useAdminClinics } from "@/lib/supabase/queries";
 import {
   useDoctorApplicationsForReview,
@@ -35,49 +51,116 @@ import {
   type Membership,
   type ProviderApplication,
 } from "@/lib/supabase/providers";
+import type { Clinic } from "@/lib/types";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Administration — CareConnect" }] }),
+  head: () => ({ meta: [{ title: pageTitles.admin }] }),
   component: AdminPage,
 });
 
-function AdminPage() {
+function ReviewWorkspace() {
   const { t } = useI18n();
-  const body = (
-    <AdminGate>
-      <Link
-        to="/admin/providers"
-        className="mb-4 inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-primary hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {t("candidates.openReview")}
-      </Link>
-      <Tabs defaultValue="applications" className="mt-2">
-        <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
-          <TabsTrigger value="applications">{t("admin.tab.applications")}</TabsTrigger>
-          <TabsTrigger value="doctor-applications">{t("admin.tab.doctorApplications")}</TabsTrigger>
-          <TabsTrigger value="doctors">{t("admin.tab.doctors")}</TabsTrigger>
-          <TabsTrigger value="publication">{t("admin.tab.publication")}</TabsTrigger>
-          <TabsTrigger value="teams">{t("admin.tab.teams")}</TabsTrigger>
+  const [startTour, setStartTour] = useState(0);
+  const applications = useApplicationsForReview(true);
+  const doctorApplications = useDoctorApplicationsForReview(true);
+  const doctorLinks = usePendingDoctorLinks(true);
+  const queues = [
+    {
+      id: "applications",
+      label: t("admin.tab.applications"),
+      status: queueStatus(applications, (a) => a.status === "submitted", 200),
+    },
+    {
+      id: "doctor-applications",
+      label: t("admin.tab.doctorApplications"),
+      status: queueStatus(doctorApplications, (a) => a.status === "submitted", 200),
+    },
+    {
+      id: "doctors",
+      label: t("admin.tab.doctors"),
+      status: queueStatus(doctorLinks, (l) => !l.isSample, 500),
+    },
+  ];
+
+  function queueStatus<T>(
+    query: { data: T[] | undefined; error: unknown },
+    isPending: (item: T) => boolean,
+    limit: number,
+  ) {
+    if (query.error) return t("setup.unavailable");
+    if (!query.data) return t("common.loading");
+    const count = query.data.filter(isPending).length;
+    return t(query.data.length < limit ? "admin.awaiting" : "admin.awaitingLoaded", { count });
+  }
+
+  return (
+    <>
+      <div className="mb-2 flex justify-end">
+        <GuidedTour role="admin" startRequested={startTour} />
+      </div>
+      <RoleTourOffer role="admin" onStart={() => setStartTour((value) => value + 1)} />
+      <Tabs defaultValue="applications" className="space-y-4">
+        <TabsList
+          aria-label={t("admin.reviewNavigation")}
+          className="grid w-full grid-cols-1 items-stretch gap-1.5 p-1.5 min-[360px]:grid-cols-2 xl:grid-cols-5"
+        >
+          {queues.map(({ id, label, status }) => (
+            <TabsTrigger
+              key={id}
+              value={id}
+              data-tour-target={`admin-${id}`}
+              aria-label={label}
+              aria-describedby={`admin-queue-${id}`}
+              className="min-h-12 min-w-0 flex-col items-start gap-0.5 whitespace-normal px-2.5 py-2 text-start [overflow-wrap:anywhere]"
+            >
+              <span className="font-semibold">{label}</span>
+              <span id={`admin-queue-${id}`} className="text-xs text-muted-foreground">
+                {status}
+              </span>
+            </TabsTrigger>
+          ))}
+          <TabsTrigger
+            value="publication"
+            data-tour-target="admin-publication"
+            className="min-h-12 min-w-0 justify-start whitespace-normal px-2.5 py-2 text-start font-semibold [overflow-wrap:anywhere]"
+          >
+            {t("admin.tab.publication")}
+          </TabsTrigger>
+          <TabsTrigger
+            value="teams"
+            className="min-h-12 min-w-0 justify-start whitespace-normal px-2.5 py-2 text-start font-semibold [overflow-wrap:anywhere]"
+          >
+            {t("admin.tab.teams")}
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="applications" className="mt-5">
-          <ApplicationsPanel />
+        <TabsContent value="applications">
+          <ApplicationsPanel query={applications} />
         </TabsContent>
-        <TabsContent value="doctor-applications" className="mt-5">
-          <DoctorApplicationsPanel />
+        <TabsContent value="doctor-applications">
+          <DoctorApplicationsPanel query={doctorApplications} />
         </TabsContent>
-        <TabsContent value="doctors" className="mt-5">
-          <DoctorsPanel />
+        <TabsContent value="doctors">
+          <DoctorsPanel query={doctorLinks} />
         </TabsContent>
-        <TabsContent value="publication" className="mt-5">
+        <TabsContent value="publication">
           <ClinicPublicationPanel />
         </TabsContent>
-        <TabsContent value="teams" className="mt-5">
+        <TabsContent value="teams">
           <TeamsPanel />
         </TabsContent>
       </Tabs>
-    </AdminGate>
+      <Link
+        to="/admin/providers"
+        className="mt-5 inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-primary hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {t("candidates.openReview")}
+      </Link>
+    </>
   );
+}
 
+function AdminPage() {
+  const { t } = useI18n();
   return (
     <PatientShell>
       <div className="flex items-center gap-3">
@@ -91,7 +174,11 @@ function AdminPage() {
           <p className="text-sm text-muted-foreground">{t("admin.subtitle")}</p>
         </div>
       </div>
-      <div className="mt-6">{body}</div>
+      <div className="mt-5">
+        <AdminGate>
+          <ReviewWorkspace />
+        </AdminGate>
+      </div>
     </PatientShell>
   );
 }
@@ -102,6 +189,14 @@ function ClinicPublicationPanel() {
   const update = useSetClinicPublicationState();
   const inFlight = useRef(false);
   const mounted = useRef(true);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    clinic: Clinic;
+    label: MessageKey;
+    patch: ClinicPublicationPatch;
+  } | null>(null);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [confirmationError, setConfirmationError] = useState<MessageKey | null>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -111,37 +206,52 @@ function ClinicPublicationPanel() {
   if (clinics.isLoading || clinics.error)
     return <PanelState query={clinics} errorTitle={t("admin.loadError")} />;
   const realClinics = (clinics.data ?? []).filter((c) => !c.isSample);
+  const current = realClinics.find((clinic) => clinic.id === pendingAction?.clinic.id);
+  const before = pendingAction?.clinic;
+  const clinicChanged = Boolean(
+    before &&
+    (!current ||
+      current.name !== before.name ||
+      current.verificationState !== before.verificationState ||
+      current.isPublished !== before.isPublished ||
+      current.patientContactPermission !== before.patientContactPermission ||
+      current.bookingEnabled !== before.bookingEnabled),
+  );
+  const preview = pendingAction
+    ? calculateClinicPublicationState(pendingAction.clinic, pendingAction.patch)
+    : null;
+  const requiresAcknowledgment = pendingAction?.patch.contactPermission === "granted";
+  const canConfirm =
+    !update.isPending &&
+    !clinics.isFetching &&
+    !clinicChanged &&
+    (!requiresAcknowledgment || acknowledged);
 
-  const change = async (
-    clinic: (typeof realClinics)[number],
-    patch: Partial<{
-      verificationState: "pending" | "verified" | "rejected";
-      isPublished: boolean;
-      contactPermission: "not_granted" | "granted" | "revoked";
-      bookingEnabled: boolean;
-    }>,
+  const requestChange = (
+    clinic: Clinic,
+    label: MessageKey,
+    patch: ClinicPublicationPatch,
+    trigger: HTMLButtonElement,
   ) => {
-    if (inFlight.current) return;
+    if (inFlight.current || pendingAction) return;
+    triggerRef.current = trigger;
+    setAcknowledged(false);
+    setConfirmationError(null);
+    setPendingAction({ clinic, label, patch });
+  };
+
+  const confirmChange = async () => {
+    if (inFlight.current || !pendingAction || !preview || !canConfirm) return;
     inFlight.current = true;
-    const next = {
-      verificationState: patch.verificationState ?? clinic.verificationState,
-      isPublished: patch.isPublished ?? clinic.isPublished,
-      contactPermission: patch.contactPermission ?? clinic.patientContactPermission,
-      bookingEnabled: patch.bookingEnabled ?? clinic.bookingEnabled,
-    };
-    if (next.verificationState !== "verified") {
-      next.isPublished = false;
-      next.contactPermission = "not_granted";
-      next.bookingEnabled = false;
-    } else if (!next.isPublished) {
-      next.contactPermission = "not_granted";
-      next.bookingEnabled = false;
-    }
+    setConfirmationError(null);
     try {
-      await update.mutateAsync({ clinicId: clinic.id, ...next });
-      if (mounted.current) toast.success(t("admin.publicationSaved"));
+      await update.mutateAsync({ clinicId: pendingAction.clinic.id, ...preview });
+      if (mounted.current) {
+        setPendingAction(null);
+        toast.success(t("admin.publicationSaved"));
+      }
     } catch (err) {
-      if (mounted.current) toast.error(t(describeDataError(err)));
+      if (mounted.current) setConfirmationError(describeDataError(err));
     } finally {
       inFlight.current = false;
     }
@@ -183,11 +293,18 @@ function ClinicPublicationPanel() {
                   size="sm"
                   variant="outline"
                   disabled={update.isPending}
-                  onClick={() =>
-                    void change(clinic, {
-                      verificationState:
-                        clinic.verificationState === "verified" ? "pending" : "verified",
-                    })
+                  onClick={(event) =>
+                    requestChange(
+                      clinic,
+                      clinic.verificationState === "verified"
+                        ? "admin.markPending"
+                        : "admin.verifyClinic",
+                      {
+                        verificationState:
+                          clinic.verificationState === "verified" ? "pending" : "verified",
+                      },
+                      event.currentTarget,
+                    )
                   }
                 >
                   {clinic.verificationState === "verified"
@@ -198,7 +315,14 @@ function ClinicPublicationPanel() {
                   size="sm"
                   variant="outline"
                   disabled={update.isPending || clinic.verificationState !== "verified"}
-                  onClick={() => void change(clinic, { isPublished: !clinic.isPublished })}
+                  onClick={(event) =>
+                    requestChange(
+                      clinic,
+                      clinic.isPublished ? "admin.unpublish" : "admin.publish",
+                      { isPublished: !clinic.isPublished },
+                      event.currentTarget,
+                    )
+                  }
                 >
                   {clinic.isPublished ? t("admin.unpublish") : t("admin.publish")}
                 </Button>
@@ -210,11 +334,18 @@ function ClinicPublicationPanel() {
                     !clinic.isPublished ||
                     clinic.verificationState !== "verified"
                   }
-                  onClick={() =>
-                    void change(clinic, {
-                      contactPermission:
-                        clinic.patientContactPermission === "granted" ? "revoked" : "granted",
-                    })
+                  onClick={(event) =>
+                    requestChange(
+                      clinic,
+                      clinic.patientContactPermission === "granted"
+                        ? "admin.revokeContact"
+                        : "admin.grantContact",
+                      {
+                        contactPermission:
+                          clinic.patientContactPermission === "granted" ? "revoked" : "granted",
+                      },
+                      event.currentTarget,
+                    )
                   }
                 >
                   {clinic.patientContactPermission === "granted"
@@ -229,7 +360,14 @@ function ClinicPublicationPanel() {
                     !clinic.isPublished ||
                     clinic.verificationState !== "verified"
                   }
-                  onClick={() => void change(clinic, { bookingEnabled: !clinic.bookingEnabled })}
+                  onClick={(event) =>
+                    requestChange(
+                      clinic,
+                      clinic.bookingEnabled ? "admin.disableBooking" : "admin.enableBooking",
+                      { bookingEnabled: !clinic.bookingEnabled },
+                      event.currentTarget,
+                    )
+                  }
                 >
                   {clinic.bookingEnabled ? t("admin.disableBooking") : t("admin.enableBooking")}
                 </Button>
@@ -241,6 +379,83 @@ function ClinicPublicationPanel() {
           ))}
         </ul>
       )}
+      <AlertDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open && !inFlight.current) setPendingAction(null);
+        }}
+      >
+        {pendingAction && preview ? (
+          <AlertDialogContent
+            className="min-w-0 rounded-xl"
+            onCloseAutoFocus={(event) => {
+              const trigger = triggerRef.current;
+              if (trigger?.isConnected && !trigger.disabled) {
+                event.preventDefault();
+                trigger.focus();
+              }
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t(pendingAction.label)}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("admin.confirmPublicationAction", {
+                  action: t(pendingAction.label),
+                  clinic: pendingAction.clinic.name,
+                })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <dl className="grid grid-cols-1 gap-2 rounded-lg border bg-muted/30 p-3 text-sm [overflow-wrap:anywhere] sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">{t("admin.clinicVerification")}</dt>
+                <dd className="font-medium">{t(`admin.state.${preview.verificationState}`)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">{t("admin.publication")}</dt>
+                <dd className="font-medium">
+                  {t(preview.isPublished ? "admin.enabled" : "admin.disabled")}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">{t("admin.patientContact")}</dt>
+                <dd className="font-medium">{t(`admin.contact.${preview.contactPermission}`)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">{t("admin.onlineBooking")}</dt>
+                <dd className="font-medium">
+                  {t(preview.bookingEnabled ? "admin.enabled" : "admin.disabled")}
+                </dd>
+              </div>
+            </dl>
+            {requiresAcknowledgment ? (
+              <label className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm [overflow-wrap:anywhere]">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 shrink-0 accent-primary"
+                  checked={acknowledged}
+                  disabled={update.isPending || clinicChanged}
+                  onChange={(event) => setAcknowledged(event.target.checked)}
+                />
+                <span>{t("admin.acknowledgeContactConsent")}</span>
+              </label>
+            ) : null}
+            {clinicChanged && !update.isPending ? (
+              <FormAlert>{t("admin.publicationChanged")}</FormAlert>
+            ) : confirmationError ? (
+              <FormAlert>{t(confirmationError)}</FormAlert>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={update.isPending}>
+                {t("common.cancel")}
+              </AlertDialogCancel>
+              <Button type="button" disabled={!canConfirm} onClick={() => void confirmChange()}>
+                {update.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                {t("admin.confirm")}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        ) : null}
+      </AlertDialog>
     </section>
   );
 }
@@ -266,9 +481,8 @@ function PanelState({
 
 // ---- Applications
 
-function ApplicationsPanel() {
+function ApplicationsPanel({ query }: { query: ReturnType<typeof useApplicationsForReview> }) {
   const { t } = useI18n();
-  const query = useApplicationsForReview(true);
   const [showAll, setShowAll] = useState(false);
   if (query.isLoading || query.error)
     return <PanelState query={query} errorTitle={t("admin.loadError")} />;
@@ -277,9 +491,6 @@ function ApplicationsPanel() {
   return (
     <section aria-label={t("admin.tab.applications")} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          {t("admin.awaiting", { count: all.filter((a) => a.status === "submitted").length })}
-        </p>
         <Button variant="outline" size="sm" onClick={() => setShowAll((v) => !v)}>
           {showAll ? t("admin.showOpen") : t("admin.showAll")}
         </Button>
@@ -412,9 +623,12 @@ function ApplicationReview({ application: a }: { application: ProviderApplicatio
 
 // ---- Doctor applications
 
-function DoctorApplicationsPanel() {
+function DoctorApplicationsPanel({
+  query,
+}: {
+  query: ReturnType<typeof useDoctorApplicationsForReview>;
+}) {
   const { t } = useI18n();
-  const query = useDoctorApplicationsForReview(true);
   const [showAll, setShowAll] = useState(false);
   if (query.isLoading || query.error)
     return <PanelState query={query} errorTitle={t("admin.loadError")} />;
@@ -424,9 +638,6 @@ function DoctorApplicationsPanel() {
   return (
     <section aria-label={t("admin.tab.doctorApplications")} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">
-          {t("admin.awaiting", { count: open.length })}
-        </p>
         <Button variant="outline" size="sm" onClick={() => setShowAll((v) => !v)}>
           {showAll ? t("admin.showOpen") : t("admin.showAll")}
         </Button>
@@ -565,9 +776,8 @@ function DoctorApplicationReview({ application: a }: { application: DoctorApplic
 
 // ---- Doctor verification
 
-function DoctorsPanel() {
+function DoctorsPanel({ query }: { query: ReturnType<typeof usePendingDoctorLinks> }) {
   const { t, fmt } = useI18n();
-  const query = usePendingDoctorLinks(true);
   const setState = useSetLinkState();
   if (query.isLoading || query.error)
     return <PanelState query={query} errorTitle={t("admin.loadError")} />;

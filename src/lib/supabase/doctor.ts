@@ -4,7 +4,12 @@ import { useAuth } from "./auth";
 import type { Database } from "@/lib/database.types";
 import type { MessageKey } from "@/lib/i18n";
 import type { AppointmentStatus } from "@/lib/types";
-import { toVerificationState, type VerificationState } from "./providers";
+import {
+  scheduleHasBookableWindow,
+  toVerificationState,
+  type VerificationState,
+} from "./providers";
+import { writeMessage, type MessageWrite } from "./messaging";
 
 /*
  * Doctor portal (migration 00055). An account is a doctor only when CareConnect has linked it to a
@@ -23,6 +28,7 @@ export interface MyDoctor {
   experienceYears: number;
   consultationFee: number;
   registrationNote: string;
+  isSample: boolean;
   links: {
     clinicId: string;
     clinicName: string;
@@ -30,6 +36,9 @@ export interface MyDoctor {
     state: VerificationState;
     verified: boolean;
     active: boolean;
+    bookingEnabled: boolean | undefined;
+    hasHours: boolean;
+    hasBookableHours: boolean;
   }[];
 }
 
@@ -44,18 +53,18 @@ export function useMyDoctor(userId: string | undefined) {
       const { data, error } = await supabase
         .from("doctors")
         .select(
-          "id, name, specialty_id, about, languages, qualifications, experience_years, consultation_fee, registration_note, clinic_doctors(clinic_id, active, verification_state, clinics(name))",
+          "id, name, specialty_id, about, languages, qualifications, experience_years, consultation_fee, registration_note, is_demo, clinic_doctors(clinic_id, active, verification_state, clinics(name, is_demo, clinic_verification_state, is_published, booking_enabled)), doctor_schedules(clinic_id, start_time, end_time, slot_minutes)",
         )
         .eq("user_id", userId)
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
-      const links = (data.clinic_doctors ?? []) as unknown as {
-        clinic_id: string;
-        active: boolean;
-        verification_state: string;
-        clinics: { name: string } | null;
-      }[];
+      const scheduledClinics = new Set(data.doctor_schedules.map((s) => s.clinic_id));
+      const bookableHours = new Set(
+        data.doctor_schedules
+          .filter((s) => scheduleHasBookableWindow(s.start_time, s.end_time, s.slot_minutes))
+          .map((s) => s.clinic_id),
+      );
       return {
         id: data.id,
         name: data.name,
@@ -66,12 +75,21 @@ export function useMyDoctor(userId: string | undefined) {
         experienceYears: data.experience_years,
         consultationFee: Number(data.consultation_fee),
         registrationNote: data.registration_note ?? "",
-        links: links.map((l) => ({
+        isSample: data.is_demo,
+        links: data.clinic_doctors.map((l) => ({
           clinicId: l.clinic_id,
           clinicName: l.clinics?.name ?? "",
           state: toVerificationState(l.verification_state),
           verified: l.verification_state === "verified",
           active: l.active,
+          bookingEnabled: l.clinics
+            ? !l.clinics.is_demo &&
+              l.clinics.clinic_verification_state === "verified" &&
+              l.clinics.is_published &&
+              l.clinics.booking_enabled
+            : undefined,
+          hasHours: scheduledClinics.has(l.clinic_id),
+          hasBookableHours: bookableHours.has(l.clinic_id),
         })),
       };
     },
@@ -124,6 +142,7 @@ export interface DoctorConversation {
   clinicId: string;
   clinicName: string;
   patientName: string;
+  privateAppointment?: { id: string; date: string; canSend: boolean };
   messages: DoctorMessage[];
 }
 
@@ -136,8 +155,8 @@ export function useDoctorConversations(enabled: boolean) {
     // Doctors cannot subscribe to messages directly because RLS intentionally denies their
     // SELECT access. Refresh the scoped SECURITY DEFINER inbox while it is visible instead.
     refetchInterval: 30_000,
-    queryFn: async (): Promise<DoctorConversation[]> => {
-      const { data, error } = await supabase.rpc("doctor_conversations");
+    queryFn: async ({ signal }): Promise<DoctorConversation[]> => {
+      const { data, error } = await supabase.rpc("doctor_conversations").abortSignal(signal);
       if (error) throw error;
       return (data ?? []).map((c) => {
         const raw = Array.isArray(c.messages) ? c.messages : [];
@@ -146,16 +165,22 @@ export function useDoctorConversations(enabled: boolean) {
           clinicId: c.clinic_id,
           clinicName: c.clinic_name,
           patientName: c.patient_name,
-          messages: raw.map((m) => {
-            const row = (m ?? {}) as Record<string, unknown>;
-            const from = row["from"];
-            return {
-              id: String(row["id"] ?? ""),
-              body: String(row["body"] ?? ""),
-              sentAt: String(row["created_at"] ?? ""),
-              from: from === "you" || from === "patient" ? from : "clinic",
-            };
-          }),
+          messages: raw
+            .map((m) => {
+              const row = (m ?? {}) as Record<string, unknown>;
+              const from = row["from"];
+              return {
+                id: String(row["id"] ?? ""),
+                body: String(row["body"] ?? ""),
+                sentAt: String(row["created_at"] ?? ""),
+                from: (from === "you" || from === "patient"
+                  ? from
+                  : "clinic") as DoctorMessage["from"],
+              };
+            })
+            .sort(
+              (a, b) => Date.parse(a.sentAt) - Date.parse(b.sentAt) || a.id.localeCompare(b.id),
+            ),
         };
       });
     },
@@ -166,16 +191,24 @@ export function useDoctorConversations(enabled: boolean) {
 export function useDoctorReply() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { conversationId: string; senderId: string; body: string }) => {
-      // No .select(): doctors have no read policy on messages (replies come back through
-      // doctor_conversations), so the insert returns nothing on success.
-      const { error } = await supabase.from("messages").insert({
-        conversation_id: args.conversationId,
-        sender_id: args.senderId,
-        body: args.body,
-      });
-      if (error) throw error;
-    },
+    mutationFn: (input: MessageWrite) =>
+      writeMessage(input, async ({ conversationId, body, messageId }) => {
+        const { data, error } = await supabase.rpc("doctor_conversations");
+        if (error) throw error;
+        const messages = data?.find((conversation) => conversation.id === conversationId)?.messages;
+        return (
+          Array.isArray(messages) &&
+          messages.some(
+            (message) =>
+              message !== null &&
+              typeof message === "object" &&
+              !Array.isArray(message) &&
+              message["id"] === messageId &&
+              message["from"] === "you" &&
+              message["body"] === body,
+          )
+        );
+      }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["doctor_conversations"] }),
   });
 }

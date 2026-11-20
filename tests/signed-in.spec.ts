@@ -145,7 +145,10 @@ test.describe("Discover URL state", () => {
     await page.goto("/discover");
     await expect(page.getByText("Dr. Verified Tester")).toBeVisible();
     await page.getByRole("button", { name: "Female" }).click();
-    await page.getByRole("button", { name: "English", exact: true }).click();
+    const englishFilter = page
+      .getByRole("group", { name: "Language spoken" })
+      .getByRole("button", { name: "English", exact: true });
+    await englishFilter.click();
     await page.getByLabel("Sort by").selectOption("experience");
     await expect(page).toHaveURL(/gender=female/);
     await expect(page).toHaveURL(/lang=English/);
@@ -156,10 +159,7 @@ test.describe("Discover URL state", () => {
       "aria-pressed",
       "true",
     );
-    await expect(page.getByRole("button", { name: "English", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(englishFilter).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByLabel("Sort by")).toHaveValue("experience");
     const search = decodeURIComponent(mock.callsTo("GET", "/rest/v1/doctors").at(-1)?.search ?? "");
     expect(search).toContain("gender=eq.female");
@@ -868,13 +868,20 @@ test.describe("Clinic portal", () => {
     await page.goto("/clinic");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
+    await page.getByRole("link", { name: /Awaiting confirmation/ }).click();
+    await expect(page).toHaveURL(/view=pending/);
     mock.state.failStatusUpdate = true;
-    await page.getByRole("button", { name: "Confirm" }).click();
-    await expect(page.getByText("already changed")).toBeVisible();
+    await page.getByRole("button", { name: "Confirm", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    const apply = dialog.getByRole("button", { name: "Apply status change" });
+    expect(mock.callsTo("PATCH", "/rest/v1/appointments")).toHaveLength(0);
+    await apply.click();
+    await expect(dialog.getByText("already changed")).toBeVisible();
     await expect(page.getByText("Appointment confirmed")).toHaveCount(0);
 
     mock.state.failStatusUpdate = false;
-    await page.getByRole("button", { name: "Confirm" }).click();
+    await apply.click();
+    await expect(dialog).toHaveCount(0);
     await expect(page.getByText("Appointment confirmed")).toBeVisible();
     expect(mock.callsTo("PATCH", "/rest/v1/appointments").at(-1)?.body).toEqual({
       status: "confirmed",

@@ -307,13 +307,17 @@ test("workflow starts the observer before CLI and reaps it before Supabase clean
     path.join(root, ".github/workflows/real-service-integration.yml"),
     "utf8",
   );
-  const startup = workflow.indexOf("startup-observer.mjs run");
-  const capture = workflow.indexOf("Capture sanitized startup evidence before cleanup");
-  const cleanup = workflow.indexOf("Stop the disposable Supabase stack");
-  const reap = workflow.indexOf("startup-observer.mjs reap");
+  const phase = readFileSync(path.join(root, "scripts/ci-real-service-phase.sh"), "utf8");
+  const supervisor = readFileSync(path.join(root, "scripts/ci-isolated-docker.sh"), "utf8");
+  const startup = phase.indexOf("startup-observer.mjs run");
+  const capture = phase.indexOf("startup-evidence.mjs after");
+  const reap = phase.indexOf("startup-observer.mjs reap");
+  const cleanup = phase.indexOf("if ! remove_owned_containers");
   const upload = workflow.indexOf("Upload sanitized integration evidence");
-  assert.ok(startup >= 0 && startup < capture && capture < cleanup && cleanup < upload);
-  assert.ok(reap > cleanup && reap < upload);
+  assert.ok(startup >= 0 && startup < capture && capture < reap && reap < cleanup);
+  assert.ok(workflow.indexOf("scripts/ci-isolated-docker.sh") < upload);
+  assert.match(supervisor, /user_phase start \|\| rc=\$\?/);
+  assert.match(supervisor, /if ! user_phase cleanup; then rc=1; fi/);
   const uploaded = workflow.slice(upload);
   assert.match(uploaded, /startup-observer\.json/);
   assert.match(uploaded, /startup-observer-cleanup\.json/);
