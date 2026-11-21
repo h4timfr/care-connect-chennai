@@ -339,6 +339,9 @@ export function sanitizeRealtimeDiagnostics(diagnostics) {
     },
     delivery: {
       eventCount: Number.isSafeInteger(item.delivery?.eventCount) ? item.delivery.eventCount : 0,
+      authorizationDenials: Number.isSafeInteger(item.delivery?.authorizationDenials)
+        ? item.delivery.authorizationDenials
+        : 0,
       payloadFieldsPresent: item.delivery?.payloadFieldsPresent === true,
       conversationFilterMatched: item.delivery?.conversationFilterMatched === true,
       expectedMessageMatched: item.delivery?.expectedMessageMatched === true,
@@ -365,7 +368,8 @@ export function isRealtimePermissionDenial(payload) {
 
 export function recordRealtimePayload(state, payload) {
   if (state.role === "anonymous" && isRealtimePermissionDenial(payload)) {
-    state.diagnostics.subscription.errorKinds.push("authorization-denied");
+    const delivery = state.diagnostics.delivery;
+    delivery.authorizationDenials = (delivery.authorizationDenials ?? 0) + 1;
     return;
   }
   const body = payload.new?.body;
@@ -385,6 +389,18 @@ export function recordRealtimePayload(state, payload) {
   for (const pending of state.pending) {
     if (pending.body === body) pending.deliver();
   }
+}
+
+export function realtimeProbeHasNoRows(state, matched) {
+  const { subscription, delivery } = state.diagnostics;
+  return (
+    matched === false &&
+    subscription.ready &&
+    subscription.statuses.length > 0 &&
+    subscription.statuses.every((status) => status === "SUBSCRIBED") &&
+    subscription.errorKinds.length === 0 &&
+    delivery.eventCount === 0
+  );
 }
 
 export function realtimePostgresChangesOptions() {
@@ -1497,15 +1513,9 @@ async function runIntegration() {
     const anonDelivery = await noInsert(anonChannel, patientMessage);
     const doctorRawDelivery = await noInsert(doctorChannel, patientMessage);
     assert(
-      !outsiderDelivery &&
-        !anonDelivery &&
-        !doctorRawDelivery &&
-        anonChannel.diagnostics.subscription.errorKinds.includes("authorization-denied") &&
-        [outsiderChannel, anonChannel, doctorChannel].every(
-          (probe) =>
-            probe.diagnostics.delivery.eventCount === 0 &&
-            probe.diagnostics.subscription.statuses.every((status) => status === "SUBSCRIBED"),
-        ),
+      realtimeProbeHasNoRows(outsiderChannel, outsiderDelivery) &&
+        realtimeProbeHasNoRows(anonChannel, anonDelivery) &&
+        realtimeProbeHasNoRows(doctorChannel, doctorRawDelivery),
       "unrelated, anonymous, and doctor raw-table subscribers receive no unauthorized events",
     );
     assert(
@@ -2049,10 +2059,7 @@ function realtimeChannel(client, role, conversationId, resources, diagnosticsCol
   return state;
 }
 
-export function subscribed(state, { expectedStatus = "SUBSCRIBED" } = {}) {
-  if (!["SUBSCRIBED", "CHANNEL_ERROR"].includes(expectedStatus)) {
-    throw new Error("invalid expected Realtime subscription status");
-  }
+export function subscribed(state) {
   return new Promise((resolve, reject) => {
     let finished = false;
     let timeout;
@@ -2078,21 +2085,12 @@ export function subscribed(state, { expectedStatus = "SUBSCRIBED" } = {}) {
         state.diagnostics.subscription.statuses.push(safeStatus);
         const errorKind = error ? classifyRealtimeChannelError(error) : null;
         if (errorKind) state.diagnostics.subscription.errorKinds.push(errorKind);
-        if (status === expectedStatus) {
-          if (status === "CHANNEL_ERROR" && errorKind !== "authorization-denied") {
-            finish(
-              reject,
-              new Error("anonymous Realtime subscription was not denied by authorization"),
-            );
-            return;
-          }
-          if (status === "SUBSCRIBED") {
-            state.diagnostics.subscription.ready = true;
-          }
+        if (status === "SUBSCRIBED" && !errorKind) {
+          state.diagnostics.subscription.ready = true;
           finish(resolve, true);
           return;
         }
-        if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+        if (errorKind || ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
           finish(reject, new Error("realtime subscription failed"));
         }
       });

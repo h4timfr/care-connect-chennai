@@ -17,6 +17,7 @@ import {
   recordRealtimePayload,
   realtimePostgresChangesOptions,
   realtimeMessageBinding,
+  realtimeProbeHasNoRows,
   isRealtimePermissionDenial,
   sanitizeRealtimeDiagnostics,
   sanitizeStartupProcess,
@@ -337,7 +338,7 @@ test("anonymous Realtime probe can register without selecting the filter column"
   });
 });
 
-test("Realtime readiness accepts only authenticated subscriptions and an anonymous auth denial", async () => {
+test("Realtime readiness distinguishes an anonymous channel join from a channel failure", async () => {
   const makeState = (subscribe) => ({
     pending: new Set(),
     channel: { subscribe },
@@ -349,21 +350,22 @@ test("Realtime readiness accepts only authenticated subscriptions and an anonymo
   assert.equal(await subscribed(patient), true);
   assert.equal(patient.diagnostics.subscription.ready, true);
 
-  const anonymous = makeState((callback) => callback("CHANNEL_ERROR", unauthorized));
-  assert.equal(await subscribed(anonymous, { expectedStatus: "CHANNEL_ERROR" }), true);
+  const anonymous = makeState((callback) => callback("SUBSCRIBED"));
+  assert.equal(await subscribed(anonymous), true);
   assert.deepEqual(anonymous.diagnostics.subscription, {
-    statuses: ["CHANNEL_ERROR"],
-    errorKinds: ["authorization-denied"],
-    ready: false,
+    statuses: ["SUBSCRIBED"],
+    errorKinds: [],
+    ready: true,
   });
+
+  const deniedJoin = makeState((callback) => callback("CHANNEL_ERROR", unauthorized));
+  await assert.rejects(subscribed(deniedJoin), /realtime subscription failed/);
+  assert.deepEqual(deniedJoin.diagnostics.subscription.errorKinds, ["authorization-denied"]);
 
   const anonymousTransportFailure = makeState((callback) =>
     callback("CHANNEL_ERROR", new Error("private transport detail")),
   );
-  await assert.rejects(
-    subscribed(anonymousTransportFailure, { expectedStatus: "CHANNEL_ERROR" }),
-    /not denied by authorization/,
-  );
+  await assert.rejects(subscribed(anonymousTransportFailure), /realtime subscription failed/);
   assert.deepEqual(anonymousTransportFailure.diagnostics.subscription.errorKinds, ["transport"]);
   assert.equal(
     classifyRealtimeChannelError(new Error("binding mismatch between server and client bindings")),
@@ -373,6 +375,50 @@ test("Realtime readiness accepts only authenticated subscriptions and an anonymo
     classifyRealtimeChannelError(new Error("PostgresChangesSubscribeTimeout")),
     "timeout",
   );
+});
+
+test("Realtime isolation accepts silence or an error-only anonymous change and rejects data", () => {
+  const state = {
+    role: "anonymous",
+    diagnostics: {
+      subscription: { statuses: ["SUBSCRIBED"], errorKinds: [], ready: true },
+      delivery: { eventCount: 0 },
+    },
+    pending: new Set(),
+    delivered: [],
+  };
+  assert.equal(realtimeProbeHasNoRows(state, false), true);
+  const denial = { errors: ["Error 401: Unauthorized"], new: {}, old: {} };
+  recordRealtimePayload(state, denial);
+  assert.equal(state.diagnostics.delivery.authorizationDenials, 1);
+  assert.deepEqual(state.diagnostics.subscription.errorKinds, []);
+  assert.equal(realtimeProbeHasNoRows(state, false), true);
+
+  recordRealtimePayload(state, { ...denial, new: { id: "synthetic-unauthorized-row" } });
+  assert.equal(realtimeProbeHasNoRows(state, false), false);
+});
+
+test("a late channel failure or inactive subscription cannot prove Realtime isolation", async () => {
+  let statusCallback;
+  const state = {
+    pending: new Set(),
+    channel: {
+      subscribe(callback) {
+        statusCallback = callback;
+        callback("SUBSCRIBED");
+      },
+    },
+    diagnostics: {
+      subscription: { statuses: [], errorKinds: [], ready: false },
+      delivery: { eventCount: 0 },
+    },
+  };
+  assert.equal(realtimeProbeHasNoRows(state, false), false);
+  await subscribed(state);
+  assert.equal(realtimeProbeHasNoRows(state, false), true);
+  assert.equal(realtimeProbeHasNoRows(state, true), false);
+  statusCallback("CLOSED");
+  assert.equal(realtimeProbeHasNoRows(state, false), false);
 });
 
 test("Realtime payload diagnostics distinguish arrival, matching fields, and expected message safely", () => {
