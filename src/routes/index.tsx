@@ -46,7 +46,7 @@ const SPECIALTY_ACCENTS: Record<string, string> = {
   psychiatry: "bg-highlight-soft text-highlight",
 };
 const SPECIALTY_LINK =
-  "flex h-full min-h-12 items-center gap-1.5 rounded-lg border bg-card px-2 py-1.5 text-start text-[0.8125rem] leading-snug font-medium [overflow-wrap:anywhere] transition-colors hover:border-primary/45 hover:bg-primary-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none max-[374px]:flex-col max-[374px]:items-start sm:gap-2 sm:px-3 sm:text-sm";
+  "flex h-full min-h-12 items-center gap-1.5 rounded-lg border bg-card px-2 py-1.5 text-start text-[0.8125rem] leading-snug font-medium [overflow-wrap:anywhere] transition-colors hover:border-primary/45 hover:bg-primary-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none max-[399px]:flex-col max-[399px]:items-start sm:gap-2 sm:px-3 sm:text-sm";
 
 function Home() {
   const { patient, patientAppointments, doctors, clinics, catalog, doctorById, clinicById } =
@@ -70,7 +70,7 @@ function Home() {
       <div className="space-y-5 sm:space-y-6">
         <section
           aria-labelledby="home-heading"
-          className="surface-card grid items-center gap-3 border-s-4 border-s-primary px-4 py-3 sm:gap-5 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-8"
+          className="surface-card grid items-center gap-2 border-s-4 border-s-primary px-3 py-2 sm:gap-5 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-8"
         >
           <div className="min-w-0">
             <h1 id="home-heading" className="page-title">
@@ -94,7 +94,7 @@ function Home() {
             <label htmlFor="home-search" className="sr-only">
               {t("home.searchLabel")}
             </label>
-            <div className="flex items-center gap-2 rounded-xl border border-primary/25 bg-background p-1.5 ps-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
+            <div className="flex items-center gap-2 rounded-xl border border-primary/25 bg-background p-1 ps-2.5 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30 sm:p-1.5 sm:ps-3">
               <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <input
                 id="home-search"
