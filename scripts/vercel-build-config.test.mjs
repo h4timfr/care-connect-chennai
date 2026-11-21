@@ -95,7 +95,10 @@ test("Vercel Preview rejects a Production target even if the prefixed context sa
 
 test("Vercel build command fails closed with system variables disabled", () => {
   const config = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
-  assert.equal(config.buildCommand, "CARECONNECT_VERCEL_BUILD=1 npm run build");
+  assert.equal(
+    config.buildCommand,
+    "CARECONNECT_VERCEL_BUILD=1 npm run build && node scripts/security-artifacts.mjs .vercel/output/static",
+  );
   const result = resolveBuild({
     ...production,
     VITE_SUPABASE_TARGET: "production",

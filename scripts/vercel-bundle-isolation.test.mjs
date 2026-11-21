@@ -5,6 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { inspectPublicAssets } from "./security-artifacts.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const guard = new URL("./deny-local-env.mjs", import.meta.url).href;
@@ -151,9 +152,13 @@ test("complete Preview and Production bundles contain only their selected public
     for (const [label, value] of Object.entries(privateValues)) {
       assert.equal(contains(files, value), false, `${targetName} bundle excludes ${label}.`);
     }
-    assert.ok(
-      files.some((filename) => filename.endsWith(".map")),
-      `${targetName} maps are included in the scan.`,
-    );
+    if (targetName === "preview") {
+      assert.ok(
+        files.some((filename) => filename.endsWith(".map")),
+        "Preview maps are scanned.",
+      );
+    } else {
+      assert.deepEqual(inspectPublicAssets(path.join(outputDir, "public")), []);
+    }
   }
 });

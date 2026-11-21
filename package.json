@@ -4,7 +4,7 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "test:unit": "node --import ./scripts/deny-local-env.mjs --import tsx --test tests/admin-publication.test.ts tests/appointment-time.test.ts tests/doctor-workspace.test.ts tests/india-calendar.test.ts tests/supabase-config.test.ts tests/toast.test.ts tests/test-safety.test.ts",
+    "test:unit": "node --import ./scripts/deny-local-env.mjs --import tsx --test tests/admin-publication.test.ts tests/appointment-time.test.ts tests/doctor-workspace.test.ts tests/error-logging.test.ts tests/india-calendar.test.ts tests/supabase-config.test.ts tests/toast.test.ts tests/test-safety.test.ts",
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",

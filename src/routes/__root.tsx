@@ -19,6 +19,7 @@ import { DeferredToaster } from "@/components/DeferredToaster";
 import { I18nProvider, languageInfo, loadMessages, useI18n } from "@/lib/i18n";
 import { resolveInitialLanguage } from "@/lib/i18n/initial";
 import { pageTitles } from "@/lib/page-titles";
+import { logAppError } from "@/lib/error-logging";
 
 const SITE_TITLE = pageTitles.home;
 const SITE_DESCRIPTION =
@@ -46,7 +47,7 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
-  console.error(error);
+  logAppError("Route rendering failed", error, import.meta.env.DEV);
   const router = useRouter();
   const { t } = useI18n();
 
