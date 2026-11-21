@@ -14,20 +14,38 @@ export function useConversations(scope: "patient_id" | "clinic_id", scopeId?: st
     if (!userId || !scopeId) return;
 
     let active = true;
-    const refresh = () => {
-      if (active)
-        void queryClient.invalidateQueries(
-          { queryKey: ["conversations", userId, scope, scopeId], exact: true },
-          { cancelRefetch: false },
-        );
+    let refreshing = false;
+    let pending = false;
+    const queryKey = ["conversations", userId, scope, scopeId] as const;
+    const filters = { queryKey, exact: true };
+    const refresh = async () => {
+      if (!active) return;
+      pending = true;
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        while (active && pending) {
+          pending = false;
+          // A join or insert can arrive while the initial read is still running. Its
+          // response can predate the event, so wait for it and then read again.
+          if (queryClient.getQueryState(queryKey)?.fetchStatus === "fetching") {
+            await queryClient.refetchQueries(filters, { cancelRefetch: false });
+          }
+          if (active) await queryClient.invalidateQueries(filters, { cancelRefetch: false });
+        }
+      } finally {
+        refreshing = false;
+      }
     };
     // The socket is an invalidation signal. Reads remain scoped and authorized by RLS.
     const channel = supabase
       .channel(`messages:${crypto.randomUUID()}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, refresh)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
+        void refresh();
+      })
       .subscribe((status) => {
         // Reconcile messages written between the initial read and a join or reconnect.
-        if (status === "SUBSCRIBED") refresh();
+        if (status === "SUBSCRIBED") void refresh();
       });
 
     return () => {

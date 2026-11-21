@@ -298,7 +298,8 @@ function Inbox({
 
             <div
               className="flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-4"
-              aria-live="polite"
+              role="log"
+              aria-label={titleOf(active)}
             >
               <p className="text-center">
                 <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -339,9 +340,12 @@ function Inbox({
                         </span>
                         <span dir="auto">{m.body}</span>
                       </div>
-                      <span className="mx-1 mt-1 text-[10px] text-muted-foreground">
+                      <time
+                        dateTime={m.sentAt}
+                        className="mx-1 mt-1 text-[10px] text-muted-foreground"
+                      >
                         {fmt.shortDate(isoDate(new Date(m.sentAt)))}, {fmt.clockTime(m.sentAt)}
-                      </span>
+                      </time>
                     </div>
                   );
                 })
@@ -384,7 +388,7 @@ function Inbox({
                     className="max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-3 py-2 text-sm outline-none"
                     rows={1}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
+                      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                         e.preventDefault();
                         void handleSend();
                       }
@@ -398,7 +402,7 @@ function Inbox({
                     aria-label={t("messages.send")}
                   >
                     {sending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden />
                     ) : (
                       <Send className="h-4 w-4 rtl:-scale-x-100" aria-hidden />
                     )}

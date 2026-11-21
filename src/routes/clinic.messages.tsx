@@ -321,9 +321,12 @@ function ClinicInbox({
                         </span>
                         <span dir="auto">{m.body}</span>
                       </div>
-                      <span className="mx-1 mt-1 text-[10px] text-muted-foreground">
+                      <time
+                        dateTime={m.sentAt}
+                        className="mx-1 mt-1 text-[10px] text-muted-foreground"
+                      >
                         {sentLabel(m.sentAt)}
-                      </span>
+                      </time>
                     </div>
                   );
                 })
