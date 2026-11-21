@@ -1,10 +1,12 @@
+import { englishShell } from "./en-shell";
+
 // English source strings. Every other language must translate every key (enforced by the
 // `Messages` type). Placeholders use {name}; keys ending in _one / _other are plural forms
 // selected with Intl.PluralRules. Doctor, clinic and other database content is never translated.
 export const en = {
+  ...englishShell,
   // ---- Common
   "common.loading": "Loading…",
-  "common.tryAgain": "Try again",
   "common.cancel": "Cancel",
   "common.saving": "Saving…",
   "common.edit": "Edit",
@@ -139,11 +141,6 @@ export const en = {
     "CareConnect is for booking and clinic messages. In a medical emergency, call 108.",
 
   // ---- Root error pages
-  "notFound.title": "Page not found",
-  "notFound.body": "The page you're looking for doesn't exist or has been moved.",
-  "notFound.home": "Go home",
-  "routeError.title": "This page didn't load",
-  "routeError.body": "Something went wrong on our end. You can try refreshing or head back home.",
 
   // ---- Home
   "home.greeting.morning": "Good morning, {name}",

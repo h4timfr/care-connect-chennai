@@ -11,7 +11,8 @@ import {
 import { ErrorState, PageLoader, StatusBadge } from "@/components/common";
 import { VerificationPill } from "@/components/ProviderStatus";
 import { Button } from "@/components/ui/button";
-import { clinicAgenda, type AgendaView } from "@/lib/clinic-workspace";
+import type { AgendaView } from "@/lib/clinic-agenda-view";
+import { clinicAgenda } from "@/lib/clinic-workspace";
 import { useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { describeDataError } from "@/lib/supabase/errors";

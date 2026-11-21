@@ -21,13 +21,8 @@ import { useAuth } from "@/lib/supabase/auth";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { describeStatusError } from "@/lib/supabase/appointments";
 import { useClinicDoctorLinks } from "@/lib/supabase/providers";
-import {
-  appointmentActions,
-  clinicAgenda,
-  isAgendaView,
-  type AgendaView,
-  type AppointmentAction,
-} from "@/lib/clinic-workspace";
+import { isAgendaView, type AgendaView } from "@/lib/clinic-agenda-view";
+import { appointmentActions, clinicAgenda, type AppointmentAction } from "@/lib/clinic-workspace";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/clinic/appointments")({

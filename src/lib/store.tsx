@@ -197,7 +197,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { mutateAsync: toggleDoctor } = useToggleSavedDoctor();
   const { mutateAsync: toggleClinic } = useToggleSavedClinic();
   const { mutateAsync: savePreferredLanguage } = useUpdatePreferredLanguage();
-  const { lang, setLanguage } = useI18n();
+  const { lang, setLanguage, t } = useI18n();
 
   // The language saved on the account applies when that account's profile first loads (sign-in,
   // a refresh, or switching accounts); after that the selector is the source of truth.
@@ -206,7 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!patient || languageAppliedFor.current === patient.userId) return;
     languageAppliedFor.current = patient.userId;
     const saved = normalizeLanguage(patient.preferredLanguage);
-    if (saved && saved !== lang) void setLanguage(saved);
+    if (saved && saved !== lang) void setLanguage(saved).catch(() => {});
   }, [patient, lang, setLanguage]);
   useEffect(() => {
     if (!auth.user && !auth.loading) languageAppliedFor.current = null;
@@ -214,7 +214,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const changeLanguage = useCallback(
     async (next: Language) => {
-      await setLanguage(next);
+      try {
+        await setLanguage(next);
+      } catch {
+        toast.error(t("welcome.languageError"));
+        return;
+      }
       if (!patient || normalizeLanguage(patient.preferredLanguage) === next) return;
       try {
         await savePreferredLanguage({ patientId: patient.id, language: next });
@@ -223,7 +228,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast.error(translateIn(next, "language.saveFailed"));
       }
     },
-    [patient, savePreferredLanguage, setLanguage],
+    [patient, savePreferredLanguage, setLanguage, t],
   );
 
   const clinics = clinicsQuery.data ?? NO_CLINICS;
