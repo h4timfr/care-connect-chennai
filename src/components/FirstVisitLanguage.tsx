@@ -77,7 +77,7 @@ export function FirstVisitLanguage({
   };
 
   return (
-    <section ref={panel} aria-labelledby={heading} className="surface-card mb-4 min-w-0 p-4 sm:p-5">
+    <section ref={panel} aria-labelledby={heading} className="surface-card mt-6 min-w-0 p-4 sm:p-5">
       {offerTour ? (
         <div className="space-y-3">
           <h2

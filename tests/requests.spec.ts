@@ -11,7 +11,8 @@ import {
 // route renders its full content). Guards against duplicate fetches and data loaded globally
 // for pages that don't show it.
 
-const SHARED = ["clinics", "doctors", "patients", "clinic_memberships"];
+const ACCOUNT = ["patients", "clinic_memberships"];
+const SHARED = ["clinics", "doctors", ...ACCOUNT];
 
 const EXPECTED: Record<string, string[]> = {
   "/": [...SHARED, "appointments"],
@@ -26,13 +27,13 @@ const EXPECTED: Record<string, string[]> = {
     "rpc/can_message_assigned_doctor",
   ],
   "/messages": [
-    ...SHARED,
+    ...ACCOUNT,
     "conversations",
     "rpc/doctor_message_inbox",
     "rpc/patient_conversation_clinics",
   ],
   "/profile": SHARED,
-  "/reset-password": ["patients", "clinic_memberships"],
+  "/reset-password": ACCOUNT,
   "/clinic": [
     ...SHARED,
     "appointments",
@@ -42,7 +43,7 @@ const EXPECTED: Record<string, string[]> = {
   ],
   "/clinic/appointments": [...SHARED, "appointments"],
   "/clinic/calendar": [...SHARED, "appointments", "clinic_doctors", "doctor_schedules"],
-  "/clinic/patients": [...SHARED, "appointments"],
+  "/clinic/patients": [...ACCOUNT, "appointments"],
   "/clinic/doctors": [
     ...SHARED,
     "clinic_doctors",
@@ -51,7 +52,7 @@ const EXPECTED: Record<string, string[]> = {
   ],
   "/clinic/messages": [...SHARED, "conversations"],
   "/clinic/profile": [
-    ...SHARED,
+    ...ACCOUNT,
     "clinic_doctors",
     "doctor_schedules",
     "rpc/get_my_clinic_contacts",
@@ -96,6 +97,28 @@ test("each route requests only what it shows, once", async ({ page }) => {
   ).toEqual([{ p_conversation_ids: [ids.conversation] }]);
   // A valid stored session is used as-is: no auth-server round trips on page loads.
   expect(mock.calls.filter((c) => c.path.startsWith("/auth/v1/"))).toEqual([]);
+});
+
+test("the inbox defers both catalogues until the patient navigates to discovery", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({
+    conversations: [conversationRow([{ from: "clinic", body: "Synthetic historical reply" }])],
+  });
+  enablePatientContact(mock.state, ids.clinicA);
+  await page.goto("/messages");
+  await expect(page.getByText("Synthetic historical reply", { exact: true })).toBeVisible();
+  expect(mock.callsTo("GET", "/rest/v1/clinics")).toHaveLength(0);
+  expect(mock.callsTo("GET", "/rest/v1/doctors")).toHaveLength(0);
+
+  await page
+    .getByRole("navigation", { name: "Primary" })
+    .getByRole("link", { name: "Find doctors", exact: true })
+    .click();
+  await expect(page.getByRole("link", { name: "Dr. Verified Tester" })).toBeVisible();
+  expect(mock.callsTo("GET", "/rest/v1/clinics")).toHaveLength(1);
+  expect(mock.callsTo("GET", "/rest/v1/doctors")).toHaveLength(1);
 });
 
 test("public listings request safe columns and preserve publication filters", async ({ page }) => {

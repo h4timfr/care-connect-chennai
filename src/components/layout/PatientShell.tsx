@@ -186,13 +186,13 @@ export function PatientShell({
           compact ? "py-4 sm:py-6" : "py-6 sm:py-8",
         )}
       >
+        {children}
         {pathname === "/" || pathname === "/discover" ? (
           <FirstVisitLanguage
             onDismiss={focusMain}
             onStartTour={() => setStartTour((value) => value + 1)}
           />
         ) : null}
-        {children}
       </main>
 
       <footer className="border-t">

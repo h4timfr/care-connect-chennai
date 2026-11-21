@@ -7,7 +7,6 @@ import { toast } from "@/lib/toast";
 import { PatientPageHeading, PatientShell } from "@/components/layout/PatientShell";
 import { EmptyState, ErrorState, Initials, PageLoader } from "@/components/common";
 import { MissingProfile } from "@/components/MissingProfile";
-import { CatalogNotice } from "@/components/CatalogNotice";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/lib/store";
 import { describeDataError, isNetworkError } from "@/lib/supabase/errors";
@@ -86,7 +85,6 @@ function MessagesView() {
     <PatientShell compact>
       <div className="space-y-4">
         <PatientPageHeading title={t("messages.title")} />
-        <CatalogNotice />
         {body}
         {requestedId &&
         !body &&

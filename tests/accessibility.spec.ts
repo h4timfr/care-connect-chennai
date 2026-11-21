@@ -106,13 +106,28 @@ test("the skip link is the first stop and moves focus to the main content", asyn
   await expect(skip).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/#main-content$/);
+  await expect(page.getByRole("main")).toBeFocused();
+  const search = page.locator("#discover-search");
   await page.keyboard.press("Tab");
-  // A first-time visitor can skip the language choices and continue to the search box.
-  await expect(page.getByRole("button", { name: "Skip", exact: true })).toBeFocused();
+  await expect(search).toBeFocused();
+
+  // The first-visit welcome follows the search content and still returns focus upon dismissal.
+  const welcome = page.getByRole("region", { name: "Welcome to CareConnect" });
+  const dismiss = welcome.getByRole("button", { name: "Skip", exact: true });
+  await expect(dismiss).toBeVisible();
+  expect(
+    await welcome.evaluate((panel) => {
+      const search = document.getElementById("discover-search");
+      return Boolean(
+        search && search.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }),
+  ).toBe(true);
+  await dismiss.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("main")).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.locator("#discover-search")).toBeFocused();
+  await expect(search).toBeFocused();
 });
 
 test("the cancel dialog works by keyboard and returns focus", async ({ page }) => {
