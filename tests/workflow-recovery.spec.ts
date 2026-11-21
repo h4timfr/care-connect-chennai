@@ -1,11 +1,11 @@
-import { conversationRow, defaultState, ids } from "./support/mock-backend";
+import { conversationRow, defaultState, enablePatientContact, ids } from "./support/mock-backend";
 import { expect, test } from "./support/fixtures";
 
 for (const role of ["patient", "clinic", "doctor"] as const) {
   test(`${role} preserves a retyped identical draft during send`, async ({ page, backend }) => {
     const state = defaultState();
     if (role === "doctor") state.doctors[0]!["user_id"] = ids.user;
-    await backend({
+    const mock = await backend({
       doctors: state.doctors,
       memberships:
         role === "clinic"
@@ -23,6 +23,7 @@ for (const role of ["patient", "clinic", "doctor"] as const) {
       ],
       delays: { messages: 1000 },
     });
+    if (role === "patient") enablePatientContact(mock.state, ids.clinicA);
     await page.goto(
       `/${role === "patient" ? "messages" : `${role}/messages`}?c=${ids.conversation}`,
     );
@@ -63,16 +64,17 @@ for (const [url, recovered] of [
 }
 
 test("patient drafts do not cross conversation boundaries", async ({ page, backend }) => {
-  await backend({
+  const mock = await backend({
     conversations: [
       conversationRow([]),
-      { ...conversationRow([]), id: "second-conversation", clinic_id: ids.clinicB },
+      { ...conversationRow([]), id: "second-conversation", kind: "appointment" },
     ],
   });
+  enablePatientContact(mock.state, ids.clinicA);
   await page.goto(`/messages?c=${ids.conversation}`);
   const input = page.getByLabel("Message", { exact: true });
   await input.fill("Private draft for clinic A");
-  await page.getByRole("button", { name: /Test Clinic B/ }).click();
+  await page.getByRole("button", { name: /About an appointment/i }).click();
   await expect(page).toHaveURL(/c=second-conversation/);
   await expect(input).toHaveValue("");
 });
@@ -90,6 +92,7 @@ for (const clinic of [false, true]) {
         ? [{ clinic_id: ids.clinicA, role: "clinic_staff", clinics: state.clinics[0] }]
         : [],
     });
+    if (!clinic) enablePatientContact(mock.state, ids.clinicA);
     await page.goto(`/${clinic ? "clinic/messages" : "messages"}?c=${ids.conversation}`);
     const input = page.getByLabel(clinic ? "Reply to patient" : "Message", { exact: true });
     const send = page.getByRole("button", { name: clinic ? "Send reply" : "Send message" });

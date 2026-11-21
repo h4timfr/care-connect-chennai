@@ -1,5 +1,5 @@
 import { expect, test } from "./support/fixtures";
-import { conversationRow, ids } from "./support/mock-backend";
+import { conversationRow, enablePatientContact, ids } from "./support/mock-backend";
 
 test("profile save loads the deferred toast UI and announces success", async ({
   page,
@@ -55,10 +55,11 @@ test("message failure remains announced when the deferred Sonner chunk fails to 
   page,
   backend,
 }) => {
-  await backend({
+  const mock = await backend({
     conversations: [conversationRow([{ from: "clinic", body: "Synthetic clinic message" }])],
     failMessageInsert: true,
   });
+  enablePatientContact(mock.state, ids.clinicA);
   let blockedSonnerChunk = false;
   await page.route(/\/assets\/sonner-[^/]+\.js(?:\?.*)?$/, async (route) => {
     blockedSonnerChunk = true;

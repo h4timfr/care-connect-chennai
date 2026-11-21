@@ -774,6 +774,7 @@ test.describe("Messages", () => {
       conversations: [conversationRow([{ from: "clinic", body: "Hello from the clinic" }])],
       failMessageInsert: true,
     });
+    enablePatientContact(mock.state, ids.clinicA);
     await page.goto(`/messages?c=${ids.conversation}`);
     await expect(page.getByText("Clinic: Hello from the clinic")).toBeVisible();
 

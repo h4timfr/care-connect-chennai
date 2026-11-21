@@ -948,6 +948,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      patient_conversation_clinics: {
+        Args: { p_conversation_ids: string[] };
+        Returns: { conversation_id: string; clinic_name: string; clinic_state: string }[];
+      };
       request_doctor_clinic_link: {
         Args: { p_clinic_id: string; p_doctor_id: string };
         Returns: string;

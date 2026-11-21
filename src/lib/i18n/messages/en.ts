@@ -354,6 +354,11 @@ export const en = {
   "messages.placeholder": "Type a message…",
   "messages.send": "Send message",
   "messages.unavailable": "That conversation isn't available.",
+  "messages.clinicHistory": "Historical clinic conversation",
+  "messages.clinicUnavailable":
+    "This clinic is unavailable. You can still read the conversation history.",
+  "messages.clinicClosed":
+    "This clinic is not accepting new patient messages. You can still read the conversation history.",
   "messages.select": "Select a conversation",
 
   // ---- Profile

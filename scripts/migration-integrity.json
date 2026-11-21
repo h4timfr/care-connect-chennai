@@ -222,6 +222,11 @@
       "version": "00065",
       "file": "00065_private_doctor_messaging.sql",
       "sha256_lf": "b23a6ded5bfca8fab13fc0c15bd820be40382f7a80651b8691d618556bbdbb15"
+    },
+    {
+      "version": "00066",
+      "file": "00066_patient_conversation_contact_guard.sql",
+      "sha256_lf": "c214024b5d75c09421520959b4e6211f878c5b6e8b130db930c48d5305e0a8e2"
     }
   ]
 }

@@ -533,9 +533,9 @@ test("hosted project variables and linked metadata fail closed without echoing v
 
 test("repository migration and SQL test inventories match the integrity manifest", () => {
   const result = verifyRepositoryIntegrity();
-  assert.equal(result.files.length, 44);
-  assert.equal(result.files.at(-1)?.slice(0, 5), "00065");
-  assert.equal(result.tests.length, 24);
+  assert.equal(result.files.length, 45);
+  assert.equal(result.files.at(-1)?.slice(0, 5), "00066");
+  assert.equal(result.tests.length, 25);
 });
 
 test("real-service startup accepts only the exact canonical disposable baseline", () => {

@@ -58,6 +58,7 @@ function MessagesView() {
     !!requestedId &&
     (requestedId.startsWith("doctor:") ? privateInbox.isFetching : status.isFetching) &&
     !allThreads.some((c) => c.id === requestedId);
+  const requestedError = requestedId?.startsWith("doctor:") ? privateInbox.error : status.error;
 
   let body;
   if (
@@ -87,6 +88,14 @@ function MessagesView() {
         <PatientPageHeading title={t("messages.title")} />
         <CatalogNotice />
         {body}
+        {requestedId &&
+        !body &&
+        !requestedError &&
+        !allThreads.some((c) => c.id === requestedId) ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {t("messages.unavailable")}
+          </p>
+        ) : null}
         {status.error && !patientError ? (
           <ErrorState
             compact
@@ -124,7 +133,7 @@ function Inbox({
   conversations: Conversation[];
   suspended: boolean;
 }) {
-  const { sendMessage, clinicById } = useApp();
+  const { sendMessage } = useApp();
   const privateReply = useSendPrivateDoctorMessage();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/messages" });
@@ -143,7 +152,7 @@ function Inbox({
   const nameOf = (c: Conversation) =>
     c.kind === "doctor_appointment"
       ? (c.doctorName ?? t("common.doctor"))
-      : (clinicById(c.clinicId)?.name ?? t("common.clinic"));
+      : (c.clinicName ?? t("common.clinic"));
   const titleOf = (c: Conversation) => {
     const subject =
       c.kind === "general"
@@ -156,7 +165,7 @@ function Inbox({
 
   const handleSend = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (!active || active.canSend === false) return;
+    if (!active?.canSend) return;
     await send(
       (body, id) =>
         active.kind === "doctor_appointment" && active.appointmentId
@@ -240,7 +249,9 @@ function Inbox({
                       {t(
                         c.kind === "doctor_appointment"
                           ? "messages.privateDoctor"
-                          : "messages.clinicThread",
+                          : c.canSend
+                            ? "messages.clinicThread"
+                            : "messages.clinicHistory",
                       )}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground" dir="auto">
@@ -282,7 +293,7 @@ function Inbox({
                 <p className="truncate text-xs text-muted-foreground">
                   {active.kind === "doctor_appointment"
                     ? t("messages.privateDoctor")
-                    : t("common.clinic")}
+                    : t(active.canSend ? "messages.clinicThread" : "messages.clinicHistory")}
                 </p>
               </div>
             </div>
@@ -339,7 +350,7 @@ function Inbox({
               ) : (
                 <p className="pt-3 text-center text-sm text-muted-foreground">
                   {t(
-                    active.canSend === false
+                    !active.canSend
                       ? "messages.noMessages"
                       : active.kind === "doctor_appointment"
                         ? "messages.doctorWriteBelow"
@@ -350,9 +361,15 @@ function Inbox({
               <div ref={endRef} />
             </div>
 
-            {active.canSend === false ? (
+            {!active.canSend ? (
               <p className="border-t bg-card p-3 text-sm text-muted-foreground">
-                {t("messages.doctorClosed")}
+                {t(
+                  active.kind === "doctor_appointment"
+                    ? "messages.doctorClosed"
+                    : active.clinicUnavailable
+                      ? "messages.clinicUnavailable"
+                      : "messages.clinicClosed",
+                )}
               </p>
             ) : (
               <form onSubmit={handleSend} className="border-t bg-card p-2.5 sm:p-3">
@@ -395,7 +412,7 @@ function Inbox({
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
             <MessageSquare className="h-12 w-12 opacity-20" aria-hidden />
-            <p>{search.c ? t("messages.unavailable") : t("messages.select")}</p>
+            <p>{t("messages.select")}</p>
           </div>
         )}
       </div>

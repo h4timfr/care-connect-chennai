@@ -355,6 +355,11 @@ export const te: Messages = {
   "messages.placeholder": "సందేశం టైప్ చేయండి…",
   "messages.send": "సందేశం పంపండి",
   "messages.unavailable": "ఆ సంభాషణ అందుబాటులో లేదు.",
+  "messages.clinicHistory": "క్లినిక్‌తో పాత సంభాషణ",
+  "messages.clinicUnavailable":
+    "ఈ క్లినిక్ ప్రస్తుతం అందుబాటులో లేదు. పాత సందేశాలను ఇప్పటికీ చదవవచ్చు.",
+  "messages.clinicClosed":
+    "ఈ క్లినిక్ రోగుల నుంచి కొత్త సందేశాలను స్వీకరించడం లేదు. పాత సందేశాలను ఇప్పటికీ చదవవచ్చు.",
   "messages.select": "ఒక సంభాషణను ఎంచుకోండి",
 
   // ---- Profile

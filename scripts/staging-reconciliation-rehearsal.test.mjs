@@ -123,17 +123,17 @@ test("pinned CLI version accepts the actual update notice observed in successful
   }
 });
 
-test("inventory is exact, with an intentional gap and 43 genuinely pending versions", () => {
-  assert.equal(validateInventory(files).length, 44);
+test("inventory is exact, with an intentional gap and 44 genuinely pending versions", () => {
+  assert.equal(validateInventory(files).length, 45);
   assert.deepEqual(pendingVersions(["00001"]), targetVersions.slice(1));
-  assert.equal(pendingVersions(["00001"]).length, 43);
+  assert.equal(pendingVersions(["00001"]).length, 44);
   assert.deepEqual(pendingVersions(targetVersions), []);
   assert.equal(aliasFile, "20261009041700_00001_initial_schema.sql");
 });
 
-test("pgTAP inventory is exactly numbered 001 through 024", () => {
+test("pgTAP inventory is exactly numbered 001 through 025", () => {
   const testFiles = readdirSync(path.join(root, "supabase/tests"));
-  assert.equal(validateTestInventory(testFiles).length, 24);
+  assert.equal(validateTestInventory(testFiles).length, 25);
   assert.throws(() => validateTestInventory(testFiles.filter((f) => !f.startsWith("024_"))));
   assert.throws(() => validateTestInventory([...testFiles, "025_unreviewed.test.sql"]));
   assert.throws(() => validateTestInventory(testFiles.map((f) => f.replace(/^024_/, "025_"))));

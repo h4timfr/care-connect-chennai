@@ -704,6 +704,53 @@ export async function mockBackend(
       if (state.doctorAppointments === "notDeployed") return notFoundFn();
       return json(route, 200, state.doctorAppointments);
     }
+    if (path === "/rest/v1/rpc/patient_conversation_clinics") {
+      const args = body as { p_conversation_ids: string[] };
+      const patients = state.patients === "error" ? [] : state.patients;
+      const conversations = state.conversations === "error" ? [] : state.conversations;
+      return respond(
+        conversations.flatMap((conversation) => {
+          const id = conversation["id"];
+          const clinic = state.clinics.find((row) => row["id"] === conversation["clinic_id"]);
+          if (
+            typeof id !== "string" ||
+            !args.p_conversation_ids.includes(id) ||
+            !clinic ||
+            !patients.some(
+              (patient) =>
+                patient["id"] === conversation["patient_id"] &&
+                patient["user_id"] === state.authUserId,
+            )
+          )
+            return [];
+          const available =
+            clinic["is_demo"] === false &&
+            clinic["clinic_verification_state"] === "verified" &&
+            clinic["is_published"] === true;
+          const hasVerifiedDoctor = state.doctors.some(
+            (doctor) =>
+              doctor["is_demo"] === false &&
+              ((doctor["clinic_doctors"] as Row[] | undefined) ?? []).some(
+                (link) =>
+                  link["clinic_id"] === clinic["id"] &&
+                  link["active"] === true &&
+                  link["verification_state"] === "verified",
+              ),
+          );
+          return [
+            {
+              conversation_id: id,
+              clinic_name: clinic["name"],
+              clinic_state: !available
+                ? "unavailable"
+                : clinic["patient_contact_permission"] === "granted" && hasVerifiedDoctor
+                  ? "open"
+                  : "closed",
+            },
+          ];
+        }),
+      );
+    }
     if (path === "/rest/v1/rpc/doctor_conversations") {
       if (state.doctorConversations === "notDeployed") return notFoundFn();
       return json(route, 200, state.doctorConversations);

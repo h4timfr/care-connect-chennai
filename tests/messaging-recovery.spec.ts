@@ -1,6 +1,101 @@
 import { expect, test } from "./support/fixtures";
 import { appointmentRow, conversationRow, enablePatientContact, ids } from "./support/mock-backend";
 
+test("an unpublished clinic keeps its real name and historical messages without a composer", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({
+    conversations: [conversationRow([{ from: "clinic", body: "A preserved historical reply" }])],
+  });
+  enablePatientContact(mock.state, ids.clinicA);
+  mock.state.clinics[0]!["is_published"] = false;
+  await page.goto(`/messages?c=${ids.conversation}`);
+
+  await expect(
+    page.getByRole("heading", { name: "Test Clinic A · General enquiry" }),
+  ).toBeVisible();
+  await expect(page.getByRole("list", { name: "Conversations" })).toContainText(
+    "Historical clinic conversation",
+  );
+  await expect(
+    page.getByText("Clinic: A preserved historical reply", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/This clinic is unavailable/)).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Message", exact: true })).toHaveCount(0);
+  expect(mock.callsTo("POST", "/rest/v1/rpc/patient_conversation_clinics")[0]?.body).toEqual({
+    p_conversation_ids: [ids.conversation],
+  });
+  expect(mock.callsTo("POST", "/rest/v1/messages")).toHaveLength(0);
+});
+
+test("a stale composer closes after a denied send and the thread stays readable", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({
+    conversations: [conversationRow([{ from: "clinic", body: "Preserved after revocation" }])],
+  });
+  enablePatientContact(mock.state, ids.clinicA);
+  await page.goto(`/messages?c=${ids.conversation}`);
+  const composer = page.getByRole("textbox", { name: "Message", exact: true });
+  await composer.fill("A draft before revocation");
+  mock.state.clinics[0]!["patient_contact_permission"] = "revoked";
+  let rejectedSends = 0;
+  await page.route("**/rest/v1/messages", async (route) => {
+    rejectedSends++;
+    await route.fulfill({ status: 403, json: { code: "42501", message: "Synthetic denial" } });
+  });
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.getByText(/This clinic is not accepting new patient messages/)).toBeVisible();
+  await expect(page.getByText("Clinic: Preserved after revocation", { exact: true })).toBeVisible();
+  await expect(composer).toHaveCount(0);
+  expect(rejectedSends).toBe(1);
+});
+
+test("reconciliation removes a deleted thread and restores the mobile inbox list", async ({
+  page,
+  backend,
+}) => {
+  const remaining = { ...conversationRow([]), id: "remaining-thread", clinic_id: ids.clinicB };
+  const mock = await backend({
+    conversations: [
+      conversationRow([{ from: "clinic", body: "Synthetic deleted history" }]),
+      remaining,
+    ],
+  });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.clock.install();
+  await page.goto(`/messages?c=${ids.conversation}`);
+  await expect(page.getByText("Clinic: Synthetic deleted history", { exact: true })).toBeVisible();
+
+  mock.state.conversations = [remaining];
+  await page.clock.fastForward(30_000);
+  await expect(page.getByText("That conversation isn't available.")).toBeVisible();
+  await expect(page.getByText(/Synthetic deleted history/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Test Clinic B/ })).toBeVisible();
+  await page.clock.fastForward(30_000);
+  await expect.poll(() => mock.callsTo("GET", "/rest/v1/conversations").length).toBeGreaterThan(2);
+  await expect(page.getByRole("button", { name: /Test Clinic A/ })).toHaveCount(0);
+});
+
+test("a thread deleted between inbox and clinic metadata reads is not rendered", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend({
+    conversations: [conversationRow([{ from: "clinic", body: "Deleted during the read" }])],
+  });
+  await page.route("**/rest/v1/rpc/patient_conversation_clinics", (route) => {
+    mock.state.conversations = [];
+    return route.fallback();
+  });
+  await page.goto(`/messages?c=${ids.conversation}`);
+  await expect(page.getByText("That conversation isn't available.")).toBeVisible();
+  await expect(page.getByText("No conversations yet")).toBeVisible();
+  await expect(page.getByText(/Deleted during the read/)).toHaveCount(0);
+});
+
 test("inboxes request only their visible scope and refresh without a socket event", async ({
   page,
   backend,
@@ -45,17 +140,18 @@ test("patient drafts survive a thread switch and a failed background refresh", a
 }) => {
   const rows = [
     conversationRow([{ from: "clinic", body: "First thread" }]),
-    { ...conversationRow([]), id: "second-thread", clinic_id: ids.clinicB },
+    { ...conversationRow([]), id: "second-thread", kind: "appointment" },
   ];
   const mock = await backend({ conversations: rows });
+  enablePatientContact(mock.state, ids.clinicA);
   await page.clock.install();
   await page.goto(`/messages?c=${ids.conversation}`);
   const composer = page.getByRole("textbox", { name: "Message", exact: true });
   await composer.fill("An unsent draft");
   const inbox = page.getByRole("list", { name: "Conversations" });
-  await inbox.getByRole("button", { name: /Test Clinic B/ }).click();
+  await inbox.getByRole("button", { name: /About an appointment/i }).click();
   await expect(composer).toHaveValue("");
-  await inbox.getByRole("button", { name: /Test Clinic A/ }).click();
+  await inbox.getByRole("button", { name: /General enquiry/ }).click();
   await expect(composer).toHaveValue("An unsent draft");
 
   mock.state.conversations = "error";
@@ -76,6 +172,7 @@ test("a lost send response retries the same message and renders only one copy", 
     conversations: [thread],
     loseMessageInsertResponse: true,
   });
+  enablePatientContact(mock.state, ids.clinicA);
   await page.goto(`/messages?c=${ids.conversation}`);
   const composer = page.getByRole("textbox", { name: "Message", exact: true });
   const send = page.getByRole("button", { name: "Send message" });

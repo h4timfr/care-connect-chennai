@@ -353,6 +353,10 @@ export const hi: Messages = {
   "messages.placeholder": "संदेश लिखें…",
   "messages.send": "संदेश भेजें",
   "messages.unavailable": "यह बातचीत उपलब्ध नहीं है।",
+  "messages.clinicHistory": "क्लिनिक की पुरानी बातचीत",
+  "messages.clinicUnavailable": "यह क्लिनिक उपलब्ध नहीं है। आप पुराने संदेश अब भी पढ़ सकते हैं।",
+  "messages.clinicClosed":
+    "यह क्लिनिक मरीज़ों के नए संदेश स्वीकार नहीं कर रहा है। आप पुराने संदेश अब भी पढ़ सकते हैं।",
   "messages.select": "कोई बातचीत चुनें",
 
   // ---- Profile

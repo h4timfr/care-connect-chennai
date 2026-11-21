@@ -356,6 +356,10 @@ export const ur: Messages = {
   "messages.placeholder": "پیغام لکھیں…",
   "messages.send": "پیغام بھیجیں",
   "messages.unavailable": "یہ گفتگو دستیاب نہیں ہے۔",
+  "messages.clinicHistory": "کلینک سے پرانی گفتگو",
+  "messages.clinicUnavailable": "یہ کلینک دستیاب نہیں ہے۔ آپ پرانے پیغامات اب بھی پڑھ سکتے ہیں۔",
+  "messages.clinicClosed":
+    "یہ کلینک مریضوں کے نئے پیغامات قبول نہیں کر رہا۔ آپ پرانے پیغامات اب بھی پڑھ سکتے ہیں۔",
   "messages.select": "کوئی گفتگو منتخب کریں",
 
   // ---- Profile
