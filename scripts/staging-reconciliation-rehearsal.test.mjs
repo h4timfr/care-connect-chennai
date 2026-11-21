@@ -228,7 +228,8 @@ test("demo-boundary SQL plan is exactly 30 assertions", () => {
   );
   assert.equal([...source.matchAll(/extensions\.plan\(30\)/g)].length, 1);
   assert.equal(
-    [...source.matchAll(/SELECT\s+extensions\.(?:is|ok|throws_ok|results_eq|lives_ok)\s*\(/gi)].length,
+    [...source.matchAll(/SELECT\s+extensions\.(?:is|ok|throws_ok|results_eq|lives_ok)\s*\(/gi)]
+      .length,
     30,
   );
 });
