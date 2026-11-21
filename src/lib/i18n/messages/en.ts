@@ -718,6 +718,9 @@ export const en = {
   "admin.subtitle": "Verify clinics and doctors, and manage clinic teams.",
   "admin.tab.applications": "Clinic applications",
   "admin.tab.doctors": "Doctor verification",
+  "admin.tab.demo": "Test/Demo",
+  "admin.demoReadOnly": "Read-only view of test and demo relationships.",
+  "admin.noDemoDoctorLinks": "No test or demo relationships",
   "admin.tab.publication": "Provider publishing",
   "admin.tab.teams": "Clinic teams",
   "admin.confirmPublicationAction":

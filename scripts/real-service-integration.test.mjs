@@ -533,8 +533,11 @@ test("hosted project variables and linked metadata fail closed without echoing v
 
 test("repository migration and SQL test inventories match the integrity manifest", () => {
   const result = verifyRepositoryIntegrity();
-  assert.equal(result.files.length, 45);
-  assert.equal(result.files.at(-1)?.slice(0, 5), "00066");
+  assert.equal(result.files.length, 46);
+  assert.deepEqual(result.files.slice(-2), [
+    "00066_doctor_clinic_visibility.sql",
+    "00067_patient_conversation_contact_guard.sql",
+  ]);
   assert.equal(result.tests.length, 25);
 });
 

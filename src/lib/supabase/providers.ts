@@ -224,7 +224,7 @@ export interface DoctorLink {
 }
 
 const LINK_SELECT =
-  "clinic_id, doctor_id, active, verification_state, doctors!inner(name, specialty_id, registration_note, qualifications, is_demo), clinics!inner(name)" as const;
+  "clinic_id, doctor_id, active, verification_state, doctors!inner(name, specialty_id, registration_note, qualifications, is_demo), clinics!inner(name, is_demo)" as const;
 
 type LinkRow = {
   clinic_id: string;
@@ -238,7 +238,7 @@ type LinkRow = {
     qualifications: string[] | null;
     is_demo: boolean;
   };
-  clinics: { name: string };
+  clinics: { name: string; is_demo: boolean };
 };
 
 function mapLink(row: LinkRow): DoctorLink {
@@ -253,7 +253,7 @@ function mapLink(row: LinkRow): DoctorLink {
     qualifications: row.doctors.qualifications ?? [],
     state: toVerificationState(state),
     active: row.active,
-    isSample: row.doctors.is_demo,
+    isSample: row.doctors.is_demo || row.clinics.is_demo,
   };
 }
 
@@ -295,6 +295,20 @@ export function useSetLinkState() {
       queryClient.invalidateQueries({ queryKey: ["doctors"] });
       queryClient.invalidateQueries({ queryKey: ["doctor_clinic_link_requests"] });
       queryClient.invalidateQueries({ queryKey: ["my_doctor"] });
+    },
+  });
+}
+
+export function useAdminDemoDoctorLinks() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["clinic_doctors", "admin_demo", user?.id],
+    enabled: !!user,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_demo_doctor_links");
+      if (error) throw error;
+      return data ?? [];
     },
   });
 }

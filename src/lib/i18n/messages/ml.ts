@@ -739,6 +739,9 @@ export const ml: Messages = {
     "ക്ലിനിക്കുകളെയും ഡോക്ടർമാരെയും പരിശോധിക്കുക, ക്ലിനിക് ടീമുകൾ കൈകാര്യം ചെയ്യുക.",
   "admin.tab.applications": "ക്ലിനിക് അപേക്ഷകൾ",
   "admin.tab.doctors": "ഡോക്ടർ പരിശോധന",
+  "admin.tab.demo": "ടെസ്റ്റ്/ഡെമോ",
+  "admin.demoReadOnly": "ടെസ്റ്റ്, ഡെമോ ബന്ധങ്ങൾ കാണാൻ മാത്രമുള്ളതാണ് ഈ വിഭാഗം.",
+  "admin.noDemoDoctorLinks": "ടെസ്റ്റ് അല്ലെങ്കിൽ ഡെമോ ബന്ധങ്ങളില്ല",
   "admin.tab.publication": "പ്രൊവൈഡർ പ്രസിദ്ധീകരണം",
   "admin.tab.teams": "ക്ലിനിക് ടീമുകൾ",
   "admin.confirmPublicationAction":

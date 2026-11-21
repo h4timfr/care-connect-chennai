@@ -225,7 +225,12 @@
     },
     {
       "version": "00066",
-      "file": "00066_patient_conversation_contact_guard.sql",
+      "file": "00066_doctor_clinic_visibility.sql",
+      "sha256_lf": "818ffe460fe88e25af36bfd3847221b4e3d5d3a7b33dedcc5bf348834ad7ad73"
+    },
+    {
+      "version": "00067",
+      "file": "00067_patient_conversation_contact_guard.sql",
       "sha256_lf": "c214024b5d75c09421520959b4e6211f878c5b6e8b130db930c48d5305e0a8e2"
     }
   ]

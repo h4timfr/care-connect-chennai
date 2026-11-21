@@ -35,6 +35,7 @@ export const targetVersions = [
   "00064",
   "00065",
   "00066",
+  "00067",
 ];
 export const sqlTestCount = 25;
 export const aliasFile = "20261009041700_00001_initial_schema.sql";

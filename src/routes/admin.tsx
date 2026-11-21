@@ -9,7 +9,7 @@ import { AdminGate } from "@/components/AdminGate";
 import { GuidedTour } from "@/components/GuidedTour";
 import { RoleTourOffer } from "@/components/RoleTourOffer";
 import { EmptyState, ErrorState, InfoNotice, PageLoader } from "@/components/common";
-import { ApplicationStatusPill, VerificationPill } from "@/components/ProviderStatus";
+import { ApplicationStatusPill, LinkStatus, VerificationPill } from "@/components/ProviderStatus";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -40,6 +40,7 @@ import { describeDataError, isNotDeployed, messageOf } from "@/lib/supabase/erro
 import {
   CONTACT_ROLE_LABEL,
   useAddClinicMember,
+  useAdminDemoDoctorLinks,
   useAllMemberships,
   useApplicationsForReview,
   usePendingDoctorLinks,
@@ -48,6 +49,7 @@ import {
   useSetLinkState,
   useSetClinicPublicationState,
   useSetMembershipActive,
+  toVerificationState,
   type Membership,
   type ProviderApplication,
 } from "@/lib/supabase/providers";
@@ -102,7 +104,7 @@ function ReviewWorkspace() {
       <Tabs defaultValue="applications" className="space-y-4">
         <TabsList
           aria-label={t("admin.reviewNavigation")}
-          className="grid w-full grid-cols-1 items-stretch gap-1.5 p-1.5 min-[360px]:grid-cols-2 xl:grid-cols-5"
+          className="grid w-full grid-cols-1 items-stretch gap-1.5 p-1.5 min-[360px]:grid-cols-2 xl:grid-cols-6"
         >
           {queues.map(({ id, label, status }) => (
             <TabsTrigger
@@ -132,6 +134,12 @@ function ReviewWorkspace() {
           >
             {t("admin.tab.teams")}
           </TabsTrigger>
+          <TabsTrigger
+            value="demo"
+            className="min-h-12 min-w-0 justify-start whitespace-normal px-2.5 py-2 text-start font-semibold [overflow-wrap:anywhere]"
+          >
+            {t("admin.tab.demo")}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="applications">
           <ApplicationsPanel query={applications} />
@@ -147,6 +155,9 @@ function ReviewWorkspace() {
         </TabsContent>
         <TabsContent value="teams">
           <TeamsPanel />
+        </TabsContent>
+        <TabsContent value="demo">
+          <DemoDoctorLinksPanel />
         </TabsContent>
       </Tabs>
       <Link
@@ -851,6 +862,44 @@ function DoctorsPanel({ query }: { query: ReturnType<typeof usePendingDoctorLink
                 >
                   {t("admin.reject")}
                 </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function DemoDoctorLinksPanel() {
+  const { t } = useI18n();
+  const query = useAdminDemoDoctorLinks();
+  if (query.isLoading || query.error)
+    return <PanelState query={query} errorTitle={t("admin.loadError")} />;
+  const links = query.data ?? [];
+
+  return (
+    <section aria-label={t("admin.tab.demo")} className="space-y-4">
+      <InfoNotice className="text-sm">{t("admin.demoReadOnly")}</InfoNotice>
+      {links.length === 0 ? (
+        <EmptyState icon={ShieldCheck} title={t("admin.noDemoDoctorLinks")} />
+      ) : (
+        <ul className="grid gap-4 md:grid-cols-2">
+          {links.map((link) => (
+            <li key={`${link.clinic_id}:${link.doctor_id}`} className="surface-card p-5">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="font-semibold [overflow-wrap:anywhere]" dir="auto">
+                    {link.doctor_name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]" dir="auto">
+                    {link.clinic_name}
+                  </p>
+                </div>
+                <LinkStatus
+                  state={toVerificationState(link.verification_state)}
+                  active={link.active}
+                />
               </div>
             </li>
           ))}

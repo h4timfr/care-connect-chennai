@@ -725,6 +725,9 @@ export const te: Messages = {
   "admin.subtitle": "క్లినిక్‌లు, వైద్యులను ధృవీకరించండి మరియు క్లినిక్ బృందాలను నిర్వహించండి.",
   "admin.tab.applications": "క్లినిక్ దరఖాస్తులు",
   "admin.tab.doctors": "వైద్యుల ధృవీకరణ",
+  "admin.tab.demo": "పరీక్ష/డెమో",
+  "admin.demoReadOnly": "పరీక్ష, డెమో సంబంధాలను ఇక్కడ చూడటానికి మాత్రమే వీలుంది.",
+  "admin.noDemoDoctorLinks": "పరీక్ష లేదా డెమో సంబంధాలు లేవు",
   "admin.tab.publication": "ప్రొవైడర్ ప్రచురణ",
   "admin.tab.teams": "క్లినిక్ బృందాలు",
   "admin.confirmPublicationAction":

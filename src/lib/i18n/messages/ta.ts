@@ -747,6 +747,9 @@ export const ta: Messages = {
     "கிளினிக்குகளையும் மருத்துவர்களையும் சரிபார்க்கவும், கிளினிக் குழுக்களை நிர்வகிக்கவும்.",
   "admin.tab.applications": "கிளினிக் விண்ணப்பங்கள்",
   "admin.tab.doctors": "மருத்துவர் சரிபார்ப்பு",
+  "admin.tab.demo": "சோதனை/டெமோ",
+  "admin.demoReadOnly": "சோதனை மற்றும் டெமோ இணைப்புகளை இங்கு பார்க்க மட்டுமே முடியும்.",
+  "admin.noDemoDoctorLinks": "சோதனை அல்லது டெமோ இணைப்புகள் இல்லை",
   "admin.tab.publication": "வழங்குநர் வெளியீடு",
   "admin.tab.teams": "கிளினிக் குழுக்கள்",
   "admin.confirmPublicationAction":

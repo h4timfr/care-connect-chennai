@@ -86,6 +86,8 @@ export interface MockState {
   doctorAppointments: Row[] | "notDeployed";
   doctorConversations: Row[] | "notDeployed";
   doctorApplications: Row[] | "notDeployed";
+  /** Clinic rows omitted by RLS from the doctor's nested profile response. */
+  hiddenDoctorClinicIds: string[];
   /**
    * Private provider-candidate review (migration 00056). Visible to platform admins only;
    * "notDeployed" answers PGRST205. Use candidateFixtures() for synthetic records.
@@ -326,6 +328,7 @@ export function defaultState(): MockState {
     doctorAppointments: [],
     doctorConversations: [],
     doctorApplications: [],
+    hiddenDoctorClinicIds: [],
     candidates: {
       facilities: [],
       doctors: [],
@@ -700,6 +703,40 @@ export async function mockBackend(
       }
       return json(route, 200, "mem-new");
     }
+    if (path === "/rest/v1/rpc/my_linked_clinic_names") {
+      const clinicIds = new Set(
+        state.doctors
+          .filter((doctor) => doctor["user_id"] === state.authUserId)
+          .flatMap((doctor) => (doctor["clinic_doctors"] as Row[] | undefined) ?? [])
+          .filter((link) => link["active"] === true)
+          .map((link) => link["clinic_id"]),
+      );
+      return json(
+        route,
+        200,
+        state.clinics
+          .filter((clinic) => clinicIds.has(clinic["id"]))
+          .map((clinic) => ({ clinic_id: clinic["id"], clinic_name: clinic["name"] })),
+      );
+    }
+    if (path === "/rest/v1/rpc/admin_demo_doctor_links") {
+      if (state.platformAdmin !== true) return json(route, 200, []);
+      const demoLinks = state.doctors.flatMap((doctor) =>
+        ((doctor["clinic_doctors"] as Row[] | undefined) ?? []).flatMap((link) => {
+          const clinic = state.clinics.find((row) => row["id"] === link["clinic_id"]);
+          if (!clinic || !(doctor["is_demo"] || clinic["is_demo"])) return [];
+          return {
+            clinic_id: clinic["id"],
+            clinic_name: clinic["name"],
+            doctor_id: doctor["id"],
+            doctor_name: doctor["name"],
+            verification_state: link["verification_state"],
+            active: link["active"],
+          };
+        }),
+      );
+      return json(route, 200, demoLinks);
+    }
     if (path === "/rest/v1/rpc/doctor_appointments") {
       if (state.doctorAppointments === "notDeployed") return notFoundFn();
       return json(route, 200, state.doctorAppointments);
@@ -802,16 +839,17 @@ export async function mockBackend(
             const clinic = state.clinics.find((c) => c["id"] === link["clinic_id"]);
             return {
               ...link,
-              clinics: clinic
-                ? {
-                    name: clinic["name"],
-                    is_demo: clinic["is_demo"],
-                    clinic_verification_state: clinic["clinic_verification_state"],
-                    is_published: clinic["is_published"],
-                    patient_contact_permission: clinic["patient_contact_permission"],
-                    booking_enabled: clinic["booking_enabled"],
-                  }
-                : null,
+              clinics:
+                clinic && !state.hiddenDoctorClinicIds.includes(String(clinic["id"]))
+                  ? {
+                      name: clinic["name"],
+                      is_demo: clinic["is_demo"],
+                      clinic_verification_state: clinic["clinic_verification_state"],
+                      is_published: clinic["is_published"],
+                      patient_contact_permission: clinic["patient_contact_permission"],
+                      booking_enabled: clinic["booking_enabled"],
+                    }
+                  : null,
             };
           }),
         });
@@ -883,6 +921,7 @@ export async function mockBackend(
             },
             clinics: {
               name: state.clinics.find((c) => c["id"] === l["clinic_id"])?.["name"] ?? "",
+              is_demo: state.clinics.find((c) => c["id"] === l["clinic_id"])?.["is_demo"] ?? false,
             },
           })),
         );

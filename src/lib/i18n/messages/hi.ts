@@ -720,6 +720,9 @@ export const hi: Messages = {
   "admin.subtitle": "क्लिनिकों और डॉक्टरों का सत्यापन करें और क्लिनिक टीमों को संभालें।",
   "admin.tab.applications": "क्लिनिक आवेदन",
   "admin.tab.doctors": "डॉक्टर सत्यापन",
+  "admin.tab.demo": "टेस्ट/डेमो",
+  "admin.demoReadOnly": "टेस्ट और डेमो संबंध केवल देखने के लिए हैं।",
+  "admin.noDemoDoctorLinks": "कोई टेस्ट या डेमो संबंध नहीं है",
   "admin.tab.publication": "प्रदाता प्रकाशन",
   "admin.tab.teams": "क्लिनिक टीमें",
   "admin.confirmPublicationAction":

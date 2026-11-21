@@ -123,10 +123,10 @@ test("pinned CLI version accepts the actual update notice observed in successful
   }
 });
 
-test("inventory is exact, with an intentional gap and 44 genuinely pending versions", () => {
-  assert.equal(validateInventory(files).length, 45);
+test("inventory is exact, with an intentional gap and 45 genuinely pending versions", () => {
+  assert.equal(validateInventory(files).length, 46);
   assert.deepEqual(pendingVersions(["00001"]), targetVersions.slice(1));
-  assert.equal(pendingVersions(["00001"]).length, 44);
+  assert.equal(pendingVersions(["00001"]).length, 45);
   assert.deepEqual(pendingVersions(targetVersions), []);
   assert.equal(aliasFile, "20261009041700_00001_initial_schema.sql");
 });
@@ -221,13 +221,16 @@ test("mutating CLI calls require explicit local target and forbid hosted overrid
   }
 });
 
-test("new demo-boundary SQL plan is exactly 18 assertions", () => {
+test("demo-boundary SQL plan is exactly 30 assertions", () => {
   const source = readFileSync(
     path.join(root, "supabase/tests/021_demo_seed_publication_boundary.test.sql"),
     "utf8",
   );
-  assert.equal([...source.matchAll(/extensions\.plan\(18\)/g)].length, 1);
-  assert.equal([...source.matchAll(/SELECT\s+extensions\.(?:is|ok|throws_ok)\s*\(/gi)].length, 18);
+  assert.equal([...source.matchAll(/extensions\.plan\(30\)/g)].length, 1);
+  assert.equal(
+    [...source.matchAll(/SELECT\s+extensions\.(?:is|ok|throws_ok|results_eq|lives_ok)\s*\(/gi)].length,
+    30,
+  );
 });
 
 test("publication safety preserves the branch freeze and requires the Vercel build and artifact gates", () => {

@@ -725,6 +725,9 @@ export const ur: Messages = {
   "admin.subtitle": "کلینکس اور ڈاکٹروں کی تصدیق کریں اور کلینک ٹیموں کا انتظام کریں۔",
   "admin.tab.applications": "کلینک کی درخواستیں",
   "admin.tab.doctors": "ڈاکٹر کی تصدیق",
+  "admin.tab.demo": "ٹیسٹ/ڈیمو",
+  "admin.demoReadOnly": "یہاں ٹیسٹ اور ڈیمو روابط صرف دیکھے جا سکتے ہیں۔",
+  "admin.noDemoDoctorLinks": "کوئی ٹیسٹ یا ڈیمو رابطہ نہیں ہے",
   "admin.tab.publication": "پرووائیڈر کی اشاعت",
   "admin.tab.teams": "کلینک ٹیمیں",
   "admin.confirmPublicationAction":
