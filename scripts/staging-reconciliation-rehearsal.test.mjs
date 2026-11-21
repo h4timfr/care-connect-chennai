@@ -230,11 +230,12 @@ test("new demo-boundary SQL plan is exactly 18 assertions", () => {
   assert.equal([...source.matchAll(/SELECT\s+extensions\.(?:is|ok|throws_ok)\s*\(/gi)].length, 18);
 });
 
-test("publication safety preserves the branch freeze and requires the guarded Vercel build", () => {
+test("publication safety preserves the branch freeze and requires the Vercel build and artifact gates", () => {
   const config = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8"));
   assert.deepEqual(config, {
     $schema: "https://openapi.vercel.sh/vercel.json",
-    buildCommand: "CARECONNECT_VERCEL_BUILD=1 npm run build",
+    buildCommand:
+      "CARECONNECT_VERCEL_BUILD=1 npm run build && node scripts/security-artifacts.mjs .vercel/output/static",
     git: { deploymentEnabled: { "claude/careconnect-frontend-repair": false } },
   });
 });
