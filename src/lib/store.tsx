@@ -47,6 +47,21 @@ const NO_MEMBER_CLINICS: MemberClinic[] = [];
 const NO_APPOINTMENTS: Appointment[] = [];
 const NO_CONVERSATIONS: Conversation[] = [];
 const ACTIVE_CLINIC_KEY = "careconnect.activeClinic";
+const PUBLIC_CATALOG_ROUTES = new Set([
+  "/",
+  "/discover",
+  "/doctors/$doctorId",
+  "/clinics/$clinicId",
+  "/book/$doctorId",
+  "/appointments/",
+  "/appointments/$appointmentId",
+  "/profile",
+  "/clinic/",
+  "/clinic/appointments",
+  "/clinic/calendar",
+  "/clinic/doctors",
+  "/clinic/messages",
+]);
 
 interface QueryStatus {
   isLoading: boolean;
@@ -113,8 +128,9 @@ const Ctx = createContext<AppState | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // Sign-in and password-reset screens show no listings.
-  const isAuthPage = pathname === "/login" || pathname === "/reset-password";
+  const needsPublicCatalog = useRouterState({
+    select: (s) => PUBLIC_CATALOG_ROUTES.has(s.matches.at(-1)?.routeId ?? ""),
+  });
   const isLoggedIn = !!auth.user && !auth.loading;
 
   const patientQuery = usePatient(auth.user?.id, auth.user?.email, { enabled: isLoggedIn });
@@ -133,8 +149,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     enabled: isLoggedIn && onPatientAppointmentsPage,
   });
 
-  const clinicsQuery = useClinics({ enabled: !isAuthPage });
-  const doctorsQuery = useDoctors({ enabled: !isAuthPage });
+  const clinicsQuery = useClinics({ enabled: needsPublicCatalog });
+  const doctorsQuery = useDoctors({ enabled: needsPublicCatalog });
 
   const authorizedClinicsQuery = useAuthorizedClinics(auth.user?.id, { enabled: isLoggedIn });
   const authorizedClinics = authorizedClinicsQuery.data;

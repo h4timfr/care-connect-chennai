@@ -11,8 +11,9 @@ test("doctor profile saves refresh cached patient search results", async ({ page
     .getByRole("navigation", { name: "Primary", exact: true })
     .getByRole("link", { name: "Find doctors" })
     .click();
-  await page.getByRole("searchbox", { name: "Search doctors and clinics" }).fill("Verified");
   await expect(page.getByRole("link", { name: "Dr. Verified Tester" })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search doctors and clinics" }).fill("Verified");
+  await expect(page).toHaveURL(/q=Verified/);
   await expect
     .poll(
       () => mock.callsTo("GET", "/rest/v1/doctors").filter((c) => c.search.includes("or=")).length,

@@ -90,6 +90,44 @@ test("first visit defaults to English regardless of browser language", async ({
   await expect(page.getByRole("region", { name: en["welcome.title"] })).toBeVisible();
 });
 
+test("the mobile language welcome leaves the page heading and navigation in place", async ({
+  page,
+  backend,
+}) => {
+  await backend();
+  await page.setViewportSize({ width: 375, height: 812 });
+  let releaseProfile!: () => void;
+  const profileReady = new Promise<void>((resolve) => {
+    releaseProfile = resolve;
+  });
+  await page.route("**/rest/v1/patients?*", async (route) => {
+    await profileReady;
+    await route.fallback();
+  });
+  const welcome = page.getByRole("region", { name: en["welcome.title"] });
+  const heading = page.locator("#home-heading");
+  let originalTop = 0;
+  try {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(heading).toBeVisible();
+    await expect(welcome).toHaveCount(0);
+    originalTop = await heading.evaluate((element) => element.getBoundingClientRect().top);
+  } finally {
+    releaseProfile();
+  }
+  await expect(welcome).toBeVisible();
+  await expect
+    .poll(async () =>
+      Math.abs((await heading.evaluate((el) => el.getBoundingClientRect().top)) - originalTop),
+    )
+    .toBeLessThanOrEqual(1);
+  const mobileNav = page.getByRole("navigation", { name: en["nav.primaryMobile"] });
+  await expect(mobileNav.getByRole("link", { name: en["nav.discover"] })).toBeVisible();
+  await mobileNav.getByRole("link", { name: en["nav.discover"] }).click({ trial: true });
+  await welcome.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(page.locator("#main-content")).toBeFocused();
+});
+
 test("changing language during a guide keeps its current step", async ({ page, backend }) => {
   await backend({}, { signedIn: false });
   let releaseScripts!: () => void;
