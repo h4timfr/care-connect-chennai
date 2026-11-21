@@ -1,8 +1,10 @@
 import {
   AlertTriangle,
   Baby,
+  Bandage,
   Bone,
   Brain,
+  BrainCircuit,
   Ear,
   Eye,
   Heart,
@@ -11,7 +13,6 @@ import {
   CalendarClock,
   Loader2,
   Smile,
-  Sparkles,
   Star,
   Stethoscope,
   type LucideIcon,
@@ -25,8 +26,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const ICONS: Record<string, LucideIcon> = {
   Baby,
+  Bandage,
   Bone,
-  Sparkles,
   Stethoscope,
   HeartPulse,
   Ear,
@@ -34,6 +35,7 @@ const ICONS: Record<string, LucideIcon> = {
   Smile,
   Eye,
   Brain,
+  BrainCircuit,
 };
 
 export function SpecialtyIcon({ icon, className }: { icon: string; className?: string }) {
@@ -181,10 +183,10 @@ export function SectionHeader({
   return (
     <div className={cn("mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3", className)}>
       <div className="min-w-0">
-        <h2 id={id} className="text-lg font-semibold [overflow-wrap:anywhere] sm:text-xl">
+        <h2 id={id} className="section-title">
           {title}
         </h2>
-        {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
+        {subtitle ? <p className="page-description mt-1">{subtitle}</p> : null}
       </div>
       {action}
     </div>
@@ -197,12 +199,14 @@ export function EmptyState({
   description,
   action,
   compact = false,
+  tone = "primary",
 }: {
   icon: LucideIcon;
   title: string;
   description?: string;
   action?: ReactNode;
   compact?: boolean;
+  tone?: "primary" | "highlight";
 }) {
   return (
     <div
@@ -214,7 +218,10 @@ export function EmptyState({
     >
       <span
         className={cn(
-          "grid shrink-0 place-items-center bg-primary-soft text-primary",
+          "grid shrink-0 place-items-center",
+          tone === "highlight"
+            ? "bg-highlight-soft text-highlight"
+            : "bg-primary-soft text-primary",
           compact ? "size-9 self-start rounded-lg" : "size-12 rounded-2xl",
         )}
       >
@@ -316,7 +323,11 @@ export function PageLoader({
 
 export function CardGridSkeleton({ count = 4, label }: { count?: number; label: string }) {
   return (
-    <div role="status" aria-label={label} className="grid gap-4 md:grid-cols-2">
+    <div
+      role="status"
+      aria-label={label}
+      className={cn("grid gap-4", count > 1 && "md:grid-cols-2")}
+    >
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="surface-card space-y-3 p-5">
           <div className="flex gap-3">

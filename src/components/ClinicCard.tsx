@@ -21,13 +21,13 @@ export function ClinicCard({ clinic }: { clinic: Clinic }) {
       <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">
-            <h3 className="font-display text-base font-semibold [overflow-wrap:anywhere]">
+            <h3 className="card-title">
               <Link
                 to="/clinics/$clinicId"
                 params={{ clinicId: clinic.id }}
                 className="hover:underline focus-visible:underline focus-visible:outline-none"
               >
-                {clinic.name}
+                <bdi>{clinic.name}</bdi>
               </Link>
             </h3>
             {clinic.area ? (

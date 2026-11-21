@@ -30,8 +30,8 @@ export function AuthCard({
           >
             <BrandMark size="lg" />
           </Link>
-          <h1 className="font-display text-2xl font-bold">{title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+          <h1 className="page-title">{title}</h1>
+          <p className="page-description mt-2">{subtitle}</p>
         </div>
         {children}
       </div>

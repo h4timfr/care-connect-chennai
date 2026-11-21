@@ -157,7 +157,9 @@ test.describe("Production hardening", () => {
     test.skip(!csp, "Security headers are added by the production (Nitro) server only");
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
-    expect(csp).toContain("font-src 'self' https://fonts.gstatic.com");
+    expect((csp ?? "").split(";").map((directive) => directive.trim())).toContain(
+      "font-src 'self'",
+    );
     expect(csp).not.toContain("unsafe-eval");
     expect(csp).not.toMatch(/(^|\s)\*(\s|;|$)/);
     expect(response.headers()["x-frame-options"]).toBe("DENY");

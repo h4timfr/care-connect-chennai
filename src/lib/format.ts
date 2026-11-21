@@ -95,7 +95,7 @@ export const SPECIALTIES: SpecialtyInfo[] = [
   {
     id: "dermatology",
     name: "Dermatology",
-    icon: "Sparkles",
+    icon: "Bandage",
     keywords: ["derma", "skin"],
   },
   {
@@ -113,7 +113,7 @@ export const SPECIALTIES: SpecialtyInfo[] = [
   {
     id: "psychiatry",
     name: "Psychiatry",
-    icon: "Brain",
+    icon: "BrainCircuit",
     keywords: ["psychiat", "mental health"],
   },
   {
