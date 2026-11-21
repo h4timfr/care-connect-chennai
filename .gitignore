@@ -22,6 +22,18 @@ dist-ssr
 .env
 .env.*
 !.env.example
+*.pgpass
+.pgpass
+*.dump
+*.dump.*
+*.backup
+*.bak
+*.gpg
+*.age
+*.key
+*.pem
+*.p12
+*.pfx
 
 # Wrangler / Cloudflare
 .wrangler/

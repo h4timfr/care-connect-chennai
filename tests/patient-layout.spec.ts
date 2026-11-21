@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
-import { conversationRow, ids } from "./support/mock-backend";
+import { conversationRow, enablePatientContact, ids } from "./support/mock-backend";
 
 async function expectNoHorizontalOverflow(page: Page) {
   expect(
@@ -93,9 +93,10 @@ for (const width of [320, 375, 390, 768, 1440]) {
 
 for (const width of [375, 768, 1440]) {
   test(`signed-in patient layouts keep actions usable at ${width}px`, async ({ page, backend }) => {
-    await backend({
+    const mock = await backend({
       conversations: [conversationRow([{ from: "clinic", body: "Hello from the clinic" }])],
     });
+    enablePatientContact(mock.state, ids.clinicA);
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/appointments");
     await expect(page.getByRole("heading", { name: "My appointments", level: 1 })).toBeVisible();

@@ -53,28 +53,53 @@ export function useConversations(scope: "patient_id" | "clinic_id", scopeId?: st
         .abortSignal(signal);
       if (error) throw error;
 
-      return data.map((c) => ({
-        id: c.id,
-        clinicId: c.clinic_id,
-        doctorId: c.doctor_id ?? undefined,
-        patientId: c.patient_id,
-        patientName: c.patients?.full_name ?? "",
-        kind: c.kind,
-        appointmentId: c.appointment_id ?? undefined,
-        appointmentDate: c.appointments?.date,
-        messages: (c.messages ?? [])
-          .map((m) => ({
-            id: m.id,
-            conversationId: m.conversation_id,
-            sender:
-              m.sender_id === c.patients?.user_id ? ("patient" as const) : ("clinic" as const),
-            body: m.body,
-            sentAt: m.created_at,
-          }))
-          .sort((a, b) => Date.parse(a.sentAt) - Date.parse(b.sentAt) || a.id.localeCompare(b.id)),
-      }));
+      const clinicMetadata =
+        scope === "patient_id" && data.length
+          ? await readPatientConversationClinics(
+              data.map((conversation) => conversation.id),
+              signal,
+            )
+          : undefined;
+      // A thread deleted between these two reads will be absent from the owner-scoped lookup.
+      return data
+        .filter((c) => !clinicMetadata || clinicMetadata.has(c.id))
+        .map((c) => ({
+          id: c.id,
+          clinicId: c.clinic_id,
+          doctorId: c.doctor_id ?? undefined,
+          patientId: c.patient_id,
+          patientName: c.patients?.full_name ?? "",
+          kind: c.kind,
+          appointmentId: c.appointment_id ?? undefined,
+          appointmentDate: c.appointments?.date,
+          ...(clinicMetadata && {
+            clinicName: clinicMetadata.get(c.id)?.clinic_name,
+            clinicUnavailable: clinicMetadata.get(c.id)?.clinic_state === "unavailable",
+            canSend: clinicMetadata.get(c.id)?.clinic_state === "open",
+          }),
+          messages: (c.messages ?? [])
+            .map((m) => ({
+              id: m.id,
+              conversationId: m.conversation_id,
+              sender:
+                m.sender_id === c.patients?.user_id ? ("patient" as const) : ("clinic" as const),
+              body: m.body,
+              sentAt: m.created_at,
+            }))
+            .sort(
+              (a, b) => Date.parse(a.sentAt) - Date.parse(b.sentAt) || a.id.localeCompare(b.id),
+            ),
+        }));
     },
   });
+}
+
+async function readPatientConversationClinics(conversationIds: string[], signal: AbortSignal) {
+  const { data, error } = await supabase
+    .rpc("patient_conversation_clinics", { p_conversation_ids: conversationIds })
+    .abortSignal(signal);
+  if (error) throw error;
+  return new Map(data.map((clinic) => [clinic.conversation_id, clinic]));
 }
 
 export interface MessageWrite {
@@ -124,8 +149,10 @@ export function useSendMessage() {
 
   return useMutation({
     mutationFn: (input: MessageWrite) => writeMessage(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    onSettled: (_data, error) => {
+      if (!error || codeOf(error) === "42501" || codeOf(error) === "23503") {
+        void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      }
     },
   });
 }

@@ -162,6 +162,7 @@ test("admin review counts are visible at 375px and queues work by keyboard", asy
     doctorApplications: [doctorApplication],
   });
   mock.state.doctors[1]!["is_demo"] = false;
+  mock.state.clinics[1]!["is_demo"] = false;
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/admin");
   const tabs = page.getByRole("tablist", { name: "Review queues" });

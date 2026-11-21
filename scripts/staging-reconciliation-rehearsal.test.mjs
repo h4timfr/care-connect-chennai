@@ -123,17 +123,17 @@ test("pinned CLI version accepts the actual update notice observed in successful
   }
 });
 
-test("inventory is exact, with an intentional gap and 43 genuinely pending versions", () => {
-  assert.equal(validateInventory(files).length, 44);
+test("inventory is exact, with an intentional gap and 45 genuinely pending versions", () => {
+  assert.equal(validateInventory(files).length, 46);
   assert.deepEqual(pendingVersions(["00001"]), targetVersions.slice(1));
-  assert.equal(pendingVersions(["00001"]).length, 43);
+  assert.equal(pendingVersions(["00001"]).length, 45);
   assert.deepEqual(pendingVersions(targetVersions), []);
   assert.equal(aliasFile, "20261009041700_00001_initial_schema.sql");
 });
 
-test("pgTAP inventory is exactly numbered 001 through 024", () => {
+test("pgTAP inventory is exactly numbered 001 through 025", () => {
   const testFiles = readdirSync(path.join(root, "supabase/tests"));
-  assert.equal(validateTestInventory(testFiles).length, 24);
+  assert.equal(validateTestInventory(testFiles).length, 25);
   assert.throws(() => validateTestInventory(testFiles.filter((f) => !f.startsWith("024_"))));
   assert.throws(() => validateTestInventory([...testFiles, "025_unreviewed.test.sql"]));
   assert.throws(() => validateTestInventory(testFiles.map((f) => f.replace(/^024_/, "025_"))));
@@ -221,20 +221,25 @@ test("mutating CLI calls require explicit local target and forbid hosted overrid
   }
 });
 
-test("new demo-boundary SQL plan is exactly 18 assertions", () => {
+test("demo-boundary SQL plan is exactly 30 assertions", () => {
   const source = readFileSync(
     path.join(root, "supabase/tests/021_demo_seed_publication_boundary.test.sql"),
     "utf8",
   );
-  assert.equal([...source.matchAll(/extensions\.plan\(18\)/g)].length, 1);
-  assert.equal([...source.matchAll(/SELECT\s+extensions\.(?:is|ok|throws_ok)\s*\(/gi)].length, 18);
+  assert.equal([...source.matchAll(/extensions\.plan\(30\)/g)].length, 1);
+  assert.equal(
+    [...source.matchAll(/SELECT\s+extensions\.(?:is|ok|throws_ok|results_eq|lives_ok)\s*\(/gi)]
+      .length,
+    30,
+  );
 });
 
-test("publication safety preserves the branch freeze and requires the guarded Vercel build", () => {
+test("publication safety preserves the branch freeze and requires the Vercel build and artifact gates", () => {
   const config = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8"));
   assert.deepEqual(config, {
     $schema: "https://openapi.vercel.sh/vercel.json",
-    buildCommand: "CARECONNECT_VERCEL_BUILD=1 npm run build",
+    buildCommand:
+      "CARECONNECT_VERCEL_BUILD=1 npm run build && node scripts/security-artifacts.mjs .vercel/output/static",
     git: { deploymentEnabled: { "claude/careconnect-frontend-repair": false } },
   });
 });

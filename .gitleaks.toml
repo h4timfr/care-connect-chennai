@@ -1,0 +1,57 @@
+title = "CareConnect secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "careconnect-supabase-secret"
+description = "Supabase server-only secret key"
+regex = '''\b(sb_secret_[A-Za-z0-9_-]{8,})\b'''
+secretGroup = 1
+keywords = ["sb_secret_"]
+
+[[rules]]
+id = "careconnect-postgres-password"
+description = "Password embedded in a PostgreSQL URL"
+regex = '''(?i)\bpostgres(?:ql)?://[^:\s/@'"]+:([^@\s'"]+@[^/\s'"?]+)'''
+secretGroup = 1
+keywords = ["postgres://", "postgresql://"]
+
+[[rules.allowlists]]
+description = "Disposable PostgreSQL credentials on loopback only"
+regexes = ['''^(?:postgres|SYNTHETIC_PASSWORD)@(?:127\.0\.0\.1|localhost)(?::[0-9]+)?$''']
+
+[[allowlists]]
+description = "Publishable Supabase client key format"
+targetRules = ["generic-api-key"]
+regexes = ['''^sb_publishable_[A-Za-z0-9_-]+$''']
+
+[[allowlists]]
+description = "Intentional, exact canaries in the SQL CI log safety test"
+condition = "AND"
+paths = ['''^scripts/run-sql-ci-step\.test\.mjs$''']
+regexes = ['''^(?:sb_secret_SYNTHETIC_CANARY|eyJhbGciOiJIUzI1NiJ9\.SYNTHETIC_CANARY\.signature)$''']
+
+[[allowlists]]
+description = "Intentional, exact canary in the compiled bundle isolation test"
+condition = "AND"
+paths = ['''^scripts/vercel-bundle-isolation\.test\.mjs$''']
+regexes = ['''^sb_secret_synthetic_private_194c$''']
+
+[[allowlists]]
+description = "Exact fake PostgreSQL credentials used by target validation tests"
+condition = "AND"
+paths = ['''^scripts/local-sql-test-target\.test\.mjs$''']
+regexes = ['''^(?:password@127\.0\.0\.1:55439|local-test-only@\$\{host\}:54322|SYNTHETIC_PASSWORD@db\.remote\.invalid:5432)$''']
+
+[[allowlists]]
+description = "Exact fake error message credential"
+condition = "AND"
+paths = ['''^scripts/staging-reconciliation-rehearsal\.test\.mjs$''']
+regexes = ['''^password@private\.invalid$''']
+
+[[allowlists]]
+description = "Exact fake Supabase keys used by configuration rejection tests"
+condition = "AND"
+paths = ['''^(?:scripts/vercel-build-config\.test\.mjs|tests/supabase-config\.test\.ts)$''']
+regexes = ['''^(?:sb_secret_synthetic_only|sb_secret_test-only)$''']

@@ -111,7 +111,7 @@ test("direct doctor A to doctor B switch never renders A's appointment data", as
   await page.getByLabel("Email").fill("patient@test.invalid");
   await page.getByLabel("Password", { exact: true }).fill("test-password");
   await page.getByRole("button", { name: "Sign in to Doctor Portal" }).click();
-  await page.goto("/doctor/appointments");
+  await expect(page).toHaveURL(/\/doctor\/appointments$/);
   await expect(page.getByText("Private A")).toBeVisible();
   await expect(page.getByText("Private B")).toHaveCount(0);
 });

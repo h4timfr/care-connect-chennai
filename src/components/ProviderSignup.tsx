@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { CheckCircle2, Loader2, MailCheck, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { FormAlert } from "@/components/AuthCard";
+import { ErrorState, InfoNotice } from "@/components/common";
 import { PasswordInput } from "@/components/PasswordInput";
 import { PatientLink, PortalAuthCard, type Portal } from "@/components/ProviderAuth";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,13 @@ export interface ProviderSignupProps<T extends object> {
   withAccount?: (form: T, account: { name: string; email: string }) => T;
   /** Shown above the form for a signed-in account (its applications, existing access). */
   signedInExtras?: ReactNode;
+  /** Account queries that must succeed before opening the application form. */
+  eligibilityChecks: {
+    isPending: boolean;
+    isFetching: boolean;
+    error: unknown;
+    refetch: () => Promise<unknown>;
+  }[];
   /** When set, the form is replaced by this message (e.g. the account is already a doctor). */
   blocked?: ReactNode;
 }
@@ -101,6 +109,11 @@ export function ProviderSignup<T extends object>(props: ProviderSignupProps<T>) 
   const [stage, setStage] = useState<Stage>({ kind: "form" });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const failedChecks = props.eligibilityChecks.filter((query) => query.error);
+  const failedCheck = failedChecks[0];
+  const eligibilityLoading =
+    user &&
+    props.eligibilityChecks.some((query) => query.isPending || (query.error && query.isFetching));
 
   const describeSubmitError = (err: unknown) => {
     if (isNotDeployed(err)) return t("signup.notOpen");
@@ -113,7 +126,13 @@ export function ProviderSignup<T extends object>(props: ProviderSignupProps<T>) 
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (submitting || !isSupabaseConfigured) return;
+    if (
+      loading ||
+      submitting ||
+      !isSupabaseConfigured ||
+      (user && (eligibilityLoading || failedCheck || props.blocked))
+    )
+      return;
     if (!user) {
       if (account.name.trim().length < 2) return setError(t("signup.error.name"));
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(account.email.trim()))
@@ -169,9 +188,13 @@ export function ProviderSignup<T extends object>(props: ProviderSignupProps<T>) 
   };
 
   let body: ReactNode;
-  if (loading) {
+  if (loading || eligibilityLoading) {
     body = (
-      <div role="status" className="flex justify-center py-6 text-muted-foreground">
+      <div
+        role="status"
+        aria-label={t("common.loading")}
+        className="flex justify-center py-6 text-muted-foreground"
+      >
         <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
       </div>
     );
@@ -214,7 +237,20 @@ export function ProviderSignup<T extends object>(props: ProviderSignupProps<T>) 
           <p className="text-foreground">{t(`signup.${portal}.verification` as MessageKey)}</p>
         </div>
         {user ? props.signedInExtras : null}
-        {props.blocked && user ? (
+        {user && failedCheck ? (
+          failedChecks.some((query) => isNotDeployed(query.error)) ? (
+            <InfoNotice>{t("signup.notOpen")}</InfoNotice>
+          ) : (
+            <ErrorState
+              compact
+              title={t("apply.yourApplications")}
+              message={t(describeDataError(failedCheck.error))}
+              onRetry={() => {
+                for (const query of failedChecks) void query.refetch();
+              }}
+            />
+          )
+        ) : props.blocked && user ? (
           props.blocked
         ) : (
           <form onSubmit={onSubmit} noValidate className="space-y-5">

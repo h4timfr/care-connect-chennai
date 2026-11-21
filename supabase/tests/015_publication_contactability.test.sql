@@ -3,7 +3,7 @@ BEGIN;
 -- production operation at the base ACL. This fixture grant rolls back below.
 -- Test 022 separately proves that real API roles have no direct clinic UPDATE.
 GRANT UPDATE ON public.clinics TO authenticated;
-SELECT extensions.plan(64);
+SELECT extensions.plan(66);
 
 -- All fixture rows are isolated from real accounts and all state transitions use the admin RPC.
 INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
@@ -39,6 +39,17 @@ INSERT INTO public.doctors (id, name, consultation_fee, is_demo, user_id) VALUES
 ('00000000-0000-0000-0000-000000005fd4', 'Dr Sample', 500, true, NULL);
 
 SET LOCAL request.jwt.claims TO '{"sub": "00000000-0000-0000-0000-000000005f09", "role": "authenticated"}';
+-- Demo links in the remaining fixtures must start pending, including when the other provider is real.
+SELECT extensions.throws_ok(
+  $$ INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES
+     ('00000000-0000-0000-0000-000000005fc5', '00000000-0000-0000-0000-000000005fd4', true, 'verified') $$,
+  '23514', 'Test and demo relationships cannot be verified.',
+  'a demo doctor cannot be inserted with a verified relationship at a real clinic');
+SELECT extensions.throws_ok(
+  $$ INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES
+     ('00000000-0000-0000-0000-000000005fc1', '00000000-0000-0000-0000-000000005fd1', true, 'verified') $$,
+  '23514', 'Test and demo relationships cannot be verified.',
+  'a real doctor cannot be inserted with a verified relationship at a demo clinic');
 INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES
 ('00000000-0000-0000-0000-000000005fc2', '00000000-0000-0000-0000-000000005fd1', true, 'verified'),
 ('00000000-0000-0000-0000-000000005fc3', '00000000-0000-0000-0000-000000005fd1', true, 'verified'),
@@ -47,9 +58,9 @@ INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_st
 ('00000000-0000-0000-0000-000000005fc5', '00000000-0000-0000-0000-000000005fd3', true, 'pending'),
 ('00000000-0000-0000-0000-000000005fc6', '00000000-0000-0000-0000-000000005fd2', true, 'verified'),
 ('00000000-0000-0000-0000-000000005fc3', '00000000-0000-0000-0000-000000005fd2', true, 'verified'),
-('00000000-0000-0000-0000-000000005fc5', '00000000-0000-0000-0000-000000005fd4', true, 'verified');
+('00000000-0000-0000-0000-000000005fc5', '00000000-0000-0000-0000-000000005fd4', true, 'pending');
 INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES
-('00000000-0000-0000-0000-000000005fc1', '00000000-0000-0000-0000-000000005fd1', true, 'verified'),
+('00000000-0000-0000-0000-000000005fc1', '00000000-0000-0000-0000-000000005fd1', true, 'pending'),
 ('00000000-0000-0000-0000-000000005fc7', '00000000-0000-0000-0000-000000005fd1', true, 'verified');
 SELECT public.admin_set_clinic_publication_state('00000000-0000-0000-0000-000000005fc2', 'pending', false, 'not_granted', false);
 SELECT public.admin_set_clinic_publication_state('00000000-0000-0000-0000-000000005fc3', 'verified', false, 'not_granted', false);

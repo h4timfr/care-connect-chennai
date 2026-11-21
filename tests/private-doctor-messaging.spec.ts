@@ -24,7 +24,7 @@ test("clinic enquiry and appointment threads have distinct labels even with the 
   page,
   backend,
 }) => {
-  await backend({
+  const mock = await backend({
     conversations: [
       { ...conversationRow([]), id: "general-clinic-thread", doctor_id: ids.doctorVerified },
       {
@@ -36,6 +36,7 @@ test("clinic enquiry and appointment threads have distinct labels even with the 
       },
     ],
   });
+  enablePatientContact(mock.state, ids.clinicA);
   await page.goto("/messages");
   const inbox = page.getByRole("list", { name: "Conversations" });
   await expect(

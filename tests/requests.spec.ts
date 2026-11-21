@@ -25,7 +25,12 @@ const EXPECTED: Record<string, string[]> = {
     "appointments",
     "rpc/can_message_assigned_doctor",
   ],
-  "/messages": [...SHARED, "conversations", "rpc/doctor_message_inbox"],
+  "/messages": [
+    ...SHARED,
+    "conversations",
+    "rpc/doctor_message_inbox",
+    "rpc/patient_conversation_clinics",
+  ],
   "/profile": SHARED,
   "/reset-password": ["patients", "clinic_memberships"],
   "/clinic": [
@@ -86,6 +91,9 @@ test("each route requests only what it shows, once", async ({ page }) => {
     Object.entries(EXPECTED).map(([route, calls]) => [route, [...calls].sort()]),
   );
   expect(actual).toEqual(expected);
+  expect(
+    mock.callsTo("POST", "/rest/v1/rpc/patient_conversation_clinics").map((call) => call.body),
+  ).toEqual([{ p_conversation_ids: [ids.conversation] }]);
   // A valid stored session is used as-is: no auth-server round trips on page loads.
   expect(mock.calls.filter((c) => c.path.startsWith("/auth/v1/"))).toEqual([]);
 });

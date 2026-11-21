@@ -141,6 +141,8 @@ export interface Conversation {
   appointmentId?: string | undefined;
   appointmentDate?: string | undefined;
   doctorName?: string | undefined;
+  clinicName?: string | undefined;
+  clinicUnavailable?: boolean | undefined;
   canSend?: boolean | undefined;
   messages: Message[];
 }

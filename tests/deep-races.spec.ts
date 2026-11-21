@@ -1,4 +1,4 @@
-import { conversationRow, defaultState, ids } from "./support/mock-backend";
+import { conversationRow, defaultState, enablePatientContact, ids } from "./support/mock-backend";
 import { expect, test } from "./support/fixtures";
 
 for (const role of ["patient", "clinic", "doctor"] as const) {
@@ -8,7 +8,7 @@ for (const role of ["patient", "clinic", "doctor"] as const) {
   }) => {
     const state = defaultState();
     if (role === "doctor") state.doctors[0]!["user_id"] = ids.user;
-    await backend({
+    const mock = await backend({
       doctors: state.doctors,
       memberships:
         role === "clinic"
@@ -19,7 +19,7 @@ for (const role of ["patient", "clinic", "doctor"] as const) {
         {
           ...conversationRow([]),
           id: "second-thread",
-          clinic_id: role === "patient" ? ids.clinicB : ids.clinicA,
+          kind: role === "patient" ? "appointment" : "general",
           patients: { full_name: "Second Recipient", user_id: "synthetic-other" },
         },
       ],
@@ -31,6 +31,7 @@ for (const role of ["patient", "clinic", "doctor"] as const) {
         messages: [],
       })),
     });
+    if (role === "patient") enablePatientContact(mock.state, ids.clinicA);
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -62,7 +63,9 @@ for (const role of ["patient", "clinic", "doctor"] as const) {
     await request;
     try {
       await page
-        .getByRole("button", { name: role === "patient" ? /Test Clinic B/ : /Second Recipient/ })
+        .getByRole("button", {
+          name: role === "patient" ? /About an appointment/i : /Second Recipient/,
+        })
         .click();
       await input.fill("Second recipient draft");
       const denied = page.waitForResponse(
@@ -77,7 +80,7 @@ for (const role of ["patient", "clinic", "doctor"] as const) {
         .getByRole("button", {
           name:
             role === "patient"
-              ? /Test Clinic A/
+              ? /General enquiry/
               : role === "clinic"
                 ? /Test Patient/
                 : /First Recipient/,

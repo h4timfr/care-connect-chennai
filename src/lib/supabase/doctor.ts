@@ -59,6 +59,12 @@ export function useMyDoctor(userId: string | undefined) {
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
+      const clinicNames = new Map<string, string>();
+      if (data.clinic_doctors.some((link) => link.active && !link.clinics)) {
+        const { data: names, error: namesError } = await supabase.rpc("my_linked_clinic_names");
+        if (namesError) throw namesError;
+        for (const clinic of names ?? []) clinicNames.set(clinic.clinic_id, clinic.clinic_name);
+      }
       const scheduledClinics = new Set(data.doctor_schedules.map((s) => s.clinic_id));
       const bookableHours = new Set(
         data.doctor_schedules
@@ -78,7 +84,7 @@ export function useMyDoctor(userId: string | undefined) {
         isSample: data.is_demo,
         links: data.clinic_doctors.map((l) => ({
           clinicId: l.clinic_id,
-          clinicName: l.clinics?.name ?? "",
+          clinicName: l.clinics?.name ?? clinicNames.get(l.clinic_id) ?? "",
           state: toVerificationState(l.verification_state),
           verified: l.verification_state === "verified",
           active: l.active,

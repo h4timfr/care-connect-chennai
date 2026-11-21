@@ -18,8 +18,17 @@ import type { Appointment } from "@/lib/types";
 
 export const Route = createFileRoute("/appointments/")({
   head: () => ({ meta: [{ title: pageTitles.appointments }] }),
+  validateSearch: ({
+    tab,
+  }: Record<string, unknown>): { tab?: "past" | "cancelled" | undefined } => ({
+    tab: parseTab(tab),
+  }),
   component: AppointmentsList,
 });
+
+function parseTab(tab: unknown) {
+  return tab === "past" || tab === "cancelled" ? tab : undefined;
+}
 
 const byDateAsc = (a: Appointment, b: Appointment) =>
   `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`);
@@ -35,6 +44,8 @@ function AppointmentsList() {
     refetchPatient,
   } = useApp();
   const { loading, user } = useProtectedRoute();
+  const { tab } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { t } = useI18n();
 
   const { upcoming, past, cancelled } = useMemo(() => {
@@ -71,7 +82,12 @@ function AppointmentsList() {
     body = <MissingProfile action="appointments" />;
   } else {
     body = (
-      <Tabs defaultValue="upcoming">
+      <Tabs
+        value={tab ?? "upcoming"}
+        onValueChange={(value) => {
+          void navigate({ search: { tab: parseTab(value) }, replace: true, resetScroll: false });
+        }}
+      >
         <TabsList className="h-auto">
           <TabsTrigger value="upcoming">
             {t("appointments.upcoming", { count: upcoming.length })}

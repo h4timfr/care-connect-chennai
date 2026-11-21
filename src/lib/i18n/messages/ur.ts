@@ -356,6 +356,10 @@ export const ur: Messages = {
   "messages.placeholder": "پیغام لکھیں…",
   "messages.send": "پیغام بھیجیں",
   "messages.unavailable": "یہ گفتگو دستیاب نہیں ہے۔",
+  "messages.clinicHistory": "کلینک سے پرانی گفتگو",
+  "messages.clinicUnavailable": "یہ کلینک دستیاب نہیں ہے۔ آپ پرانے پیغامات اب بھی پڑھ سکتے ہیں۔",
+  "messages.clinicClosed":
+    "یہ کلینک مریضوں کے نئے پیغامات قبول نہیں کر رہا۔ آپ پرانے پیغامات اب بھی پڑھ سکتے ہیں۔",
   "messages.select": "کوئی گفتگو منتخب کریں",
 
   // ---- Profile
@@ -721,6 +725,9 @@ export const ur: Messages = {
   "admin.subtitle": "کلینکس اور ڈاکٹروں کی تصدیق کریں اور کلینک ٹیموں کا انتظام کریں۔",
   "admin.tab.applications": "کلینک کی درخواستیں",
   "admin.tab.doctors": "ڈاکٹر کی تصدیق",
+  "admin.tab.demo": "ٹیسٹ/ڈیمو",
+  "admin.demoReadOnly": "یہاں ٹیسٹ اور ڈیمو روابط صرف دیکھے جا سکتے ہیں۔",
+  "admin.noDemoDoctorLinks": "کوئی ٹیسٹ یا ڈیمو رابطہ نہیں ہے",
   "admin.tab.publication": "پرووائیڈر کی اشاعت",
   "admin.tab.teams": "کلینک ٹیمیں",
   "admin.confirmPublicationAction":

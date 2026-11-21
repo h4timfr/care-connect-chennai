@@ -1,5 +1,5 @@
 BEGIN;
-SELECT extensions.plan(18);
+SELECT extensions.plan(30);
 
 -- Exact deterministic rows inserted by 00008.  The full clean/staging-state replay
 -- must preserve these only as demo data; no candidate import is part of this job.
@@ -123,6 +123,95 @@ SELECT extensions.is(
    WHERE p.user_id = '00000000-0000-0000-0000-0000000021e2'),
   0, 'the rejected demo booking creates no appointment'
 );
+RESET role;
+RESET request.jwt.claims;
+
+-- These transaction-scoped fixtures model a pending demo doctor and an unrelated doctor.
+INSERT INTO auth.users (id, email, created_at, updated_at) VALUES
+  ('00000000-0000-0000-0000-0000000021e3', 'linked-demo@test.invalid', now(), now()),
+  ('00000000-0000-0000-0000-0000000021e4', 'other-doctor@test.invalid', now(), now());
+INSERT INTO public.clinics (id, name, address, phone, email, is_demo) VALUES
+  ('00000000-0000-0000-0000-0000000021c1', 'Clinic For Unrelated Doctor', 'Test Road',
+   '000000', 'clinic@test.invalid', false);
+INSERT INTO public.doctors (id, user_id, name, consultation_fee, is_demo) VALUES
+  ('00000000-0000-0000-0000-0000000021d1', '00000000-0000-0000-0000-0000000021e3',
+   'Linked Demo Doctor', 500, true),
+  ('00000000-0000-0000-0000-0000000021d2', '00000000-0000-0000-0000-0000000021e4',
+   'Unrelated Doctor', 500, false);
+INSERT INTO public.clinic_doctors (clinic_id, doctor_id, active, verification_state) VALUES
+  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-0000000021d1', true, 'pending'),
+  ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-0000000021d1', false, 'pending'),
+  ('00000000-0000-0000-0000-0000000021c1', '00000000-0000-0000-0000-0000000021d1', false, 'pending'),
+  ('00000000-0000-0000-0000-0000000021c1', '00000000-0000-0000-0000-0000000021d2', true, 'pending'),
+  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-0000000021d2', false, 'pending');
+
+SET LOCAL role anon;
+SELECT extensions.throws_ok($$ SELECT * FROM public.my_linked_clinic_names() $$,
+  '42501', NULL, 'anonymous callers cannot invoke the linked clinic lookup');
+SELECT extensions.throws_ok($$ SELECT * FROM public.admin_demo_doctor_links() $$,
+  '42501', NULL, 'anonymous callers cannot invoke the demo review lookup');
+RESET role;
+
+SET LOCAL role authenticated;
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000021e3","role":"authenticated"}';
+SELECT extensions.is(
+  (SELECT count(*)::int FROM public.clinic_doctors AS cd
+   LEFT JOIN public.clinics AS c ON c.id = cd.clinic_id
+   WHERE cd.doctor_id = '00000000-0000-0000-0000-0000000021d1' AND cd.active
+     AND cd.verification_state = 'pending' AND c.name IS NULL),
+  1, 'the pending relationship is visible while the original embedded clinic row stays hidden'
+);
+SELECT extensions.results_eq(
+  $$ SELECT * FROM public.my_linked_clinic_names() $$,
+  $$ VALUES ('11111111-1111-1111-1111-111111111111'::uuid, 'Little Steps Clinic'::text) $$,
+  'the linked doctor sees only the ID and name of their active clinic'
+);
+SELECT extensions.is((SELECT count(*)::int FROM public.admin_demo_doctor_links()), 0,
+  'the linked doctor cannot list demo relationships through the admin lookup');
+
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000021e4","role":"authenticated"}';
+SELECT extensions.results_eq(
+  $$ SELECT * FROM public.my_linked_clinic_names() $$,
+  $$ VALUES ('00000000-0000-0000-0000-0000000021c1'::uuid, 'Clinic For Unrelated Doctor'::text) $$,
+  'another doctor sees only their own active clinic and no inactive demo clinic');
+SELECT extensions.throws_ok(
+  $$ SELECT email FROM public.clinics WHERE id = '11111111-1111-1111-1111-111111111111' $$,
+  '42501', NULL, 'another doctor cannot read the demo clinic contact field');
+
+SET LOCAL request.jwt.claims TO '{"sub":"00000000-0000-0000-0000-0000000021e1","role":"authenticated"}';
+SELECT extensions.results_eq(
+  $$ SELECT doctor_name, clinic_name, verification_state, active
+     FROM public.admin_demo_doctor_links()
+     WHERE doctor_id = '00000000-0000-0000-0000-0000000021d1'
+        OR clinic_id = '00000000-0000-0000-0000-0000000021c1'
+     ORDER BY active DESC, clinic_name $$,
+  $$ VALUES ('Linked Demo Doctor'::text, 'Little Steps Clinic'::text, 'pending'::text, true),
+            ('Linked Demo Doctor'::text, 'Anna Nagar Ortho & Physio Centre'::text, 'pending'::text, false),
+            ('Linked Demo Doctor'::text, 'Clinic For Unrelated Doctor'::text, 'pending'::text, false) $$,
+  'the admin sees demo names and statuses, including inactive links, and no genuine relationship'
+);
+SELECT extensions.throws_ok(
+  $$ UPDATE public.clinic_doctors SET verification_state = 'verified'
+     WHERE clinic_id = '11111111-1111-1111-1111-111111111111'
+       AND doctor_id = '00000000-0000-0000-0000-0000000021d2' $$,
+  '23514', 'Test and demo relationships cannot be verified.',
+  'the admin write path cannot verify a link involving a demo clinic');
+SELECT extensions.throws_ok(
+  $$ UPDATE public.clinic_doctors SET verification_state = 'verified'
+     WHERE clinic_id = '00000000-0000-0000-0000-0000000021c1'
+       AND doctor_id = '00000000-0000-0000-0000-0000000021d1' $$,
+  '23514', 'Test and demo relationships cannot be verified.',
+  'the admin write path cannot verify a link involving a demo doctor');
+SELECT extensions.lives_ok(
+  $$ UPDATE public.clinic_doctors SET verification_state = 'verified'
+     WHERE clinic_id = '00000000-0000-0000-0000-0000000021c1'
+       AND doctor_id = '00000000-0000-0000-0000-0000000021d2' $$,
+  'the existing admin verification path still verifies genuine relationships');
+SELECT extensions.is(
+  (SELECT verification_state FROM public.clinic_doctors
+   WHERE clinic_id = '00000000-0000-0000-0000-0000000021c1'
+     AND doctor_id = '00000000-0000-0000-0000-0000000021d2'),
+  'verified', 'the genuine relationship retains its saved verification state');
 RESET role;
 RESET request.jwt.claims;
 

@@ -353,6 +353,10 @@ export const hi: Messages = {
   "messages.placeholder": "संदेश लिखें…",
   "messages.send": "संदेश भेजें",
   "messages.unavailable": "यह बातचीत उपलब्ध नहीं है।",
+  "messages.clinicHistory": "क्लिनिक की पुरानी बातचीत",
+  "messages.clinicUnavailable": "यह क्लिनिक उपलब्ध नहीं है। आप पुराने संदेश अब भी पढ़ सकते हैं।",
+  "messages.clinicClosed":
+    "यह क्लिनिक मरीज़ों के नए संदेश स्वीकार नहीं कर रहा है। आप पुराने संदेश अब भी पढ़ सकते हैं।",
   "messages.select": "कोई बातचीत चुनें",
 
   // ---- Profile
@@ -716,6 +720,9 @@ export const hi: Messages = {
   "admin.subtitle": "क्लिनिकों और डॉक्टरों का सत्यापन करें और क्लिनिक टीमों को संभालें।",
   "admin.tab.applications": "क्लिनिक आवेदन",
   "admin.tab.doctors": "डॉक्टर सत्यापन",
+  "admin.tab.demo": "टेस्ट/डेमो",
+  "admin.demoReadOnly": "टेस्ट और डेमो संबंध केवल देखने के लिए हैं।",
+  "admin.noDemoDoctorLinks": "कोई टेस्ट या डेमो संबंध नहीं है",
   "admin.tab.publication": "प्रदाता प्रकाशन",
   "admin.tab.teams": "क्लिनिक टीमें",
   "admin.confirmPublicationAction":

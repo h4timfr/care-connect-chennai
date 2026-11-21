@@ -305,28 +305,40 @@ test.describe("Platform administration", () => {
     ).toMatchObject({ p_application_id: "app-1", p_approve: true });
   });
 
-  test("an admin verifies a pending doctor; sample doctors are not offered", async ({
+  test("an admin verifies a genuine link; links with either demo participant are excluded", async ({
     page,
     backend,
   }) => {
     const mock = await backend({ platformAdmin: true });
-    // Dr. Pending Tester is a sample (is_demo) in the default fixtures; add a real pending doctor.
-    const real = structuredClone(mock.state.doctors[1]!);
-    Object.assign(real, {
-      id: "00000000-0000-4000-8000-0000000000d9",
-      name: "Dr. Real Pending",
+    mock.state.clinics[0]!["is_demo"] = false;
+    const realId = "00000000-0000-4000-8000-0000000000d9";
+    const pendingRealDoctor = {
+      ...structuredClone(mock.state.doctors[1]!),
+      id: "00000000-0000-4000-8000-0000000000d8",
+      name: "Dr. Real at Sample Clinic",
       is_demo: false,
       registration_note: "TNMC 555",
+    };
+    mock.state.doctors.push(pendingRealDoctor, {
+      ...pendingRealDoctor,
+      id: realId,
+      name: "Dr. Real Pending",
+      clinic_doctors: [{ clinic_id: ids.clinicA, active: true, verification_state: "pending" }],
     });
-    mock.state.doctors.push(real);
     await page.goto("/admin");
     await page.getByRole("tab", { name: "Doctor verification" }).click();
     await expect(page.getByText("Dr. Real Pending")).toBeVisible();
     await expect(page.getByText("Dr. Pending Tester")).toHaveCount(0);
-    await expect(page.getByText("1 sample listings are hidden here")).toBeVisible();
+    await expect(page.getByText("Dr. Real at Sample Clinic")).toHaveCount(0);
+    await expect(page.getByText("2 sample listings are hidden here")).toBeVisible();
     await page.getByRole("button", { name: "Verify doctor" }).click();
     await expect(page.getByText("Doctor verified")).toBeVisible();
-    expect(mock.callsTo("PATCH", "/rest/v1/clinic_doctors")[0]?.body).toEqual({
+    const writes = mock.callsTo("PATCH", "/rest/v1/clinic_doctors");
+    expect(writes).toHaveLength(1);
+    const filters = new URLSearchParams(writes[0]!.search);
+    expect(filters.get("doctor_id")).toBe(`eq.${realId}`);
+    expect(filters.get("clinic_id")).toBe(`eq.${ids.clinicA}`);
+    expect(writes[0]!.body).toEqual({
       verification_state: "verified",
     });
   });

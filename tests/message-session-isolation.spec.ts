@@ -1,4 +1,10 @@
-import { conversationRow, defaultState, fakeAccessToken, ids } from "./support/mock-backend";
+import {
+  conversationRow,
+  defaultState,
+  enablePatientContact,
+  fakeAccessToken,
+  ids,
+} from "./support/mock-backend";
 import { expect, test } from "./support/fixtures";
 
 const accountB = "00000000-0000-4000-8000-0000000000b2";
@@ -29,6 +35,7 @@ for (const role of ["patient", "clinic", "doctor"] as const) {
           },
         ],
       });
+      if (role === "patient") enablePatientContact(mock.state, ids.clinicA);
       let release!: () => void;
       const pending = new Promise<void>((resolve) => {
         release = resolve;

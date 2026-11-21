@@ -48,7 +48,7 @@ export default defineConfig({
   ...(bundleTestMode ? { nitro: { output: { dir: bundleTestOutput! } } } : {}),
   vite: {
     envPrefix: [],
-    ...(bundleTestMode ? { build: { sourcemap: true } } : {}),
+    ...(bundleTestMode && vercelEnv === "preview" ? { build: { sourcemap: true } } : {}),
     plugins: [
       {
         name: "careconnect-public-config",
