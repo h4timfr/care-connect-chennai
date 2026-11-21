@@ -21,6 +21,7 @@ const VIEWPORTS = [
   { name: "desktop-1280", width: 1280, height: 900 },
   { name: "desktop-1024", width: 1024, height: 900 },
   { name: "desktop-1440", width: 1440, height: 900 },
+  { name: "desktop-wide-1920", width: 1920, height: 1080 },
 ];
 
 const PAGES = [
@@ -42,6 +43,10 @@ const PAGES = [
   `/clinic/messages?c=${ids.conversation}`,
   "/clinic/profile",
   "/providers",
+  "/providers/apply",
+  "/login",
+  "/signup",
+  "/reset-password",
   "/clinic/signup",
   "/doctor/signup",
   "/doctor/login",
