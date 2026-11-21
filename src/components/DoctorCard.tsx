@@ -35,13 +35,13 @@ export function DoctorCard({ doctor, compact }: { doctor: Doctor; compact?: bool
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
         <Initials name={doctor.name} className="h-12 w-12 text-base" />
         <div className="min-w-0">
-          <h3 className="font-display text-base font-semibold [overflow-wrap:anywhere]">
+          <h3 className="card-title">
             <Link
               to="/doctors/$doctorId"
               params={{ doctorId: doctor.id }}
               className="hover:underline focus-visible:underline focus-visible:outline-none"
             >
-              {doctor.name}
+              <bdi>{doctor.name}</bdi>
             </Link>
           </h3>
           {doctor.specialtyId ? (

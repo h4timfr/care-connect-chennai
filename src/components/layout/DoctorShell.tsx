@@ -163,12 +163,12 @@ export function DoctorShell({
     <div className="min-h-screen">
       <SkipToContent />
       <div className="mx-auto flex max-w-[1500px]">
-        <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col overflow-y-auto border-e bg-sidebar px-4 py-6 lg:flex xl:w-64">
+        <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col overflow-y-auto border-e bg-sidebar px-4 py-5 lg:flex xl:w-64">
           <Link to="/doctor" className="mb-6 flex items-center gap-2 px-2">
             <BrandMark />
             <span className="min-w-0">
               <span className="block font-display text-sm font-bold">CareConnect</span>
-              <span className="block truncate text-xs font-medium text-primary">
+              <span className="block truncate text-xs font-medium text-muted-foreground">
                 {t("portal.doctor.name")}
               </span>
             </span>
@@ -214,11 +214,9 @@ export function DoctorShell({
 
         <div className="min-w-0 flex-1">
           <header className="z-30 border-b bg-card/95 px-4 py-3 sm:px-6 lg:sticky lg:top-0 lg:backdrop-blur">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
               <div className="min-w-0">
-                <h1 className="font-display text-xl font-bold [overflow-wrap:anywhere] sm:text-2xl">
-                  {title}
-                </h1>
+                <h1 className="portal-title">{title}</h1>
                 <p
                   className="text-xs text-muted-foreground [overflow-wrap:anywhere] lg:hidden"
                   dir="auto"
@@ -232,13 +230,9 @@ export function DoctorShell({
                 <ThemeToggle />
               </div>
             </div>
-            {description ? (
-              <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
-                {description}
-              </p>
-            ) : null}
+            {description ? <p className="page-description mt-1.5">{description}</p> : null}
             <nav
-              className="mt-3 flex flex-wrap gap-1.5 lg:hidden"
+              className="mt-3 flex flex-wrap gap-1.5 border-t pt-2.5 lg:hidden"
               aria-label={t("doctorNav.mobileLabel")}
             >
               {NAV.map((item) => (

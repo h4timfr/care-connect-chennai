@@ -83,10 +83,8 @@ function ProvidersReviewPage() {
         <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />
         {t("admin.title")}
       </Link>
-      <h1 className="mt-2 font-display text-2xl font-bold [overflow-wrap:anywhere] sm:text-3xl">
-        {t("candidates.title")}
-      </h1>
-      <p className="mt-1 text-sm text-muted-foreground">{t("candidates.subtitle")}</p>
+      <h1 className="page-title mt-3">{t("candidates.title")}</h1>
+      <p className="page-description mt-1.5">{t("candidates.subtitle")}</p>
       <div
         role="note"
         className="mt-4 flex gap-3 rounded-xl border border-warning/50 bg-warning/10 p-4 text-sm text-foreground"

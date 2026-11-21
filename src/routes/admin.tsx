@@ -55,13 +55,31 @@ import {
 } from "@/lib/supabase/providers";
 import type { Clinic } from "@/lib/types";
 
+const REVIEW_TABS = [
+  "applications",
+  "doctor-applications",
+  "doctors",
+  "publication",
+  "teams",
+  "demo",
+] as const;
+type ReviewTab = (typeof REVIEW_TABS)[number];
+
+function isReviewTab(value: unknown): value is ReviewTab {
+  return REVIEW_TABS.some((tab) => tab === value);
+}
+
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: pageTitles.admin }] }),
+  validateSearch: ({ tab }: Record<string, unknown>): { tab?: ReviewTab } =>
+    isReviewTab(tab) && tab !== "applications" ? { tab } : {},
   component: AdminPage,
 });
 
 function ReviewWorkspace() {
   const { t } = useI18n();
+  const { tab = "applications" } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [startTour, setStartTour] = useState(0);
   const applications = useApplicationsForReview(true);
   const doctorApplications = useDoctorApplicationsForReview(true);
@@ -97,14 +115,29 @@ function ReviewWorkspace() {
 
   return (
     <>
-      <div className="mb-2 flex justify-end">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="h-auto min-h-9 max-w-full whitespace-normal"
+        >
+          <Link to="/admin/providers">{t("candidates.openReview")}</Link>
+        </Button>
         <GuidedTour role="admin" startRequested={startTour} />
       </div>
       <RoleTourOffer role="admin" onStart={() => setStartTour((value) => value + 1)} />
-      <Tabs defaultValue="applications" className="space-y-4">
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          if (isReviewTab(value))
+            void navigate({ search: value === "applications" ? {} : { tab: value } });
+        }}
+        className="space-y-4"
+      >
         <TabsList
           aria-label={t("admin.reviewNavigation")}
-          className="grid w-full grid-cols-1 items-stretch gap-1.5 p-1.5 min-[360px]:grid-cols-2 xl:grid-cols-6"
+          className="grid w-full grid-cols-1 items-stretch gap-1.5 border bg-card p-1.5 min-[360px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 [&>[data-state=active]]:bg-primary-soft [&>[data-state=active]]:text-primary"
         >
           {queues.map(({ id, label, status }) => (
             <TabsTrigger
@@ -160,12 +193,6 @@ function ReviewWorkspace() {
           <DemoDoctorLinksPanel />
         </TabsContent>
       </Tabs>
-      <Link
-        to="/admin/providers"
-        className="mt-5 inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-primary hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {t("candidates.openReview")}
-      </Link>
     </>
   );
 }
@@ -174,17 +201,15 @@ function AdminPage() {
   const { t } = useI18n();
   return (
     <PatientShell>
-      <div className="flex items-center gap-3">
+      <header className="surface-card flex items-start gap-3 border-s-4 border-s-primary p-4 sm:p-5">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-highlight-soft text-highlight">
           <ShieldCheck className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold [overflow-wrap:anywhere]">
-            {t("admin.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t("admin.subtitle")}</p>
+          <h1 className="page-title">{t("admin.title")}</h1>
+          <p className="page-description mt-1.5">{t("admin.subtitle")}</p>
         </div>
-      </div>
+      </header>
       <div className="mt-5">
         <AdminGate>
           <ReviewWorkspace />

@@ -55,12 +55,8 @@ export function PatientPageHeading({
 }) {
   return (
     <div className="min-w-0">
-      <h1 className="font-display text-2xl leading-tight font-bold tracking-tight [overflow-wrap:anywhere] sm:text-3xl">
-        {title}
-      </h1>
-      {description ? (
-        <p className="mt-1 max-w-prose text-sm text-muted-foreground">{description}</p>
-      ) : null}
+      <h1 className="page-title">{title}</h1>
+      {description ? <p className="page-description mt-1.5">{description}</p> : null}
     </div>
   );
 }
@@ -125,7 +121,7 @@ export function PatientShell({
                     className={cn(
                       "whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       active
-                        ? "bg-highlight-soft text-highlight"
+                        ? "bg-primary-soft font-semibold text-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
@@ -184,7 +180,8 @@ export function PatientShell({
         id="main-content"
         tabIndex={-1}
         className={cn(
-          "mx-auto w-full max-w-6xl flex-1 px-4 outline-none sm:px-6",
+          "mx-auto w-full max-w-6xl px-4 outline-none sm:px-6",
+          pathname !== "/" && "flex-1",
           compact ? "py-4 sm:py-6" : "py-6 sm:py-8",
         )}
       >
@@ -197,14 +194,16 @@ export function PatientShell({
         ) : null}
       </main>
 
-      <footer className="border-t">
+      <footer className={cn("border-t bg-card/75", pathname === "/" && "flex-1")}>
         <div
           className={cn(
             "mx-auto flex max-w-6xl flex-col gap-1 px-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6",
             compact ? "py-3" : "py-5",
           )}
         >
-          <p>{t("footer.copyright", { year: new Date().getFullYear() })}</p>
+          <p className="font-medium text-foreground">
+            {t("footer.copyright", { year: new Date().getFullYear() })}
+          </p>
           <div className="flex flex-wrap items-center gap-x-3">
             <Link
               to="/providers"
@@ -216,7 +215,7 @@ export function PatientShell({
               <GuidedTour role="patient" compact startRequested={startTour} />
             ) : null}
           </div>
-          <p>{t("footer.emergency")}</p>
+          <p className="max-w-md leading-relaxed">{t("footer.emergency")}</p>
         </div>
       </footer>
 
@@ -238,7 +237,9 @@ export function PatientShell({
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-md px-0.5 py-2.5 text-[11px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                    active ? "text-highlight" : "text-muted-foreground hover:text-foreground",
+                    active
+                      ? "bg-primary-soft/70 text-primary"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <item.icon className="h-5 w-5 shrink-0" aria-hidden />

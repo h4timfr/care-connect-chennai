@@ -142,7 +142,7 @@ export function ClinicShell({
     <div className="min-h-screen">
       <SkipToContent />
       <div className="mx-auto flex max-w-[1600px]">
-        <aside className="sticky top-0 hidden h-screen w-[216px] shrink-0 flex-col border-e bg-sidebar px-3 py-5 xl:w-[244px] xl:px-4 lg:flex">
+        <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-e bg-sidebar px-4 py-5 lg:flex xl:w-64">
           <Link
             to="/clinic"
             className="mb-6 flex items-center gap-2 rounded-lg px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
@@ -168,7 +168,7 @@ export function ClinicShell({
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   isActive(item.to, item.exact)
-                    ? "bg-highlight-soft text-highlight"
+                    ? "bg-primary-soft text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
@@ -209,12 +209,10 @@ export function ClinicShell({
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="relative z-30 border-b bg-card/95 px-3 py-3 sm:px-6 lg:sticky lg:top-0">
+          <header className="relative z-30 border-b bg-card/95 px-4 py-3 sm:px-6 lg:sticky lg:top-0">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2">
               <div className="min-w-0">
-                <h1 className="font-display text-xl font-bold [overflow-wrap:anywhere] sm:text-2xl">
-                  {title}
-                </h1>
+                <h1 className="portal-title">{title}</h1>
                 {memberClinics.length > 1 ? (
                   <div className="mt-1 max-w-xs lg:hidden">
                     <ClinicPicker
@@ -229,11 +227,7 @@ export function ClinicShell({
                     {activeClinic.name} · {role}
                   </p>
                 )}
-                {description ? (
-                  <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
-                    {description}
-                  </p>
-                ) : null}
+                {description ? <p className="page-description mt-1.5">{description}</p> : null}
               </div>
               <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                 <GuidedTour role="clinic" iconOnly startRequested={startTour} />
@@ -257,9 +251,9 @@ export function ClinicShell({
                   data-tour-target={item.to}
                   aria-current={isActive(item.to, item.exact) ? "page" : undefined}
                   className={cn(
-                    "inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium [overflow-wrap:anywhere] transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    "inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium [overflow-wrap:anywhere] transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                     isActive(item.to, item.exact)
-                      ? "bg-highlight text-highlight-foreground"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground",
                   )}
                 >
@@ -286,7 +280,7 @@ export function ClinicShell({
             ref={mainRef}
             id="main-content"
             tabIndex={-1}
-            className="mx-auto min-w-0 max-w-screen-2xl px-3 py-4 outline-none sm:px-6 sm:py-6"
+            className="mx-auto min-w-0 max-w-screen-2xl px-4 py-4 outline-none sm:px-6 sm:py-6"
           >
             {pathname === "/clinic" || pathname === "/clinic/" ? (
               <RoleTourOffer role="clinic" onStart={() => setStartTour((value) => value + 1)} />

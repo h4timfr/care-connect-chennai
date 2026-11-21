@@ -1,7 +1,7 @@
 import { pageTitles } from "@/lib/page-titles";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Building2, CalendarDays, Search, Stethoscope } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowRight, Building2, CalendarDays, LayoutGrid, Search, Stethoscope } from "lucide-react";
+import { useMemo } from "react";
 import { PatientShell } from "@/components/layout/PatientShell";
 import { DoctorCard } from "@/components/DoctorCard";
 import { ClinicCard } from "@/components/ClinicCard";
@@ -34,13 +34,24 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const FEATURED_COUNT = 6;
+const PREVIEW_COUNT = 3;
+const SPECIALTY_ACCENTS: Record<string, string> = {
+  cardiology: "bg-highlight-soft text-highlight",
+  dermatology: "bg-warning/15 text-warning-foreground dark:text-warning",
+  ent: "bg-info/15 text-info",
+  gynecology: "bg-highlight-soft text-highlight",
+  neurology: "bg-highlight-soft text-highlight",
+  ophthalmology: "bg-info/15 text-info",
+  pediatrics: "bg-warning/15 text-warning-foreground dark:text-warning",
+  psychiatry: "bg-highlight-soft text-highlight",
+};
+const SPECIALTY_LINK =
+  "flex h-full min-h-12 items-center gap-1.5 rounded-lg border bg-card px-2 py-1.5 text-start text-[0.8125rem] leading-snug font-medium [overflow-wrap:anywhere] transition-colors hover:border-primary/45 hover:bg-primary-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none max-[399px]:flex-col max-[399px]:items-start sm:gap-2 sm:px-3 sm:text-sm";
 
 function Home() {
   const { patient, patientAppointments, doctors, clinics, catalog, doctorById, clinicById } =
     useApp();
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
   const { t, fmt } = useI18n();
   // The viewer's local time of day (their own time zone, not the clinic's).
   const period = useDayPeriod();
@@ -52,8 +63,6 @@ function Home() {
       .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))[0];
   }, [patientAppointments]);
 
-  const specialties = SPECIALTIES;
-
   const catalogError = catalog.error ? t(describeDataError(catalog.error)) : null;
 
   return (
@@ -61,44 +70,41 @@ function Home() {
       <div className="space-y-5 sm:space-y-6">
         <section
           aria-labelledby="home-heading"
-          className="grid items-center gap-2 rounded-2xl border border-primary/15 bg-linear-to-br from-primary-soft via-card to-highlight-soft px-4 py-2 sm:gap-5 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-8"
+          className="surface-card grid items-center gap-2 border-s-4 border-s-primary px-3 py-2 sm:gap-5 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-8"
         >
           <div className="min-w-0">
-            <h1
-              id="home-heading"
-              className="font-display text-2xl leading-tight font-bold tracking-tight text-balance [overflow-wrap:anywhere] sm:text-3xl xl:text-4xl"
-            >
+            <h1 id="home-heading" className="page-title">
               {patient?.name && period
                 ? t(`home.greeting.${period}`, { name: patient.name })
                 : t("home.title")}
             </h1>
-            <p className="mt-1.5 max-w-prose text-sm text-muted-foreground">{t("home.subtitle")}</p>
+            <p className="page-description mt-1.5">{t("home.subtitle")}</p>
           </div>
 
           <form
             className="min-w-0"
             role="search"
+            action="/discover"
             onSubmit={(e) => {
               e.preventDefault();
-              const q = query.trim();
+              const q = String(new FormData(e.currentTarget).get("q") ?? "").trim();
               navigate({ to: "/discover", search: q ? { q } : {} });
             }}
           >
             <label htmlFor="home-search" className="sr-only">
               {t("home.searchLabel")}
             </label>
-            <div className="flex items-center gap-2 rounded-xl border bg-card p-1.5 ps-3 shadow-xs focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
+            <div className="flex items-center gap-2 rounded-xl border border-primary/25 bg-background p-1 ps-2.5 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30 sm:p-1.5 sm:ps-3">
               <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <input
                 id="home-search"
+                name="q"
                 type="search"
                 aria-describedby="home-search-hint"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("home.searchPlaceholder")}
-                className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+                className="min-w-0 flex-1 bg-transparent py-2 text-base outline-none placeholder:text-muted-foreground sm:text-sm"
               />
-              <Button type="submit" variant="highlight" className="h-9 shrink-0 px-3 sm:px-4">
+              <Button type="submit" className="h-9 shrink-0 px-3 sm:px-4">
                 {t("home.search")}
               </Button>
             </div>
@@ -137,29 +143,42 @@ function Home() {
           </section>
         ) : null}
 
-        <section aria-labelledby="specialties-heading">
+        <section
+          aria-labelledby="specialties-heading"
+          className="rounded-2xl border bg-card/65 p-3 sm:p-4"
+        >
           <SectionHeader
             id="specialties-heading"
             title={t("home.browseBySpecialty")}
-            className="mb-2"
+            className="mb-3"
           />
-          <ul className="grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-3 sm:grid-cols-5">
-            {specialties.map((s) => (
-              <li key={s.id}>
-                <Link
-                  to="/discover"
-                  search={{ specialty: s.id }}
-                  className="group flex h-full items-center gap-2 rounded-xl border bg-card px-2 py-2 text-start transition-colors hover:border-highlight/40 hover:bg-highlight-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary transition-colors group-hover:bg-highlight-soft group-hover:text-highlight">
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {SPECIALTIES.map((s) => (
+              <li key={s.id} className="min-w-0">
+                <Link to="/discover" search={{ specialty: s.id }} className={SPECIALTY_LINK}>
+                  <span
+                    className={cn(
+                      "grid size-7 shrink-0 place-items-center rounded-md sm:size-8",
+                      SPECIALTY_ACCENTS[s.id] ?? "bg-primary-soft text-primary",
+                    )}
+                  >
                     <SpecialtyIcon icon={s.icon} className="size-4" />
                   </span>
-                  <span className="min-w-0 text-xs leading-tight font-medium [overflow-wrap:anywhere]">
-                    {fmt.specialty(s.id)}
-                  </span>
+                  <span className="min-w-0">{fmt.specialty(s.id)}</span>
                 </Link>
               </li>
             ))}
+            <li className="min-w-0">
+              <Link
+                to="/discover"
+                className={cn(SPECIALTY_LINK, "border-primary/25 bg-primary-soft/35 text-primary")}
+              >
+                <span className="grid size-7 shrink-0 place-items-center rounded-md bg-primary-soft sm:size-8">
+                  <LayoutGrid className="size-4" aria-hidden />
+                </span>
+                <span className="min-w-0">{t("discover.allSpecialties")}</span>
+              </Link>
+            </li>
           </ul>
         </section>
 
@@ -172,12 +191,7 @@ function Home() {
           />
         ) : (
           <>
-            <div
-              className={cn(
-                "grid gap-5 sm:gap-6",
-                !catalog.isLoading && !doctors.length && !clinics.length && "md:grid-cols-2",
-              )}
-            >
+            <div className="grid items-start gap-5 md:grid-cols-2 md:gap-6">
               <section aria-labelledby="doctors-heading" className="min-w-0">
                 <SectionHeader
                   id="doctors-heading"
@@ -194,10 +208,10 @@ function Home() {
                   }
                 />
                 {catalog.isLoading ? (
-                  <CardGridSkeleton count={4} label={t("home.loadingDoctors")} />
+                  <CardGridSkeleton count={1} label={t("home.loadingDoctors")} />
                 ) : doctors.length ? (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {doctors.slice(0, FEATURED_COUNT).map((d) => (
+                  <div className="grid gap-3">
+                    {doctors.slice(0, PREVIEW_COUNT).map((d) => (
                       <DoctorCard key={d.id} doctor={d} />
                     ))}
                   </div>
@@ -227,16 +241,17 @@ function Home() {
                   }
                 />
                 {catalog.isLoading ? (
-                  <CardGridSkeleton count={2} label={t("home.loadingClinics")} />
+                  <CardGridSkeleton count={1} label={t("home.loadingClinics")} />
                 ) : clinics.length ? (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {clinics.slice(0, 3).map((c) => (
+                  <div className="grid gap-3">
+                    {clinics.slice(0, PREVIEW_COUNT).map((c) => (
                       <ClinicCard key={c.id} clinic={c} />
                     ))}
                   </div>
                 ) : (
                   <EmptyState
                     compact
+                    tone="highlight"
                     icon={Building2}
                     title={t("home.noClinicsTitle")}
                     description={t("home.noClinicsBody")}
@@ -246,6 +261,27 @@ function Home() {
             </div>
           </>
         )}
+        <section
+          aria-labelledby="clinic-onboarding-heading"
+          className="grid items-center gap-3 rounded-xl border bg-primary-soft/40 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5"
+        >
+          <div className="min-w-0">
+            <h2 id="clinic-onboarding-heading" className="section-title">
+              {t("providers.eyebrow")}
+            </h2>
+            <p className="page-description mt-1">{t("providers.howBody")}</p>
+          </div>
+          <Button
+            asChild
+            variant="outline"
+            className="h-auto min-h-9 max-w-full whitespace-normal justify-self-start py-2 text-start"
+          >
+            <Link to="/providers/apply">
+              {t("providers.apply")}
+              <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
+            </Link>
+          </Button>
+        </section>
       </div>
     </PatientShell>
   );
