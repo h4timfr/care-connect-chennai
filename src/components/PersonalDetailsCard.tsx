@@ -122,7 +122,9 @@ function DetailsForm({ patient, onDone }: { patient: Patient; onDone: () => void
       });
       toast.success(t("details.saved"));
       const uiLanguage = normalizeLanguage(language);
-      if (uiLanguage && uiLanguage !== lang) void setLanguage(uiLanguage);
+      if (uiLanguage && uiLanguage !== lang) {
+        void setLanguage(uiLanguage).catch(() => toast.error(t("welcome.languageError")));
+      }
       onDone();
     } catch (err) {
       // 23514/22007/22P02: a database constraint or type rejected one of the values.

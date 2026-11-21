@@ -10,7 +10,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { en, type MessageKey, type Messages } from "./messages/en";
+import type { MessageKey, Messages } from "./messages/en";
+import { englishShell } from "./messages/en-shell";
 import {
   DEFAULT_LANGUAGE,
   LANGUAGE_COOKIE,
@@ -42,10 +43,11 @@ export type PluralKey = {
 }[MessageKey];
 
 // ---------------------------------------------------------------------------------------------
-// Dictionaries: English ships with the app; the others are loaded on demand and cached.
+// The document already provides the initial dictionary. Load other choices on demand.
 // ---------------------------------------------------------------------------------------------
 
-const loaders: Record<Exclude<Language, "en">, () => Promise<Messages>> = {
+const loaders: Record<Language, () => Promise<Messages>> = {
+  en: () => import("./messages/en").then((m) => m.en),
   hi: () => import("./messages/hi").then((m) => m.hi),
   ur: () => import("./messages/ur").then((m) => m.ur),
   ml: () => import("./messages/ml").then((m) => m.ml),
@@ -53,12 +55,13 @@ const loaders: Record<Exclude<Language, "en">, () => Promise<Messages>> = {
   te: () => import("./messages/te").then((m) => m.te),
 };
 
-const cache = new Map<Language, Messages>([["en", en]]);
+const cache = new Map<Language, Messages>();
+const shellMessages: Partial<Messages> = englishShell;
 
 export async function loadMessages(lang: Language): Promise<Messages> {
   const cached = cache.get(lang);
   if (cached) return cached;
-  const messages = lang === "en" ? en : await loaders[lang]();
+  const messages = await loaders[lang]();
   cache.set(lang, messages);
   return messages;
 }
@@ -67,9 +70,13 @@ export function primeMessages(lang: Language, messages: Messages) {
   cache.set(lang, messages);
 }
 
-/** A message in a specific language (English if that dictionary hasn't been loaded). */
+/** Translate using a loaded language, including a choice still being saved to the profile. */
 export function translateIn(lang: Language, key: MessageKey, vars?: Vars) {
-  return interpolate((cache.get(lang) ?? en)[key] ?? en[key], vars);
+  return interpolate(cache.get(lang)?.[key] ?? englishFallback(key), vars);
+}
+
+function englishFallback(key: MessageKey) {
+  return cache.get("en")?.[key] ?? shellMessages[key] ?? key;
 }
 
 function interpolate(template: string, vars?: Vars) {
@@ -170,10 +177,10 @@ export interface I18n {
   setLanguage: (lang: Language) => Promise<void>;
 }
 
-function createTranslate(messages: Messages, locale: string): Translate {
+function createTranslate(messages: Partial<Messages>, locale: string): Translate {
   const rules = new Intl.PluralRules(locale);
   const t = ((key: MessageKey, vars?: Vars) =>
-    interpolate(messages[key] ?? en[key] ?? key, vars)) as Translate;
+    interpolate(messages[key] ?? englishFallback(key), vars)) as Translate;
   t.plural = (key, count, vars) => {
     const form = rules.select(count) === "one" ? "one" : "other";
     return t(`${key}_${form}` as MessageKey, { count: count.toLocaleString(locale), ...vars });
@@ -183,7 +190,7 @@ function createTranslate(messages: Messages, locale: string): Translate {
 
 function buildI18n(
   lang: Language,
-  messages: Messages,
+  messages: Partial<Messages>,
   setLanguage: (lang: Language) => Promise<void>,
 ): I18n {
   const info = languageInfo(lang);
@@ -192,7 +199,7 @@ function buildI18n(
 }
 
 // English without a provider (e.g. the root error page if the app itself failed to render).
-const fallback = buildI18n("en", en, async () => {});
+const fallback = buildI18n("en", shellMessages, async () => {});
 const I18nContext = createContext<I18n>(fallback);
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;

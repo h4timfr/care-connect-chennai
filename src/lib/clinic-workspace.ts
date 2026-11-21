@@ -1,19 +1,8 @@
 import { isAppointmentInPast } from "@/lib/appointment-time";
+import type { AgendaView } from "@/lib/clinic-agenda-view";
 import { isoDate } from "@/lib/format";
 import type { MessageKey } from "@/lib/i18n";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
-
-export type AgendaView = "all" | "today" | "upcoming" | "history" | "pending";
-
-export function isAgendaView(value: unknown): value is AgendaView {
-  return (
-    value === "all" ||
-    value === "today" ||
-    value === "upcoming" ||
-    value === "history" ||
-    value === "pending"
-  );
-}
 
 type AgendaFilters = {
   view: AgendaView;

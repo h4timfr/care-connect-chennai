@@ -151,28 +151,30 @@ export function PatientShell({
             ) : null}
             <LanguageSelect />
             <ThemeToggle />
-            {loading ? (
-              <div className="h-9 w-9 animate-pulse rounded-full bg-muted" aria-hidden />
-            ) : user ? (
-              <Link
-                to="/profile"
-                aria-label={t("nav.yourProfile")}
-                className="ms-1 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <ProfileAvatar name={patient?.name || user.email || ""} className="h-9 w-9" />
-              </Link>
-            ) : (
-              <div className="flex gap-2">
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/login">{t("nav.signIn")}</Link>
-                </Button>
-                <Button asChild size="sm" className="hidden sm:inline-flex">
-                  <Link to="/login" search={{ signup: true }}>
-                    {t("nav.signUp")}
-                  </Link>
-                </Button>
-              </div>
-            )}
+            <div className="flex min-h-9 items-center">
+              {loading ? (
+                <span className="size-9 animate-pulse rounded-full bg-muted" aria-hidden />
+              ) : user ? (
+                <Link
+                  to="/profile"
+                  aria-label={t("nav.yourProfile")}
+                  className="ms-1 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <ProfileAvatar name={patient?.name || user.email || ""} className="h-9 w-9" />
+                </Link>
+              ) : (
+                <div className="flex gap-2">
+                  <Button asChild variant="ghost" size="sm">
+                    <Link to="/login">{t("nav.signIn")}</Link>
+                  </Button>
+                  <Button asChild size="sm" className="hidden sm:inline-flex">
+                    <Link to="/login" search={{ signup: true }}>
+                      {t("nav.signUp")}
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>

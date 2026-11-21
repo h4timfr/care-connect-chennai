@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { appointmentActions, clinicAgenda, isAgendaView } from "../src/lib/clinic-workspace";
+import { isAgendaView } from "../src/lib/clinic-agenda-view";
+import { appointmentActions, clinicAgenda } from "../src/lib/clinic-workspace";
 import type { Appointment } from "../src/lib/types";
 
 const now = new Date("2026-11-15T19:00:00Z"); // 00:30 on 16 November in Chennai.
