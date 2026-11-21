@@ -67,7 +67,7 @@ async function signIn(
   password: string,
 ) {
   const pathName = portal === "patient" ? "/login" : "/" + portal + "/login";
-  await page.goto(pathName);
+  if (new URL(page.url()).pathname !== pathName) await page.goto(pathName);
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   const buttonName =
@@ -160,9 +160,10 @@ test(
 );
 
 test(
-  "clinic staff sees the created appointment in the clinic portal",
+  "clinic staff sees the created appointment and exchanges messages with the patient",
   { tag: "@workflow-clinic" },
-  async ({ page }) => {
+  async ({ page, browser }) => {
+    test.setTimeout(120_000);
     addNetworkEvidence(page);
     await signIn(
       page,
@@ -199,6 +200,84 @@ test(
       Promise.resolve().then(() => expect(found).toBe(true)),
       "clinic appointment details show the reason entered during the patient booking",
     );
+    const thread = process.env["CARECONNECT_CONVERSATION_ID"]!;
+    const otherThread = process.env["CARECONNECT_OTHER_CONVERSATION_ID"]!;
+    const question = "Synthetic clinic question " + runId;
+    const reply = "Synthetic clinic reply " + runId;
+    const patientPage = await browser.newPage();
+    try {
+      await patientAppointment(patientPage);
+      await Promise.all([
+        page.goto("/clinic/messages?c=" + thread),
+        patientPage.goto("/messages?c=" + thread),
+      ]);
+      const patientLog = patientPage.getByRole("log");
+      const clinicLog = page.getByRole("log");
+      await expect(patientLog).toBeVisible();
+      await expect(clinicLog).toBeVisible();
+      let patientPosts = 0;
+      patientPage.on("request", (request) => {
+        if (request.method() === "POST" && new URL(request.url()).pathname === "/rest/v1/messages")
+          patientPosts++;
+      });
+      await patientPage.getByRole("textbox", { name: "Message", exact: true }).fill(question);
+      await patientPage.getByRole("button", { name: "Send message" }).evaluate((element) => {
+        const button = element as HTMLButtonElement;
+        button.click();
+        button.click();
+      });
+      await check(
+        expect(clinicLog.getByText(question, { exact: true })).toHaveCount(1, { timeout: 40_000 }),
+        "one patient message arrives in the clinic log after rapid duplicate actions",
+      );
+      await check(
+        Promise.resolve().then(() => expect(patientPosts).toBe(1)),
+        "rapid duplicate actions send only one message insert",
+      );
+      await page.getByRole("textbox", { name: "Reply to patient" }).fill(reply);
+      await page.getByRole("button", { name: "Send reply" }).click();
+      await check(
+        expect(patientLog.getByText(reply, { exact: true })).toHaveCount(1, { timeout: 40_000 }),
+        "clinic reply reaches the still-open patient log",
+      );
+      await Promise.all([patientPage.reload(), page.reload()]);
+      for (const log of [patientLog, clinicLog]) {
+        await check(
+          expect(log.getByText(reply, { exact: true })).toHaveCount(1),
+          "clinic reply remains present once after reload",
+        );
+      }
+      await patientPage.getByRole("link", { name: "Profile", exact: true }).click();
+      await patientPage.getByRole("button", { name: "Sign out" }).click();
+      await expect(patientPage).toHaveURL(/\/login(?:\?|$)/);
+      await signIn(
+        patientPage,
+        "patient",
+        process.env["CARECONNECT_OTHER_PATIENT_EMAIL"]!,
+        process.env["CARECONNECT_OTHER_PATIENT_PASSWORD"]!,
+      );
+      await patientPage.getByRole("link", { name: "Messages", exact: true }).click();
+      await check(
+        expect(patientPage.getByText("Synthetic second patient message " + runId)).toBeVisible(),
+        "other patient sees their own thread after switching accounts",
+      );
+      await check(
+        expect(patientPage.getByText(reply, { exact: true })).toHaveCount(0),
+        "account switch clears the first patient's messages",
+      );
+      await patientPage.goto("/messages?c=" + thread);
+      await check(
+        expect(patientPage.getByText("That conversation isn't available.")).toBeVisible(),
+        "other patient cannot open the original conversation",
+      );
+      await patientPage.goto("/messages?c=" + otherThread);
+      await check(
+        expect(patientLog).toBeVisible(),
+        "other patient can open the owned conversation",
+      );
+    } finally {
+      await patientPage.close();
+    }
   },
 );
 
@@ -259,9 +338,9 @@ test(
 
     await page.reload();
     await check(
-      expect(
-        page.locator('[aria-live="polite"]').getByText(doctorReply, { exact: true }),
-      ).toBeVisible({ timeout: 20_000 }),
+      expect(page.getByRole("log").getByText(doctorReply, { exact: true })).toBeVisible({
+        timeout: 20_000,
+      }),
       "patient sees the doctor reply in the patient portal",
     );
     await doctorPage.close();

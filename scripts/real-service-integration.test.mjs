@@ -865,7 +865,7 @@ test("browser workflow scenarios use UI actions and run independently", () => {
   const config = readFileSync(path.join(root, "playwright.config.ts"), "utf8");
   for (const [id, title] of [
     ["patient", "patient books and cancels an appointment through the interface"],
-    ["clinic", "clinic staff sees the created appointment in the clinic portal"],
+    ["clinic", "clinic staff sees the created appointment and exchanges messages with the patient"],
     [
       "doctor",
       "doctor sees the appointment, receives a patient message, and replies in the portals",

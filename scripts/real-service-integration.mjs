@@ -1264,6 +1264,39 @@ async function runIntegration() {
       "patient creates an authorized conversation",
     );
     const conversationId = conversation.data.id;
+    const otherPatient = clients["other-patient"];
+    const otherProfile = await otherPatient
+      .from("patients")
+      .select("id")
+      .eq("user_id", users["other-patient"].id)
+      .single();
+    assert(!otherProfile.error && otherProfile.data?.id, "second synthetic patient owns a profile");
+    const otherThread = await otherPatient
+      .from("conversations")
+      .insert({ clinic_id: clinic, patient_id: otherProfile.data.id, kind: "general" })
+      .select("id")
+      .single();
+    assert(
+      !otherThread.error && otherThread.data?.id,
+      "second synthetic patient owns a conversation",
+    );
+    const otherConversationId = otherThread.data.id;
+    const otherMessage = await otherPatient.from("messages").insert({
+      conversation_id: otherConversationId,
+      sender_id: users["other-patient"].id,
+      body: "Synthetic second patient message " + runId,
+    });
+    assert(!otherMessage.error, "second synthetic patient sends an owned message");
+    for (const [table, column] of [
+      ["conversations", "id"],
+      ["messages", "conversation_id"],
+    ]) {
+      const denied = await patient.from(table).select("id").eq(column, otherConversationId);
+      assert(
+        !denied.error && denied.data.length === 0,
+        "first patient cannot read second patient rows",
+      );
+    }
     const unrelatedConversation = await clients["other-patient"]
       .from("conversations")
       .select("id")
@@ -1433,6 +1466,15 @@ async function runIntegration() {
         ),
       "doctor receives both message directions through the scoped inbox RPC",
     );
+    const clinicReply = "Synthetic Realtime clinic reply " + runId;
+    const clinicReplyDelivery = waitForInsert(patientChannel, clinicReply);
+    const clinicSent = await clients["clinic-staff"].from("messages").insert({
+      conversation_id: conversationId,
+      sender_id: users["clinic-staff"].id,
+      body: clinicReply,
+    });
+    assert(!clinicSent.error, "authorized clinic member replies to the patient");
+    assert(await clinicReplyDelivery, "patient socket receives the clinic reply without polling");
     await new Promise((resolve) => setTimeout(resolve, 500));
     const anonymousRows = await anonClient
       .from("messages")
@@ -1499,6 +1541,75 @@ async function runIntegration() {
     assert(
       afterReconnect.verified,
       "Realtime channels and sockets close after reconnect verification",
+    );
+
+    // Keep the browser's appointment thread open and use a different owned fixture here.
+    const privateAppointment = booked[2].id;
+    const opened = await patient.rpc("open_doctor_message_thread", {
+      p_appointment_id: privateAppointment,
+    });
+    assert(
+      !opened.error && opened.data === privateAppointment,
+      "patient opens owned private doctor thread",
+    );
+    const privateReply = {
+      p_appointment_id: privateAppointment,
+      p_message_id: randomUUID(),
+      p_body: "Synthetic private doctor reply " + runId,
+    };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const sent = await clients.doctor.rpc("send_doctor_message", privateReply);
+      assert(!sent.error, "assigned doctor sends or confirms an exact retry");
+    }
+    for (const [client, asDoctor] of [
+      [patient, false],
+      [clients.doctor, true],
+    ]) {
+      const inbox = await client.rpc("doctor_message_inbox", { p_as_doctor: asDoctor });
+      const target = inbox.data?.find((item) => item.appointment_id === privateAppointment);
+      assert(
+        !inbox.error &&
+          target?.messages?.filter(
+            (item) =>
+              item.id === privateReply.p_message_id &&
+              item.sender === "doctor" &&
+              item.body === privateReply.p_body,
+          ).length === 1,
+        "authorized private inbox contains one retained doctor reply",
+      );
+    }
+    for (const client of [otherPatient, clients["clinic-staff"]]) {
+      const inbox = await client.rpc("doctor_message_inbox", { p_as_doctor: false });
+      assert(
+        !inbox.error && !inbox.data?.some((item) => item.appointment_id === privateAppointment),
+        "private doctor reply is absent from the unrelated and clinic-only inboxes",
+      );
+    }
+    const closed = await patient
+      .from("appointments")
+      .update({ status: "cancelled" })
+      .eq("id", privateAppointment)
+      .select("id")
+      .single();
+    assert(
+      !closed.error && closed.data?.id === privateAppointment,
+      "patient closes the disposable appointment",
+    );
+    const blockedSend = await clients.doctor.rpc("send_doctor_message", {
+      ...privateReply,
+      p_message_id: randomUUID(),
+    });
+    assert(blockedSend.error?.code === "42501", "closed private appointment rejects a new reply");
+    const history = await patient.rpc("doctor_message_inbox", { p_as_doctor: false });
+    assert(
+      !history.error &&
+        history.data?.some(
+          (item) =>
+            item.appointment_id === privateAppointment &&
+            item.can_send === false &&
+            item.messages?.some((message) => message.id === privateReply.p_message_id),
+        ),
+      "closed private thread retains authorized read-only history",
     );
 
     storagePath = `${users.patient.id}/avatar`;
@@ -1663,6 +1774,7 @@ async function runIntegration() {
       ids,
       runId,
       conversationId,
+      otherConversationId,
       browserDate,
       browserTime,
     }));
@@ -2062,6 +2174,7 @@ async function runBrowserFlow({
   ids,
   runId,
   conversationId,
+  otherConversationId,
   browserDate,
   browserTime,
 }) {
@@ -2075,6 +2188,8 @@ async function runBrowserFlow({
     CARECONNECT_RUN_ID: runId,
     CARECONNECT_PATIENT_EMAIL: users.patient.email,
     CARECONNECT_PATIENT_PASSWORD: users.patient.password,
+    CARECONNECT_OTHER_PATIENT_EMAIL: users["other-patient"].email,
+    CARECONNECT_OTHER_PATIENT_PASSWORD: users["other-patient"].password,
     CARECONNECT_CLINIC_EMAIL: users["clinic-staff"].email,
     CARECONNECT_CLINIC_PASSWORD: users["clinic-staff"].password,
     CARECONNECT_DOCTOR_EMAIL: users.doctor.email,
@@ -2088,6 +2203,7 @@ async function runBrowserFlow({
     CARECONNECT_DOCTOR_ID: ids.doctor_id,
     CARECONNECT_BROWSER_APPOINTMENT_REASON: ids.browser_appointment_reason,
     CARECONNECT_CONVERSATION_ID: conversationId,
+    CARECONNECT_OTHER_CONVERSATION_ID: otherConversationId,
     CARECONNECT_BROWSER_DATE: browserDate,
     CARECONNECT_BROWSER_TIME: browserTime,
     VITE_SUPABASE_URL: creds.url,
