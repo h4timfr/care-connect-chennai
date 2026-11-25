@@ -10,7 +10,7 @@ import { mockBackend, type MockBackend, type MockState } from "./mock-backend";
 export const test = base.extend<{
   backend: (
     state?: Partial<MockState>,
-    options?: { signedIn?: boolean; expiredSession?: boolean },
+    options?: { signedIn?: boolean; expiredSession?: boolean; authNow?: number },
   ) => Promise<MockBackend>;
   consoleErrors: string[];
   externalSupabaseRequests: string[];
@@ -63,11 +63,7 @@ export const test = base.extend<{
   backend: async ({ page }, provide) => {
     let installed: MockBackend | undefined;
     await provide(async (state = {}, options = {}) => {
-      installed = await mockBackend(page, {
-        state,
-        signedIn: options.signedIn ?? true,
-        expiredSession: options.expiredSession ?? false,
-      });
+      installed = await mockBackend(page, { state, ...options });
       return installed;
     });
     // Every request must have been understood by the mock.
