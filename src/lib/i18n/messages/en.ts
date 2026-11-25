@@ -1062,6 +1062,9 @@ export const en = {
   "signup.sameAsAccount": "Same as your account",
   "signup.section.account": "Your account",
   "signup.signInFirst": "Sign in first",
+  "signup.draftConflict":
+    "This application draft changed in another tab. Reload it before continuing. Reloading replaces the unsaved edits in this tab.",
+  "signup.reloadDraft": "Reload saved draft",
 
   // ---- Private provider-candidate review (/admin/providers)
   "candidates.addEvidence": "Record evidence",

@@ -1074,6 +1074,9 @@ export const te: Messages = {
   "signup.sameAsAccount": "మీ ఖాతాలో ఉన్నదే",
   "signup.section.account": "మీ ఖాతా",
   "signup.signInFirst": "ముందుగా సైన్ ఇన్ చేయండి",
+  "signup.draftConflict":
+    "ఈ దరఖాస్తు ముసాయిదా మరో ట్యాబ్‌లో మారింది. కొనసాగించే ముందు దాన్ని మళ్లీ లోడ్ చేయండి. దీంతో ఈ ట్యాబ్‌లో సేవ్ చేయని మార్పులు తొలగిపోతాయి.",
+  "signup.reloadDraft": "సేవ్ చేసిన ముసాయిదాను మళ్లీ లోడ్ చేయండి",
 
   // ---- Private provider-candidate review (/admin/providers)
   "candidates.addEvidence": "ఆధారాన్ని నమోదు చేయి",

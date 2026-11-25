@@ -1,3 +1,4 @@
+import { addDays, isoDate } from "../src/lib/format";
 import { LANGUAGES, LANGUAGE_COOKIE, LANGUAGE_STORAGE_KEY } from "../src/lib/i18n/languages";
 import { en } from "../src/lib/i18n/messages/en";
 import { hi } from "../src/lib/i18n/messages/hi";
@@ -7,7 +8,7 @@ import { te } from "../src/lib/i18n/messages/te";
 import { ur } from "../src/lib/i18n/messages/ur";
 import { LANGUAGE_WELCOME_KEY } from "../src/lib/onboarding-preferences";
 import { expect, test } from "./support/fixtures";
-import { enablePatientContact, ids } from "./support/mock-backend";
+import { enablePatientContact, ids, TEST_EMAIL } from "./support/mock-backend";
 
 const dictionaries = { en, hi, ml, ta, te, ur };
 
@@ -228,7 +229,7 @@ test("storage unavailable does not block login or a preselected booking", async 
   page,
   backend,
 }) => {
-  const mock = await backend();
+  const mock = await backend({}, { signedIn: false });
   enablePatientContact(mock.state, ids.clinicA, true);
   await page.addInitScript(() => {
     const get = Storage.prototype.getItem;
@@ -260,8 +261,22 @@ test("storage unavailable does not block login or a preselected booking", async 
   await page.getByRole("button", { name: "Get started", exact: true }).click();
   await page.getByRole("button", { name: "Skip for now", exact: true }).click();
   await expect(page.getByRole("region", { name: en["welcome.title"] })).toHaveCount(0);
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
-  await page.goto(`/book/${ids.doctorVerified}?date=${today}&time=09%3A30&clinicId=${ids.clinicA}`);
+  const date = isoDate(addDays(new Date(), 1));
+  const booking = `/book/${ids.doctorVerified}?date=${date}&time=09%3A30&clinicId=${ids.clinicA}`;
+  await page.goto(booking);
+  await expect(page).toHaveURL(
+    (url) => url.pathname === "/login" && url.searchParams.get("redirect") === booking,
+  );
+  await page.getByLabel("Email", { exact: true }).fill(TEST_EMAIL);
+  await page.getByLabel("Password", { exact: true }).fill("synthetic-password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(
+    (url) =>
+      url.pathname === `/book/${ids.doctorVerified}` &&
+      url.searchParams.get("date") === date &&
+      url.searchParams.get("time") === "09:30" &&
+      url.searchParams.get("clinicId") === ids.clinicA,
+  );
   await expect(page.getByRole("button", { name: "Request appointment" })).toBeEnabled();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });

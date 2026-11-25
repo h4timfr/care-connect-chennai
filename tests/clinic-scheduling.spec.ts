@@ -138,13 +138,17 @@ test("calendar navigation crosses India year boundary with long names at all wid
   page,
   backend,
 }) => {
-  await page.clock.setFixedTime(new Date("2026-12-31T18:29:00Z"));
+  const clock = new Date("2026-12-31T18:29:00Z");
+  await page.clock.setFixedTime(clock);
   const state = defaultState();
   const name = "SyntheticPatient".repeat(12);
-  await backend({
-    memberships: [membership(state.clinics[0]!)],
-    appointments: [appointmentRow({ date: "2027-01-01", patients: { full_name: name } })],
-  });
+  await backend(
+    {
+      memberships: [membership(state.clinics[0]!)],
+      appointments: [appointmentRow({ date: "2027-01-01", patients: { full_name: name } })],
+    },
+    { authNow: clock.getTime() },
+  );
   for (const width of [320, 375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 800 });
     await page.goto("/clinic/calendar");

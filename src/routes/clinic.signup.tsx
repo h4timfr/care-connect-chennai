@@ -133,7 +133,6 @@ function ClinicSignup() {
       portal="clinic"
       title={t("signup.clinic.title")}
       subtitle={t("signup.clinic.subtitle")}
-      draftKey="careconnect.clinicApplicationDraft"
       initial={{ ...INITIAL, contactEmail: user?.email ?? "" }}
       validate={validate}
       withAccount={(f, account) => ({
@@ -148,18 +147,21 @@ function ClinicSignup() {
           <InfoNotice>{t("apply.limitReached", { count: MAX_OPEN })}</InfoNotice>
         ) : undefined
       }
-      submit={async (f) => {
+      submit={async (f, ownerId) => {
         await submitApplication.mutateAsync({
-          clinic_name: f.clinicName.trim(),
-          area: f.area.trim(),
-          address: f.address.trim(),
-          registration_details: f.registrationDetails.trim(),
-          doctor_count: f.doctorCount ? Number(f.doctorCount) : null,
-          contact_name: f.contactName.trim(),
-          contact_role: f.contactRole,
-          contact_phone: f.contactPhone.trim(),
-          contact_email: f.contactEmail.trim(),
-          message: f.message.trim() || null,
+          ownerId,
+          input: {
+            clinic_name: f.clinicName.trim(),
+            area: f.area.trim(),
+            address: f.address.trim(),
+            registration_details: f.registrationDetails.trim(),
+            doctor_count: f.doctorCount ? Number(f.doctorCount) : null,
+            contact_name: f.contactName.trim(),
+            contact_role: f.contactRole,
+            contact_phone: f.contactPhone.trim(),
+            contact_email: f.contactEmail.trim(),
+            message: f.message.trim() || null,
+          },
         });
       }}
       renderFields={(f, set) => (

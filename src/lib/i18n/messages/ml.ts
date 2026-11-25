@@ -1092,6 +1092,9 @@ export const ml: Messages = {
   "signup.sameAsAccount": "നിങ്ങളുടെ അക്കൗണ്ടിലേതു തന്നെ",
   "signup.section.account": "നിങ്ങളുടെ അക്കൗണ്ട്",
   "signup.signInFirst": "ആദ്യം സൈൻ ഇൻ ചെയ്യുക",
+  "signup.draftConflict":
+    "ഈ അപേക്ഷയുടെ കരട് മറ്റൊരു ടാബിൽ മാറിയിട്ടുണ്ട്. തുടരുന്നതിന് മുമ്പ് അത് വീണ്ടും ലോഡ് ചെയ്യുക. വീണ്ടും ലോഡ് ചെയ്യുമ്പോൾ ഈ ടാബിൽ സംരക്ഷിക്കാത്ത മാറ്റങ്ങൾ നഷ്ടപ്പെടും.",
+  "signup.reloadDraft": "സംരക്ഷിച്ച കരട് വീണ്ടും ലോഡ് ചെയ്യുക",
 
   // ---- Private provider-candidate review (/admin/providers)
   "candidates.addEvidence": "തെളിവ് രേഖപ്പെടുത്തുക",

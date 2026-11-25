@@ -379,8 +379,8 @@ function base64Url(value: object) {
 }
 
 /** A syntactically valid, unsigned JWT. The mock never verifies it; production would reject it. */
-export function fakeAccessToken(userId = ids.user, email = TEST_EMAIL) {
-  const exp = Math.floor(Date.now() / 1000) + 3600;
+export function fakeAccessToken(userId = ids.user, email = TEST_EMAIL, now = Date.now()) {
+  const exp = Math.floor(now / 1000) + 3600;
   return `${base64Url({ alg: "HS256", typ: "JWT" })}.${base64Url({
     sub: userId,
     role: "authenticated",
@@ -390,10 +390,10 @@ export function fakeAccessToken(userId = ids.user, email = TEST_EMAIL) {
   })}.test-signature`;
 }
 
-function sessionPayload(expired = false, userId = ids.user, email = TEST_EMAIL) {
-  const expiresAt = Math.floor(Date.now() / 1000) + (expired ? -3600 : 3600);
+function sessionPayload(expired = false, userId = ids.user, email = TEST_EMAIL, now = Date.now()) {
+  const expiresAt = Math.floor(now / 1000) + (expired ? -3600 : 3600);
   return {
-    access_token: fakeAccessToken(userId, email),
+    access_token: fakeAccessToken(userId, email, now),
     token_type: "bearer",
     expires_in: 3600,
     expires_at: expiresAt,
@@ -431,8 +431,14 @@ export async function mockBackend(
   {
     signedIn = true,
     expiredSession = false,
+    authNow,
     state: overrides = {},
-  }: { signedIn?: boolean; expiredSession?: boolean; state?: Partial<MockState> } = {},
+  }: {
+    signedIn?: boolean;
+    expiredSession?: boolean;
+    authNow?: number;
+    state?: Partial<MockState>;
+  } = {},
 ): Promise<MockBackend> {
   if (process.env["VITE_SUPABASE_URL"] !== "https://careconnect-test.invalid") {
     throw new Error("Mocked Playwright tests require the isolated careconnect-test.invalid URL.");
@@ -447,7 +453,7 @@ export async function mockBackend(
   };
 
   if (signedIn) {
-    const session = sessionPayload(expiredSession, state.authUserId, state.authEmail);
+    const session = sessionPayload(expiredSession, state.authUserId, state.authEmail, authNow);
     await page.addInitScript(
       ([key, value]) => {
         // Only seed once per test, so a sign-out inside the test is not undone on reload.
@@ -509,13 +515,28 @@ export async function mockBackend(
     const path = url.pathname;
 
     // ---- Auth
-    if (path === "/auth/v1/user")
+    if (path === "/auth/v1/user") {
+      const token = request.headers()["authorization"]?.split(" ")[1]?.split(".");
+      if (token?.[1] && token[2] === "test-signature") {
+        const claims: unknown = JSON.parse(Buffer.from(token[1], "base64url").toString());
+        if (
+          claims &&
+          typeof claims === "object" &&
+          "sub" in claims &&
+          typeof claims.sub === "string" &&
+          "email" in claims &&
+          typeof claims.email === "string"
+        ) {
+          return json(route, 200, sessionPayload(false, claims.sub, claims.email).user);
+        }
+      }
       return json(route, 200, sessionPayload(false, state.authUserId, state.authEmail).user);
+    }
     if (path === "/auth/v1/token") {
       if (state.tokenResponse) {
         return json(route, state.tokenResponse.status, state.tokenResponse.body);
       }
-      return json(route, 200, sessionPayload(false, state.authUserId, state.authEmail));
+      return json(route, 200, sessionPayload(false, state.authUserId, state.authEmail, authNow));
     }
     if (path === "/auth/v1/signup" && state.signupResponse) {
       return json(route, state.signupResponse.status, state.signupResponse.body);

@@ -65,6 +65,7 @@ for (const theme of ["light", "dark"] as const) {
 
       for (const route of ["/clinic/signup", "/doctor/signup"]) {
         await page.goto(route);
+        await expect(page.getByRole("button", { name: "Create account and submit" })).toBeEnabled();
         expect(await readBackdrop(authCard, true)).toEqual(login);
       }
 
