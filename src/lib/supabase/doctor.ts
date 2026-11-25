@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./client";
+import { providerSubmissionAuthorization } from "./provider-submission";
 import { useAuth } from "./auth";
 import type { Database } from "@/lib/database.types";
 import type { MessageKey } from "@/lib/i18n";
@@ -347,10 +348,12 @@ export function useMyDoctorApplications(userId: string | undefined) {
 export function useSubmitDoctorApplication() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: DoctorApplicationInput) => {
+    mutationFn: async ({ input, ownerId }: { input: DoctorApplicationInput; ownerId: string }) => {
+      const authorization = await providerSubmissionAuthorization(ownerId);
       const { error } = await supabase
         .from("doctor_applications")
         .insert(input)
+        .setHeader("Authorization", authorization)
         .select("id")
         .single();
       if (error) throw error;

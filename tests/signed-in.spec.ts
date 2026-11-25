@@ -5,6 +5,8 @@ import {
   enablePatientContact,
   fakeAccessToken,
   ids,
+  mockBackend,
+  PROJECT_REF,
   TEST_EMAIL,
   TEST_NAME,
 } from "./support/mock-backend";
@@ -503,6 +505,155 @@ test.describe("Password reset", () => {
     expect(mock.callsTo("PUT", "/auth/v1/user").at(-1)?.body).toMatchObject({
       password: "a-new-password-1",
     });
+  });
+
+  for (const change of ["before submit", "during update", "sign out during update"] as const) {
+    test(`a recovery session yields to an account change ${change}`, async ({ page, backend }) => {
+      const mock = await backend({}, { signedIn: false });
+      const second = await page.context().newPage();
+      const otherId = "00000000-0000-4000-8000-0000000000b2";
+      const otherEmail = "recovery-switch@test.invalid";
+      await mockBackend(second, {
+        signedIn: false,
+        state: { authUserId: otherId, authEmail: otherEmail },
+      });
+      const accessToken = fakeAccessToken();
+      const hash = new URLSearchParams({
+        access_token: accessToken,
+        refresh_token: "test-recovery-refresh",
+        expires_in: "3600",
+        expires_at: String(Math.floor(Date.now() / 1000) + 3600),
+        token_type: "bearer",
+        type: "recovery",
+      });
+      const key = `sb-${PROJECT_REF}-auth-token`;
+      let release = () => {};
+      const pending = new Promise<void>((resolve) => (release = resolve));
+      let allowLogin = () => {};
+      const loginPending = new Promise<void>((resolve) => (allowLogin = resolve));
+      const signsOut = change === "sign out during update";
+      await second.route("**/auth/v1/token?grant_type=password", async (route) => {
+        await loginPending;
+        await route.fallback();
+      });
+      await page.route("**/auth/v1/user", async (route) => {
+        if (route.request().method() === "PUT") await pending;
+        await route.fallback();
+      });
+      await page.addInitScript(() => {
+        const fetch = window.fetch;
+        window.fetch = async (input, init) => {
+          const response = await fetch(input, init);
+          if (init?.method === "PUT" && response.url.endsWith("/auth/v1/user")) {
+            const json = response.json.bind(response);
+            response.json = async () => {
+              const body: unknown = await json();
+              setTimeout(() => sessionStorage.setItem("reset-response-read", "yes"), 0);
+              return body;
+            };
+          }
+          return response;
+        };
+      });
+      try {
+        if (!signsOut) {
+          await second.goto("/login");
+          await second.getByLabel("Email", { exact: true }).fill(otherEmail);
+          await second.getByLabel("Password", { exact: true }).fill("synthetic-login-password-1");
+          const sent = second.waitForRequest((r) => r.url().includes("grant_type=password"));
+          await second.getByRole("button", { name: "Sign in", exact: true }).click();
+          await sent;
+        }
+        await page.goto(`/reset-password#${hash}`);
+        const heading = page.getByRole("heading", { name: "Choose a new password" });
+        await expect(heading).toBeVisible();
+        await page.getByLabel("New password", { exact: true }).fill("synthetic-new-password-1");
+        await page.getByLabel("Confirm new password").fill("synthetic-new-password-1");
+        const stale = await page.evaluate((storageKey) => localStorage.getItem(storageKey), key);
+        if (change !== "before submit") {
+          const sent = page.waitForRequest(
+            (r) => r.method() === "PUT" && r.url().endsWith("/auth/v1/user"),
+          );
+          await page.getByRole("button", { name: "Save new password" }).click();
+          expect(
+            (await (await sent).headerValue("authorization")) === `Bearer ${accessToken}`,
+          ).toBe(true);
+        }
+        if (signsOut) {
+          await second.goto("/profile");
+          await second.getByRole("button", { name: "Sign out" }).click();
+          await expect(second).toHaveURL(/\/login/);
+        } else {
+          allowLogin();
+          await expect(second.getByRole("link", { name: "Your profile" })).toBeVisible();
+        }
+        await expect(heading).toHaveCount(0);
+        await page.evaluate(
+          ({ key, stale }) => {
+            const channel = new BroadcastChannel(key);
+            channel.postMessage({
+              event: "PASSWORD_RECOVERY",
+              session: JSON.parse(stale ?? "null"),
+            });
+            channel.close();
+          },
+          { key, stale },
+        );
+        if (change !== "before submit") {
+          release();
+          await expect
+            .poll(() => page.evaluate(() => sessionStorage.getItem("reset-response-read")))
+            .toBe("yes");
+        }
+        await expect(heading).toHaveCount(0);
+        await expect(page).toHaveURL(/\/reset-password/);
+        expect(
+          await page.evaluate((storageKey) => {
+            const stored = localStorage.getItem(storageKey);
+            return stored ? JSON.parse(stored).user.id : null;
+          }, key),
+        ).toBe(signsOut ? null : otherId);
+        expect(mock.callsTo("PUT", "/auth/v1/user")).toHaveLength(
+          change === "before submit" ? 0 : 1,
+        );
+      } finally {
+        release();
+        allowLogin();
+        await second.close();
+      }
+    });
+  }
+
+  test("recovery waits for successful identity verification after a temporary failure", async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend({}, { signedIn: false });
+    let lookups = 0;
+    let allowVerification = false;
+    await page.route("**/auth/v1/user", async (route) => {
+      if (++lookups === 1 || allowVerification) return route.fallback();
+      return route.fulfill({
+        status: 503,
+        json: { message: "Synthetic temporary failure" },
+        headers: { "access-control-allow-origin": "*" },
+      });
+    });
+    const hash = new URLSearchParams({
+      access_token: fakeAccessToken(),
+      refresh_token: "synthetic-recovery-refresh",
+      expires_in: "3600",
+      expires_at: String(Math.floor(Date.now() / 1000) + 3600),
+      token_type: "bearer",
+      type: "recovery",
+    });
+    await page.goto(`/reset-password#${hash}`);
+    await expect.poll(() => lookups).toBeGreaterThan(1);
+    const heading = page.getByRole("heading", { name: "Choose a new password" });
+    await expect(heading).toHaveCount(0);
+    expect(mock.callsTo("PUT", "/auth/v1/user")).toEqual([]);
+    allowVerification = true;
+    await expect(heading).toBeVisible();
   });
 
   test("an ordinary session cannot change the password here", async ({ page, backend }) => {

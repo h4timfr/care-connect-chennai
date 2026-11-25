@@ -95,8 +95,9 @@ test("each route requests only what it shows, once", async ({ page }) => {
   expect(
     mock.callsTo("POST", "/rest/v1/rpc/patient_conversation_clinics").map((call) => call.body),
   ).toEqual([{ p_conversation_ids: [ids.conversation] }]);
-  // A valid stored session is used as-is: no auth-server round trips on page loads.
-  expect(mock.calls.filter((c) => c.path.startsWith("/auth/v1/"))).toEqual([]);
+  // Verify the stored identity once per document before loading private data.
+  expect(mock.callsTo("GET", "/auth/v1/user")).toHaveLength(Object.keys(EXPECTED).length);
+  expect(mock.callsTo("POST", "/auth/v1/token")).toEqual([]);
 });
 
 test("the inbox defers both catalogues until the patient navigates to discovery", async ({

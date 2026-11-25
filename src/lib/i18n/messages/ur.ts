@@ -1073,6 +1073,9 @@ export const ur: Messages = {
   "signup.sameAsAccount": "آپ کے اکاؤنٹ جیسا",
   "signup.section.account": "آپ کا اکاؤنٹ",
   "signup.signInFirst": "پہلے سائن ان کریں",
+  "signup.draftConflict":
+    "درخواست کا یہ مسودہ کسی اور ٹیب میں تبدیل ہوا ہے۔ جاری رکھنے سے پہلے اسے دوبارہ لوڈ کریں۔ دوبارہ لوڈ کرنے سے اس ٹیب کی غیر محفوظ شدہ تبدیلیاں ختم ہو جائیں گی۔",
+  "signup.reloadDraft": "محفوظ شدہ مسودہ دوبارہ لوڈ کریں",
 
   // ---- Private provider-candidate review (/admin/providers)
   "candidates.addEvidence": "ثبوت درج کریں",

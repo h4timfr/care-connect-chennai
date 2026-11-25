@@ -1108,6 +1108,9 @@ export const ta: Messages = {
   "signup.sameAsAccount": "உங்கள் கணக்கில் உள்ளதே",
   "signup.section.account": "உங்கள் கணக்கு",
   "signup.signInFirst": "முதலில் உள்நுழையுங்கள்",
+  "signup.draftConflict":
+    "இந்த விண்ணப்ப வரைவு வேறொரு தாவலில் மாற்றப்பட்டுள்ளது. தொடர்வதற்கு முன் அதை மீண்டும் ஏற்றுங்கள். அப்படிச் செய்தால் இந்தத் தாவலில் சேமிக்காத மாற்றங்கள் நீக்கப்படும்.",
+  "signup.reloadDraft": "சேமித்த வரைவை மீண்டும் ஏற்றுக",
 
   // ---- Private provider-candidate review (/admin/providers)
   "candidates.addEvidence": "சான்றைப் பதிவுசெய்",

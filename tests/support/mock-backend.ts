@@ -509,8 +509,23 @@ export async function mockBackend(
     const path = url.pathname;
 
     // ---- Auth
-    if (path === "/auth/v1/user")
+    if (path === "/auth/v1/user") {
+      const token = request.headers()["authorization"]?.split(" ")[1]?.split(".");
+      if (token?.[1] && token[2] === "test-signature") {
+        const claims: unknown = JSON.parse(Buffer.from(token[1], "base64url").toString());
+        if (
+          claims &&
+          typeof claims === "object" &&
+          "sub" in claims &&
+          typeof claims.sub === "string" &&
+          "email" in claims &&
+          typeof claims.email === "string"
+        ) {
+          return json(route, 200, sessionPayload(false, claims.sub, claims.email).user);
+        }
+      }
       return json(route, 200, sessionPayload(false, state.authUserId, state.authEmail).user);
+    }
     if (path === "/auth/v1/token") {
       if (state.tokenResponse) {
         return json(route, state.tokenResponse.status, state.tokenResponse.body);

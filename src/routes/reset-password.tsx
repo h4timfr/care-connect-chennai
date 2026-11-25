@@ -10,9 +10,8 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/PasswordInput";
 import { MIN_PASSWORD_LENGTH } from "@/lib/passwords";
 import { useAuth } from "@/lib/supabase/auth";
-import { supabase } from "@/lib/supabase/client";
 import { describeAuthError } from "@/lib/supabase/errors";
-import { endPasswordRecovery, useIsPasswordRecovery } from "@/lib/supabase/recovery";
+import { saveRecoveryPassword, usePasswordRecovery } from "@/lib/supabase/recovery";
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/reset-password")({
@@ -21,8 +20,8 @@ export const Route = createFileRoute("/reset-password")({
 });
 
 function ResetPasswordPage() {
-  const { user, loading } = useAuth();
-  const recovering = useIsPasswordRecovery();
+  const { session, user, loading } = useAuth();
+  const recovery = usePasswordRecovery(session);
   const [linkError, setLinkError] = useState(false);
   const { t } = useI18n();
 
@@ -42,7 +41,7 @@ function ResetPasswordPage() {
 
   // Only a session that came from a reset link may set a new password here; an ordinary
   // signed-in session must not be able to change the password without proving ownership.
-  if (!user || !recovering) {
+  if (!user || !recovery) {
     return (
       <AuthCard
         title={linkError ? t("reset.expiredTitle") : t("reset.neededTitle")}
@@ -56,10 +55,16 @@ function ResetPasswordPage() {
     );
   }
 
-  return <NewPasswordForm email={user.email ?? ""} />;
+  return <NewPasswordForm email={user.email ?? ""} recovery={recovery} />;
 }
 
-function NewPasswordForm({ email }: { email: string }) {
+function NewPasswordForm({
+  email,
+  recovery,
+}: {
+  email: string;
+  recovery: Parameters<typeof saveRecoveryPassword>[0];
+}) {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -83,12 +88,7 @@ function NewPasswordForm({ email }: { email: string }) {
     setSubmitting(true);
     setError(null);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) {
-        setError(describeAuth(updateError));
-        return;
-      }
-      endPasswordRecovery();
+      if (!(await saveRecoveryPassword(recovery, password))) return;
       toast.success(t("reset.updated"));
       navigate({ to: "/", replace: true });
     } catch (err) {

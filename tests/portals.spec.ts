@@ -463,7 +463,7 @@ test.describe("Provider registration", () => {
     expect(mock.callsTo("POST", "/rest/v1/provider_applications")).toEqual([]);
     expect(mock.callsTo("POST", "/rest/v1/clinic_memberships")).toEqual([]);
     const draft = await page.evaluate(() =>
-      localStorage.getItem("careconnect.clinicApplicationDraft"),
+      localStorage.getItem("careconnect.providerApplicationDraft.v1:clinic:new-user"),
     );
     expect(draft).toContain("New Clinic");
     expect(draft).not.toContain("a-strong-pass-1");

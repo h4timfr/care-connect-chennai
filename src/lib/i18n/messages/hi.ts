@@ -1069,6 +1069,9 @@ export const hi: Messages = {
   "signup.sameAsAccount": "आपके खाते जैसा ही",
   "signup.section.account": "आपका खाता",
   "signup.signInFirst": "पहले साइन इन करें",
+  "signup.draftConflict":
+    "यह आवेदन ड्राफ़्ट किसी दूसरे टैब में बदल गया है। जारी रखने से पहले उसे फिर से लोड करें। इससे इस टैब के बिना सहेजे बदलाव बदल जाएँगे।",
+  "signup.reloadDraft": "सहेजा हुआ ड्राफ़्ट फिर से लोड करें",
 
   // ---- Private provider-candidate review (/admin/providers)
   "candidates.addEvidence": "साक्ष्य दर्ज करें",

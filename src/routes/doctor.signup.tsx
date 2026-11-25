@@ -140,7 +140,6 @@ function DoctorSignup() {
       portal="doctor"
       title={t("signup.doctor.title")}
       subtitle={t("signup.doctor.subtitle")}
-      draftKey="careconnect.doctorApplicationDraft"
       initial={{ ...INITIAL, contactEmail: user?.email ?? "" }}
       validate={validate}
       withAccount={(f, account) => ({
@@ -151,20 +150,23 @@ function DoctorSignup() {
       signedInExtras={extras}
       eligibilityChecks={[doctor, mine]}
       blocked={blocked}
-      submit={async (f) => {
+      submit={async (f, ownerId) => {
         await submitApplication.mutateAsync({
-          full_name: f.fullName.trim(),
-          specialty_id: f.specialtyId,
-          qualifications: f.qualifications.trim(),
-          registration_council: f.registrationCouncil.trim(),
-          registration_number: f.registrationNumber.trim(),
-          experience_years: Number(f.experienceYears),
-          consultation_fee: f.consultationFee ? Number(f.consultationFee) : null,
-          clinic_id: f.clinicId || null,
-          clinic_note: f.clinicNote.trim() || null,
-          contact_phone: f.contactPhone.trim(),
-          contact_email: f.contactEmail.trim(),
-          message: f.message.trim() || null,
+          ownerId,
+          input: {
+            full_name: f.fullName.trim(),
+            specialty_id: f.specialtyId,
+            qualifications: f.qualifications.trim(),
+            registration_council: f.registrationCouncil.trim(),
+            registration_number: f.registrationNumber.trim(),
+            experience_years: Number(f.experienceYears),
+            consultation_fee: f.consultationFee ? Number(f.consultationFee) : null,
+            clinic_id: f.clinicId || null,
+            clinic_note: f.clinicNote.trim() || null,
+            contact_phone: f.contactPhone.trim(),
+            contact_email: f.contactEmail.trim(),
+            message: f.message.trim() || null,
+          },
         });
       }}
       renderFields={(f, set) => (

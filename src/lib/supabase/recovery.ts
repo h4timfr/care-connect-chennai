@@ -1,45 +1,137 @@
 import { useSyncExternalStore } from "react";
-import { supabase } from "./client";
+import { AuthSessionMissingError, type Session } from "@supabase/supabase-js";
+import { authSessionStorage, supabase, updateRecoveryPassword } from "./client";
 
-// auth-js emits PASSWORD_RECOVERY once, right after it reads the session from a reset link, and
-// possibly before React has mounted, so the listener must be registered at startup. It's started
-// by an explicit call (see auth.tsx) rather than as an import side effect: package.json declares
-// "sideEffects": false, so a bare `import "./recovery"` is dropped from production bundles.
+type Snapshot = NonNullable<
+  Awaited<ReturnType<NonNullable<typeof authSessionStorage>["snapshotFor"]>>
+>;
+type Recovery = { session: Session; snapshot?: Snapshot };
 
-let recovering = false;
+let recovery: Recovery | null = null;
+let lastAuthorized: Recovery | null = null;
 const listeners = new Set<() => void>();
 
-function setRecovering(value: boolean) {
-  if (recovering === value) return;
-  recovering = value;
+function setRecovery(value: Recovery | null) {
+  if (recovery === value) return;
+  recovery = value;
   for (const listener of listeners) listener();
+}
+
+function sameSession(left: Session, right: Session | null) {
+  return left.access_token === right?.access_token && left.user.id === right.user.id;
+}
+
+function authorize(candidate: Recovery) {
+  if (
+    lastAuthorized &&
+    sameSession(lastAuthorized.session, candidate.session) &&
+    lastAuthorized.snapshot?.revision === candidate.snapshot?.revision
+  )
+    return;
+  lastAuthorized = candidate;
+  setRecovery(candidate);
 }
 
 let watching = false;
 
-/** Starts tracking PASSWORD_RECOVERY. Call once, at module load of the app shell. */
+/** Register before React mounts so the SDK's initial recovery event is observed. */
 export function watchPasswordRecovery() {
   if (watching || typeof window === "undefined") return;
   watching = true;
-  supabase.auth.onAuthStateChange((event) => {
-    if (event === "PASSWORD_RECOVERY") setRecovering(true);
-    if (event === "SIGNED_OUT") setRecovering(false);
+  let eventRevision = 0;
+  let previousEvent: Session | null = null;
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (!authSessionStorage && previousEvent?.access_token !== session?.access_token)
+      eventRevision++;
+    previousEvent = session;
+    if (recovery) {
+      const snapshot = recovery.snapshot;
+      let current = false;
+      try {
+        current = snapshot
+          ? !!authSessionStorage?.isCurrent(snapshot)
+          : sameSession(recovery.session, session);
+      } catch {
+        // Unreadable storage cannot establish ownership.
+      }
+      if (!current) setRecovery(null);
+    }
+    if (event !== "PASSWORD_RECOVERY" || !session) return;
+    const revision = ++eventRevision;
+    queueMicrotask(() => {
+      void (async () => {
+        if (authSessionStorage) {
+          const snapshot = await authSessionStorage.snapshotFor(session.access_token);
+          if (snapshot && revision === eventRevision && authSessionStorage.isCurrent(snapshot))
+            authorize({ session, snapshot });
+        } else {
+          const current = await supabase.auth.getSession();
+          if (
+            revision === eventRevision &&
+            !current.error &&
+            sameSession(session, current.data.session)
+          )
+            authorize({ session });
+        }
+      })().catch(() => {});
+    });
   });
 }
 
-/** Call once the new password is saved, so the reset form can't be reused. */
-export function endPasswordRecovery() {
-  setRecovering(false);
-}
-
-/** True while the current session came from a password-reset link. */
-export function useIsPasswordRecovery() {
-  return useSyncExternalStore(
+export function usePasswordRecovery(verified: Session | null) {
+  const candidate = useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    () => recovering,
-    () => false,
+    () => recovery,
+    () => null,
   );
+  return verified && candidate && sameSession(candidate.session, verified) ? candidate : null;
+}
+
+export async function saveRecoveryPassword(candidate: Recovery, password: string) {
+  async function isCurrent() {
+    if (recovery !== candidate) return false;
+    if (candidate.snapshot) return !!authSessionStorage?.isCurrent(candidate.snapshot);
+    const current = await supabase.auth.getSession();
+    return (
+      recovery === candidate &&
+      !current.error &&
+      sameSession(candidate.session, current.data.session)
+    );
+  }
+
+  const { error } = await updateRecoveryPassword(
+    candidate.session,
+    password,
+    async (input, init) => {
+      // The isolated SDK may attempt to refresh a near-expiry session. Only the explicit
+      // password request with the original bearer may leave this client.
+      if (
+        init?.method !== "PUT" ||
+        new Headers(init.headers).get("Authorization") !==
+          `Bearer ${candidate.session.access_token}` ||
+        !(await isCurrent())
+      )
+        throw new AuthSessionMissingError();
+
+      const dispatch = () => {
+        if (recovery !== candidate) throw new AuthSessionMissingError();
+        return globalThis.fetch(input, init);
+      };
+      return candidate.snapshot && authSessionStorage
+        ? authSessionStorage.dispatchIfCurrent(candidate.snapshot, dispatch)
+        : dispatch();
+    },
+  );
+  if (
+    !(await isCurrent()) ||
+    recovery !== candidate ||
+    (candidate.snapshot && !authSessionStorage?.isCurrent(candidate.snapshot))
+  )
+    return false;
+  if (error) throw error;
+  setRecovery(null);
+  return true;
 }
