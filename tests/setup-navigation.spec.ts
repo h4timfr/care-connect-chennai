@@ -189,3 +189,99 @@ test("admin review counts are visible at 375px and queues work by keyboard", asy
   expect(mock.callsTo("GET", "/rest/v1/doctor_applications")).toHaveLength(1);
   expect(mock.callsTo("GET", "/rest/v1/clinic_doctors")).toHaveLength(1);
 });
+
+for (const relationship of ["pending", "verified", "rejected", "absent"] as const) {
+  test(`doctor setup handles a ${relationship} clinic relationship without a request record`, async ({
+    page,
+    backend,
+  }) => {
+    const mock = await backend();
+    const doctor = mock.state.doctors[0]!;
+    doctor["user_id"] = ids.user;
+    doctor["clinic_doctors"] =
+      relationship === "absent"
+        ? []
+        : [{ clinic_id: ids.clinicA, active: true, verification_state: relationship }];
+
+    await page.goto("/doctor");
+    const checklist = page.getByRole("region", { name: "Doctor setup" });
+    const connection = checklist
+      .getByRole("listitem")
+      .filter({ hasText: "Clinic connection accepted" });
+    const verification = checklist
+      .getByRole("listitem")
+      .filter({ hasText: "Clinic relationship verified" });
+    const request = connection.getByRole("link", { name: "View link requests" });
+
+    if (relationship === "pending") {
+      await expect(connection).toContainText("Awaiting verification");
+      await expect(verification).toContainText("Pending");
+      await expect(request).toHaveCount(0);
+      await expect(connection).not.toContainText("Share your profile ID");
+    } else if (relationship === "verified") {
+      await expect(connection).toContainText("No separate consent record");
+      await expect(verification).toContainText("Complete");
+      await expect(request).toHaveCount(0);
+    } else {
+      await expect(connection).toContainText("Share your profile ID");
+      await expect(verification).toContainText("Waiting for earlier steps");
+      await expect(request).toBeVisible();
+    }
+  });
+}
+
+test("current clinic links override stale accepted and verified request history", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend();
+  const doctor = mock.state.doctors[0]!;
+  doctor["user_id"] = ids.user;
+  doctor["clinic_doctors"] = [
+    { clinic_id: ids.clinicA, active: true, verification_state: "rejected" },
+  ];
+  await page.route("**/rest/v1/rpc/list_doctor_clinic_link_requests", (route) =>
+    route.fulfill({
+      json: [
+        { id: "old-a", status: "accepted" },
+        { id: "old-b", status: "verified" },
+      ],
+    }),
+  );
+  await page.goto("/doctor");
+  const checks = page.getByRole("region", { name: "Doctor setup" });
+  await expect(
+    checks.getByRole("listitem").filter({ hasText: "Clinic connection accepted" }),
+  ).toContainText("Share your profile ID");
+  await expect(
+    checks.getByRole("listitem").filter({ hasText: "Clinic relationship verified" }),
+  ).toContainText("Waiting for earlier steps");
+});
+
+test("an incoming clinic request remains actionable alongside an existing pending link", async ({
+  page,
+  backend,
+}) => {
+  const mock = await backend();
+  const doctor = mock.state.doctors[0]!;
+  doctor["user_id"] = ids.user;
+  doctor["clinic_doctors"] = [
+    { clinic_id: ids.clinicA, active: true, verification_state: "pending" },
+  ];
+  await page.route("**/rest/v1/rpc/list_doctor_clinic_link_requests", (route) =>
+    route.fulfill({
+      json: [
+        { id: "old", status: "accepted" },
+        { id: "incoming", status: "requested" },
+      ],
+    }),
+  );
+  await page.goto("/doctor");
+  const checks = page.getByRole("region", { name: "Doctor setup" });
+  const connection = checks.getByRole("listitem").filter({ hasText: "Clinic connection accepted" });
+  await expect(connection).toContainText("Accept a clinic request to continue.");
+  await expect(connection.getByRole("link", { name: "View link requests" })).toBeVisible();
+  await expect(
+    checks.getByRole("listitem").filter({ hasText: "Clinic relationship verified" }),
+  ).toContainText("Pending");
+});

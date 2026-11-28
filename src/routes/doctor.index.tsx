@@ -58,13 +58,14 @@ function DoctorSetup({
   const ready = !me?.isSample && usable.some((link) => link.bookingEnabled === true);
   const publicationUnknown = usable.some((link) => link.bookingEnabled === undefined);
   const visibleRequests = requests?.error ? [] : (requests?.data ?? []);
-  const accepted = visibleRequests.some(
-    (request) => request.status === "accepted" || request.status === "verified",
-  );
   const awaitingConsent = visibleRequests.some((request) => request.status === "requested");
-  const awaitingVerification =
-    visibleRequests.some((request) => request.status === "accepted") ||
-    me?.links.some((link) => link.active && link.state === "pending");
+  const hasPendingLink = me?.links.some((link) => link.active && link.state === "pending");
+  // Current links determine progress. Request history can only explain consent or offer a response.
+  const consentRecorded =
+    verified && visibleRequests.some((request) => request.status === "verified");
+  const pendingConnection = hasPendingLink && !awaitingConsent && !verified;
+  const showRequestAction =
+    me && requests?.isSuccess && (awaitingConsent || (!hasPendingLink && !verified));
   const applicationState = applications.error
     ? "unavailable"
     : applications.isLoading
@@ -108,21 +109,27 @@ function DoctorSetup({
     },
     {
       label: "setup.connectionAccepted",
-      state: accepted
-        ? "done"
-        : !me
-          ? "blocked"
-          : requests?.error
-            ? "unavailable"
-            : requests?.isLoading
-              ? "checking"
-              : verified && !awaitingConsent
+      state: !me
+        ? "blocked"
+        : awaitingConsent
+          ? "action"
+          : consentRecorded
+            ? "done"
+            : pendingConnection
+              ? "pending"
+              : requests?.error
                 ? "unavailable"
-                : "action",
-      ...(verified && !accepted && !awaitingConsent && requests?.isSuccess
-        ? { detail: "setup.consentNotRecorded" }
-        : {}),
-      ...(me && !accepted && (!verified || awaitingConsent)
+                : requests?.isLoading
+                  ? "checking"
+                  : verified
+                    ? "unavailable"
+                    : "action",
+      ...(pendingConnection
+        ? { detail: "verification.pending" }
+        : verified && !consentRecorded && !awaitingConsent && requests?.isSuccess
+          ? { detail: "setup.consentNotRecorded" }
+          : {}),
+      ...(showRequestAction
         ? {
             detail: awaitingConsent ? "setup.doctorRespond" : "setup.doctorRequest",
             link: (
@@ -137,7 +144,7 @@ function DoctorSetup({
       label: "setup.relationshipVerified",
       state: verified
         ? "done"
-        : awaitingVerification
+        : hasPendingLink
           ? "pending"
           : requests?.error
             ? "unavailable"

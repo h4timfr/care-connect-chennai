@@ -240,6 +240,11 @@ test("publication safety preserves the branch freeze and requires the Vercel bui
     $schema: "https://openapi.vercel.sh/vercel.json",
     buildCommand:
       "CARECONNECT_VERCEL_BUILD=1 npm run build && node scripts/security-artifacts.mjs .vercel/output/static",
-    git: { deploymentEnabled: { "claude/careconnect-frontend-repair": false } },
+    git: {
+      deploymentEnabled: {
+        "claude/careconnect-frontend-repair": false,
+        "codex/doctor-portal-targeted-fixes": false,
+      },
+    },
   });
 });

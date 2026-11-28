@@ -50,6 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const principalId = useRef<string | null>(null);
+  const signInGeneration = useRef(0);
+  const [logoutFailure, setLogoutFailure] = useState<{
+    generation: number;
+    owner: string | undefined;
+    waitForLocalSignOut: boolean;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     let generation = 0;
@@ -61,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (principalId.current !== nextPrincipalId) {
         // A direct A -> B SIGNED_IN event does not pass through a signed-out state.
         clearPrivateQueryCache(queryClient);
+        if (nextPrincipalId !== null) signInGeneration.current++;
         principalId.current = nextPrincipalId;
       }
       setSession(nextSession);
@@ -158,13 +166,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [queryClient]);
 
+  useEffect(() => {
+    if (!logoutFailure || loading) return;
+    const { generation, owner, waitForLocalSignOut, message } = logoutFailure;
+    if (
+      generation !== signInGeneration.current ||
+      (authSessionStorage &&
+        !authSessionStorage.matchesOwner(undefined) &&
+        (waitForLocalSignOut || !authSessionStorage.matchesOwner(owner)))
+    ) {
+      setLogoutFailure(null);
+      return;
+    }
+    // Let the signed-out notification host mount before announcing the remote failure.
+    if (waitForLocalSignOut && session) return;
+    setLogoutFailure(null);
+    toast.error(message);
+  }, [loading, logoutFailure, session]);
+
   const signOut = useCallback(async () => {
+    const generation = signInGeneration.current;
+    const signingOutOwner = session?.user.id;
+    let locallySignedOut = false;
     try {
       if (authSessionStorage && session) {
         // Invalidate the local generation before a remote logout can race with a refresh.
         // The remote call uses the account captured from this exact slot, even if it changes now.
         const owned = await authSessionStorage.takeSession(session);
         if (!owned) return false;
+        locallySignedOut = true;
         const { error } = await supabase.auth.admin.signOut(owned.access_token, "global");
         if (
           error &&
@@ -179,7 +209,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearPrivateQueryCache(queryClient);
       return true;
     } catch (error) {
-      toast.error(t(describeDataError(error)));
+      setLogoutFailure({
+        generation,
+        owner: signingOutOwner,
+        waitForLocalSignOut: locallySignedOut,
+        message: t(describeDataError(error)),
+      });
       return false;
     }
   }, [queryClient, session, t]);

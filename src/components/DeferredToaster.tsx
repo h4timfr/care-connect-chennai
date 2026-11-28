@@ -1,29 +1,57 @@
 import { useEffect, useState, type ComponentType } from "react";
+import { useAuth } from "@/lib/supabase/auth";
 import { connectToastHandler, type ToastRequest } from "@/lib/toast";
 
 type ToasterComponent = ComponentType<{ position: "top-center"; richColors: boolean }>;
+type FallbackToast = ToastRequest & { id: number };
+const DEFAULT_TOAST_DURATION = 4000;
 
 export function DeferredToaster() {
+  const { user, loading } = useAuth();
+  const scope = loading ? "checking" : (user?.id ?? "signed-out");
+  return <NotificationHost key={scope} />;
+}
+
+function NotificationHost() {
   const [Toaster, setToaster] = useState<ToasterComponent | null>(null);
-  const [fallbacks, setFallbacks] = useState<ToastRequest[]>([]);
+  const [fallbacks, setFallbacks] = useState<FallbackToast[]>([]);
 
   useEffect(() => {
     let mounted = true;
+    let nextId = 0;
+    const dismissRenderedToasts = new Map<string | number, () => void>();
+    const expirationTimers = new Set<ReturnType<typeof setTimeout>>();
     const disconnect = connectToastHandler((request) => {
       void Promise.all([import("sonner"), import("@/components/ui/sonner")])
         .then(([sonner, toaster]) => {
           if (!mounted) return;
           setToaster(() => toaster.Toaster);
-          sonner.toast[request.kind](request.message, request.options);
+          const activeIds = new Set(sonner.toast.getToasts().map((toast) => toast.id));
+          for (const id of dismissRenderedToasts.keys()) {
+            if (!activeIds.has(id)) dismissRenderedToasts.delete(id);
+          }
+          const id = sonner.toast[request.kind](request.message, request.options);
+          dismissRenderedToasts.set(id, () => sonner.toast.dismiss(id));
         })
         .catch(() => {
-          if (mounted) setFallbacks((current) => [...current, request]);
+          if (!mounted) return;
+          const id = nextId++;
+          setFallbacks((current) => [...current, { ...request, id }]);
+          const duration = request.options?.duration || DEFAULT_TOAST_DURATION;
+          if (duration === Infinity) return;
+          const timer = setTimeout(() => {
+            expirationTimers.delete(timer);
+            setFallbacks((current) => current.filter((fallback) => fallback.id !== id));
+          }, duration);
+          expirationTimers.add(timer);
         });
     });
 
     return () => {
       mounted = false;
       disconnect();
+      for (const timer of expirationTimers) clearTimeout(timer);
+      for (const dismiss of dismissRenderedToasts.values()) dismiss();
     };
   }, []);
 
@@ -32,9 +60,9 @@ export function DeferredToaster() {
       {Toaster ? <Toaster position="top-center" richColors /> : null}
       {fallbacks.length ? (
         <div className="fixed left-1/2 top-4 z-[100] flex w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 flex-col gap-2">
-          {fallbacks.map((fallback, index) => (
+          {fallbacks.map((fallback) => (
             <div
-              key={`${index}-${fallback.kind}-${fallback.message}`}
+              key={fallback.id}
               data-testid="toast-fallback-announcement"
               role={fallback.kind === "error" ? "alert" : "status"}
               aria-live={fallback.kind === "error" ? "assertive" : "polite"}
