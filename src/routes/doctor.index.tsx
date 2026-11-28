@@ -62,9 +62,12 @@ function DoctorSetup({
     (request) => request.status === "accepted" || request.status === "verified",
   );
   const awaitingConsent = visibleRequests.some((request) => request.status === "requested");
+  const hasPendingLink = me?.links.some((link) => link.active && link.state === "pending");
   const awaitingVerification =
-    visibleRequests.some((request) => request.status === "accepted") ||
-    me?.links.some((link) => link.active && link.state === "pending");
+    visibleRequests.some((request) => request.status === "accepted") || hasPendingLink;
+  const pendingConnection = hasPendingLink && !awaitingConsent;
+  const showRequestAction =
+    me && requests?.isSuccess && !accepted && (awaitingConsent || (!hasPendingLink && !verified));
   const applicationState = applications.error
     ? "unavailable"
     : applications.isLoading
@@ -112,17 +115,21 @@ function DoctorSetup({
         ? "done"
         : !me
           ? "blocked"
-          : requests?.error
-            ? "unavailable"
-            : requests?.isLoading
-              ? "checking"
-              : verified && !awaitingConsent
-                ? "unavailable"
-                : "action",
-      ...(verified && !accepted && !awaitingConsent && requests?.isSuccess
-        ? { detail: "setup.consentNotRecorded" }
-        : {}),
-      ...(me && !accepted && (!verified || awaitingConsent)
+          : pendingConnection
+            ? "pending"
+            : requests?.error
+              ? "unavailable"
+              : requests?.isLoading
+                ? "checking"
+                : verified && !awaitingConsent
+                  ? "unavailable"
+                  : "action",
+      ...(pendingConnection && !accepted
+        ? { detail: "verification.pending" }
+        : verified && !accepted && !awaitingConsent && requests?.isSuccess
+          ? { detail: "setup.consentNotRecorded" }
+          : {}),
+      ...(showRequestAction
         ? {
             detail: awaitingConsent ? "setup.doctorRespond" : "setup.doctorRequest",
             link: (
