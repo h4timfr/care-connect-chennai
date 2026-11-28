@@ -3,7 +3,8 @@
   "buildCommand": "CARECONNECT_VERCEL_BUILD=1 npm run build && node scripts/security-artifacts.mjs .vercel/output/static",
   "git": {
     "deploymentEnabled": {
-      "claude/careconnect-frontend-repair": false
+      "claude/careconnect-frontend-repair": false,
+      "codex/doctor-portal-targeted-fixes": false
     }
   }
 }

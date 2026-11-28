@@ -50,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const principalId = useRef<string | null>(null);
+  const signInGeneration = useRef(0);
 
   useEffect(() => {
     let generation = 0;
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (principalId.current !== nextPrincipalId) {
         // A direct A -> B SIGNED_IN event does not pass through a signed-out state.
         clearPrivateQueryCache(queryClient);
+        if (nextPrincipalId !== null) signInGeneration.current++;
         principalId.current = nextPrincipalId;
       }
       setSession(nextSession);
@@ -159,6 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const signOut = useCallback(async () => {
+    const generation = signInGeneration.current;
+    const signingOutOwner = session?.user.id;
     try {
       if (authSessionStorage && session) {
         // Invalidate the local generation before a remote logout can race with a refresh.
@@ -179,7 +183,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearPrivateQueryCache(queryClient);
       return true;
     } catch (error) {
-      toast.error(t(describeDataError(error)));
+      // A failed remote logout can settle after a different session has replaced the local one.
+      if (
+        generation === signInGeneration.current &&
+        (!authSessionStorage ||
+          authSessionStorage.matchesOwner(undefined) ||
+          authSessionStorage.matchesOwner(signingOutOwner))
+      ) {
+        toast.error(t(describeDataError(error)));
+      }
       return false;
     }
   }, [queryClient, session, t]);

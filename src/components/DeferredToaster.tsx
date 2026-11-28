@@ -1,4 +1,5 @@
 import { useEffect, useState, type ComponentType } from "react";
+import { useAuth } from "@/lib/supabase/auth";
 import { connectToastHandler, type ToastRequest } from "@/lib/toast";
 
 type ToasterComponent = ComponentType<{ position: "top-center"; richColors: boolean }>;
@@ -6,19 +7,31 @@ type FallbackToast = ToastRequest & { id: number };
 const DEFAULT_TOAST_DURATION = 4000;
 
 export function DeferredToaster() {
+  const { user, loading } = useAuth();
+  const scope = loading ? "checking" : (user?.id ?? "signed-out");
+  return <NotificationHost key={scope} />;
+}
+
+function NotificationHost() {
   const [Toaster, setToaster] = useState<ToasterComponent | null>(null);
   const [fallbacks, setFallbacks] = useState<FallbackToast[]>([]);
 
   useEffect(() => {
     let mounted = true;
     let nextId = 0;
+    const dismissRenderedToasts = new Map<string | number, () => void>();
     const expirationTimers = new Set<ReturnType<typeof setTimeout>>();
     const disconnect = connectToastHandler((request) => {
       void Promise.all([import("sonner"), import("@/components/ui/sonner")])
         .then(([sonner, toaster]) => {
           if (!mounted) return;
           setToaster(() => toaster.Toaster);
-          sonner.toast[request.kind](request.message, request.options);
+          const activeIds = new Set(sonner.toast.getToasts().map((toast) => toast.id));
+          for (const id of dismissRenderedToasts.keys()) {
+            if (!activeIds.has(id)) dismissRenderedToasts.delete(id);
+          }
+          const id = sonner.toast[request.kind](request.message, request.options);
+          dismissRenderedToasts.set(id, () => sonner.toast.dismiss(id));
         })
         .catch(() => {
           if (!mounted) return;
@@ -38,6 +51,7 @@ export function DeferredToaster() {
       mounted = false;
       disconnect();
       for (const timer of expirationTimers) clearTimeout(timer);
+      for (const dismiss of dismissRenderedToasts.values()) dismiss();
     };
   }, []);
 
