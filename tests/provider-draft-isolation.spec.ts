@@ -771,15 +771,24 @@ for (const delayedPath of ["signup", "user"] as const) {
     });
 
     try {
+      await secondTab.goto("/login");
+      const replacementSignIn = secondTab.getByRole("button", { name: "Sign in", exact: true });
+      await expect(replacementSignIn).toBeEnabled();
       await page.goto("/clinic/signup");
       await fillSignupAccount(page);
       await fillClinic(page);
       await page.getByRole("button", { name: "Create account and submit" }).click();
       await started.promise;
-      await secondTab.goto("/login");
       await secondTab.getByLabel("Email", { exact: true }).fill(emailB);
       await secondTab.getByLabel("Password", { exact: true }).fill(testPassword);
-      await secondTab.getByRole("button", { name: "Sign in", exact: true }).click();
+      const replacementResponse = secondTab.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          response.url().includes("/auth/v1/token?grant_type=password"),
+      );
+      await replacementSignIn.click();
+      expect((await replacementResponse).ok()).toBe(true);
+      await expect(secondTab).toHaveURL(/\/$/);
       await expect(page.locator("#contact-email")).toHaveValue(emailB);
       const response = page.waitForResponse((item) =>
         item.url().includes(`/auth/v1/${delayedPath}`),
